@@ -1,0 +1,3 @@
+*.pdf
+.idea
+cmake-*

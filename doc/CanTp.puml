@@ -1,0 +1,93 @@
+@startuml
+
+state CANTP_PROCESSING {
+
+note as N
+the internal state is only written by
+asynchronous functions CanTp_Transmit,
+CanTp_RxIndication and
+CanTp_TxConfirmation. it means the
+periodic task won't modify the state.
+end note
+
+note as CanTp_RxIndication
+    CanTp_RxIndication
+end note
+
+note "CanTp_TxConfirmation" as CanTp_TxConfirmation
+
+state CanTp_MainFunction
+CanTp_MainFunction : N_As ++
+CanTp_MainFunction : N_Bs ++
+CanTp_MainFunction : N_Cs ++
+CanTp_MainFunction --> CanIf_Transmit : tx_flag = TRUE
+CanTp_MainFunction --> CanTp_MainFunction : taskState = CANTP_WAIT
+
+note top of CanTp_MainFunction
+  the CanTp_MainFunction is called cyclically.
+  it increments the As, Bs and Cs timeouts
+  unconditionally.
+  it is the only function which performs calls
+  to CanIf_Transmit, as the CanIf_Transmit is
+  not re-entrant for the same PDU identifier.
+end note
+
+CanIf_Transmit : tx_flag = FALSE
+CanIf_Transmit --> CanTp_MainFunction
+
+[*] --> CanTp_Transmit
+CanTp_Transmit: tx_flag = TRUE
+
+state CanTp_Transmit
+CanTp_Transmit --> WAIT_SF_TX_CONFIRMATION : SF
+CanTp_Transmit --> WAIT_FF_TX_CONFIRMATION : MF
+
+note left of CanTp_Transmit
+  the tx_flag is set to TRUE, which mean
+  CanIf_Transmit will be called on next
+  cyclic call.
+end note
+
+state WAIT_SF_TX_CONFIRMATION
+WAIT_SF_TX_CONFIRMATION -[#green]> [*] : confirmed
+WAIT_SF_TX_CONFIRMATION --> N_As : not confirmed
+
+state N_As #red
+N_As --> WAIT_SF_TX_CONFIRMATION : no
+N_As --> WAIT_FF_TX_CONFIRMATION : no
+N_As --> WAIT_CF_TX_CONFIRMATION : no
+N_As -[#red]> [*] : yes
+
+state WAIT_FF_TX_CONFIRMATION
+WAIT_FF_TX_CONFIRMATION : BS = 0
+WAIT_FF_TX_CONFIRMATION --> WAIT_FC_RX_INDICATION : confirmed
+WAIT_FF_TX_CONFIRMATION --> N_As : not confirmed
+
+state WAIT_FC_RX_INDICATION
+WAIT_FC_RX_INDICATION --> COPY_DATA : indicated
+WAIT_FC_RX_INDICATION --> N_Bs : not indicated
+
+state N_Bs #red
+N_Bs --> WAIT_FC_RX_INDICATION : no
+N_Bs -[#red]> [*] : yes
+
+COPY_DATA --> N_Cs : not copied
+COPY_DATA --> WAIT_CF_TX_CONFIRMATION : copied
+
+WAIT_CF_TX_CONFIRMATION : BS ++
+WAIT_CF_TX_CONFIRMATION --> N_As : not confirmed
+WAIT_CF_TX_CONFIRMATION --> Data : confirmed
+
+BS --> COPY_DATA : no
+BS --> WAIT_FC_RX_INDICATION : yes
+
+Data --> BS : yes
+Data -[#green]> [*] : no
+
+state N_Cs #red
+N_Cs --> COPY_DATA : no
+N_Cs -[#red]> [*] : yes
+
+}
+
+@enduml

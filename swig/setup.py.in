@@ -1,0 +1,10 @@
+from distutils.core import setup
+
+setup(author='Guillaume Sottas',
+      author_email='guillaumesottas@gmail.com',
+      description='AUTOSAR CanTp',
+      name='cantp',
+      packages=['pycantp'],
+      package_data={'pycantp': ['_pycantp.so']},
+      url='https://github.com/Sauci/CanTp',
+      version='@PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@.@PROJECT_VERSION_PATCH@')

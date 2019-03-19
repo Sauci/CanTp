@@ -1,0 +1,11 @@
+language: cpp
+compiler:
+  - gcc
+install:
+  - sudo apt-get install libgtest-dev
+before_script:
+  - mkdir build
+  - cd build
+  - cmake --version
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON ..
+script: make && make test
