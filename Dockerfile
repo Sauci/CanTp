@@ -1,33 +1,31 @@
-FROM alpine:3.9 AS cmake_builder
+FROM alpine:3.9 AS env_cantp
 
 LABEL maintainer="Guillaume Sottas"
 
-ENV HOME=/usr \
-    TOOL=$HOME/tool \
-    PROJECT_DIR=$HOME/project \
-    CMAKE_BUILD_DIR=$HOME/build/cmake \
-    CMAKE_INSTALL_DIR=$HOME/install/cmake
-
-RUN apk update && apk add build-base git linux-headers make
-
-WORKDIR $CMAKE_BUILD_DIR
-RUN git clone -b v3.14.0 --depth 1 https://github.com/Kitware/CMake.git $CMAKE_BUILD_DIR && \
-    ./bootstrap --prefix=$CMAKE_INSTALL_DIR && make install -j 8
-
-
-FROM alpine:3.9 AS env_cantp
-
-# get cmake from cmake_uilder and add bin directory to PATH.
-COPY --from=cmake_builder $CMAKE_INSTALL_DIR $TOOL/cmake
-ENV PATH="${TOOL}/cmake/bin:${PATH}"
+ENV PROJECT_DIR=/usr/project/
 
 # get build utilities (compiler, linker,...).
-RUN apk update && apk add build-base cmake python python3 python-dev python3-dev swig
+RUN apk update && apk add \
+    build-base \
+    cmake \
+    libffi \
+    libffi-dev \
+    mercurial \
+    nano \
+    python3 \
+    python3-dev
 
-# copy CanTp project.
-WORKDIR $PROJECT_DIR/cantp
-COPY . .
-RUN mkdir build && cd build && cmake .. -DCMAKE_POSITION_INDEPENDENT_CODE=ON && make all
+# install required python packages.
+RUN pip3 install --upgrade pip && \
+    pip3 install cffi gcovr pcpp pytest
 
-CMD ["/bin/sh"]
-VOLUME ["$PROJECT_DIR/cantp"]
+# copy CanTp project and generate makefile.
+#WORKDIR $PROJECT_DIR/cantp
+#COPY . .
+#RUN mkdir build && cd build && cmake .. -DCMAKE_POSITION_INDEPENDENT_CODE=ON && make all
+
+WORKDIR $PROJECT_DIR
+VOLUME ["$PROJECT_DIR"]
+RUN cd $PROJECT_DIR
+
+#EXPOSE 4444

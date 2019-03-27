@@ -167,10 +167,10 @@ const CanTp_RxNSduType CanTp_RxNSduConfig[] = {
         0x64u, /* ncr */
         0x64u, /* wftMax */
         0x55u, /* sTMin */
-        0x00u, /* rxNSduRef */
         CANTP_EXTENDED, /* af */
         CANTP_ON, /* padding */
-        CANTP_PHYSICAL /* comType */
+        CANTP_PHYSICAL, /* taType */
+        0x00u /* rxNSduRef */
     }
 };
 

@@ -1,11 +1,27 @@
-language: cpp
-compiler:
-  - gcc
+language: python
+
+python:
+  - 3.6
+
 install:
-  - sudo apt-get install libgtest-dev
+  # install cmake 3.14.1.
+  - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
+  - mkdir ${DEPS_DIR} && cd ${DEPS_DIR}
+  - travis_retry wget --no-check-certificate https://github.com/Kitware/CMake/releases/download/v3.14.1/cmake-3.14.1-Linux-x86_64.tar.gz
+  - tar -xvf cmake-3.14.1-Linux-x86_64.tar.gz > /dev/null
+  - mv cmake-3.14.1-Linux-x86_64 cmake-install
+  - PATH=${DEPS_DIR}/cmake-install:${DEPS_DIR}/cmake-install/bin:$PATH
+  - cd ${TRAVIS_BUILD_DIR}
+  # install python packages.
+  - pip install cffi gcovr pcpp pytest
+
 before_script:
   - mkdir build
   - cd build
-  - cmake --version
-  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON ..
-script: make && make test
+  - cmake .. -DCMAKE_BUILD_TYPE=Debug -Denable_test=ON
+  # create the source distribution for tests and install it (we might use make pip...).
+  - make sdist
+  - python -m pip install ./*.tar.gz
+
+script:
+  - ctest -V

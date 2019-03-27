@@ -51,7 +51,7 @@ extern "C"
  * @satisfy{@req{SWS_CanTp_00235}}
  * @satisfy{@req{SWS_CanTp_00322}}
  */
-extern void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo);
+void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -66,7 +66,7 @@ extern void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo);
  * @satisfy{@req{SWS_CanTp_00215}}
  * @satisfy{@req{SWS_CanTp_00236}}
  */
-extern void CanTp_TxConfirmation(PduIdType txPduId, Std_ReturnType result);
+void CanTp_TxConfirmation(PduIdType txPduId, Std_ReturnType result);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
