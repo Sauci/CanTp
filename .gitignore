@@ -3,6 +3,7 @@
 .idea
 build*
 cmake-*
+debug/*
 src/*
 swig/*
 !swig/CanIf.i
@@ -19,4 +20,3 @@ report/*
 test/unit_test/__pycache__
 test/unit_test/pycantp/*
 venv/*
-
