@@ -47,6 +47,7 @@ if (${enable_test})
     target_link_libraries(CanTp INTERFACE CanIf Det PduR)
 
     add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/source.c
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp.c
         COMMAND pcpp ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp.c
         "-D$<JOIN:$<TARGET_PROPERTY:CanTp,COMPILE_DEFINITIONS>,;-D>"
         -DCANTP_BUILD_CFFI_INTERFACE
@@ -57,6 +58,7 @@ if (${enable_test})
         VERBATIM)
 
     add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/header.h
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/interface/CanTp.h
         COMMAND pcpp ${CMAKE_CURRENT_SOURCE_DIR}/interface/CanTp.h
         "-D$<JOIN:$<TARGET_PROPERTY:CanTp,COMPILE_DEFINITIONS>,;-D>"
         -DCANTP_BUILD_CFFI_INTERFACE

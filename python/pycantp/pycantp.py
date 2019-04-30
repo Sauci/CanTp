@@ -50,7 +50,6 @@ CANTP_E_TX_COM = 0xD0
 
 def mock_callback(func):
     def wrapper(*args, **kwargs):
-        print(func.__name__.lstrip('_'))
         return func(*args, **kwargs)
 
     return wrapper

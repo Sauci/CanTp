@@ -90,6 +90,7 @@ class TestSWS00057:
                                                           main_function_period=1)
         handle.lib.CanTp_Init(configurator.config)
         handle.lib.CanTp_Transmit(self.pdu_id, Helper.create_pdu_info(handle, list(ord(c) for c in self.tx_data)))
+        handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(self.pdu_id, E_OK)
         handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_pdu_info(handle, self.rx_fc))
         handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_pdu_info(handle, can_frame))
