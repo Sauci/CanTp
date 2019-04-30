@@ -3,6 +3,12 @@ language: python
 python:
   - 3.6
 
+matrix:
+  include:
+    - python: 3.7
+      dist: xenial
+      sudo: true
+
 install:
   # install cmake 3.14.1.
   - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
