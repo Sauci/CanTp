@@ -1,1 +1,1 @@
-recursive-include pycantp *.c *.h *.a
+recursive-include pycantp *.c *.h

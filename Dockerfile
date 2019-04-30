@@ -19,13 +19,14 @@ RUN apk update && apk add \
 RUN pip3 install --upgrade pip && \
     pip3 install cffi gcovr pcpp pytest
 
-# copy CanTp project and generate makefile.
-#WORKDIR $PROJECT_DIR/cantp
-#COPY . .
-#RUN mkdir build && cd build && cmake .. -DCMAKE_POSITION_INDEPENDENT_CODE=ON && make all
+WORKDIR $PROJECT_DIR/prebuilt
+COPY . .
+RUN mkdir build && \
+    cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Debug -Denable_test=ON && \
+    make sdist_install && \
+    ctest -V
 
 WORKDIR $PROJECT_DIR
 VOLUME ["$PROJECT_DIR"]
 RUN cd $PROJECT_DIR
-
-#EXPOSE 4444
