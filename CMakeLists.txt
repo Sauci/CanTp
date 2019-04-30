@@ -75,9 +75,15 @@ if (${enable_test})
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/python
         COMMENT "building python source distribution package")
 
+    add_custom_target(sdist_install
+        DEPENDS sdist
+        COMMAND ${PYTHON_EXECUTABLE} -m pip install ./*.tar.gz
+        COMMENT "installing python source distribution package"
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
     add_test(NAME CanTp_UnitTest
         COMMAND ${PYTHON_EXECUTABLE} -m pytest test/unit_test --junitxml=./report/ut.xml
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-    set_tests_properties(CanTp_UnitTest PROPERTIES DEPENDS pip)
+    set_tests_properties(CanTp_UnitTest PROPERTIES DEPENDS sdist_install)
 endif ()

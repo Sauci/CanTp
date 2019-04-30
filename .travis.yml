@@ -19,9 +19,7 @@ before_script:
   - mkdir build
   - cd build
   - cmake .. -DCMAKE_BUILD_TYPE=Debug -Denable_test=ON
-  # create the source distribution for tests and install it (we might use make pip...).
-  - make sdist
-  - python -m pip install ./*.tar.gz
+  - make sdist_install
 
 script:
   - ctest -V
