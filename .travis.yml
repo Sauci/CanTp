@@ -19,7 +19,7 @@ install:
   - PATH=${DEPS_DIR}/cmake-install:${DEPS_DIR}/cmake-install/bin:$PATH
   - cd ${TRAVIS_BUILD_DIR}
   # install python packages.
-  - pip install cffi gcovr pcpp pytest
+  - pip install --upgrade pip && pip install -r requirements.txt
 
 before_script:
   - mkdir build
