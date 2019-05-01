@@ -7,8 +7,6 @@ option(enable_test "enable/add test-related target(s) of CanTp module." ON)
 option(enable_code_coverage "build unit test target(s) with code coverage options." ON)
 option(enable_python_wrapper "generates code to wrap library into python module." ON)
 
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/python)
-
 set(CMAKE_MACOSX_RPATH ON)
 set(CMAKE_INSTALL_RPATH ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
@@ -71,10 +69,10 @@ if (${enable_test})
     add_custom_target(sdist
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/source.c
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/header.h
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/python
-        ${CMAKE_BINARY_DIR}/python
         COMMAND ${PYTHON_EXECUTABLE} setup.py sdist -d ${CMAKE_BINARY_DIR}
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/python
+        COMMAND ${CMAKE_COMMAND} -E remove_directory build
+        COMMAND ${CMAKE_COMMAND} -E remove_directory pycantp.egg-info
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python
         COMMENT "building python source distribution package")
 
     add_custom_target(sdist_install
