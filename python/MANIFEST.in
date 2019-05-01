@@ -1,1 +1,3 @@
-recursive-include pycantp *.c *.h
+include pycantp/input/source.c
+include pycantp/input/header.h
+recursive-include pycantp *.so

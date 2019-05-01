@@ -1,7 +1,7 @@
 import os
 import sys
+from imp import find_module
 
-from glob import glob
 from importlib import import_module
 
 try:
@@ -112,21 +112,14 @@ class CanTpMocked:
 
 
 class CanTp(object):
-    def __init__(self, recompile=True):
-        library_directory = os.getcwd()
+    def __init__(self, recompile=False):
         if recompile is False:
-            library_path = glob(os.path.join(library_directory, __package__, '*.so'))
-            if not library_path:
-                library_path = builder.compile(tmpdir=library_directory)
-            else:
-                library_path = library_path[0]
+            _, module_path, _ = find_module('pycantp')
+            library_path = os.path.join(module_path, 'input', 'pycantp')
         else:
-            library_path = builder.compile(tmpdir=library_directory)
-        sys.path.append(os.path.dirname(library_path))
-        try:
-            self.module = import_module('_cantp', package='pycantp')
-        except (ImportError, SystemError) as e:
-            raise e
+            library_path = os.path.dirname(builder.compile())
+        sys.path.append(library_path)
+        self.module = import_module('_cantp', package='pycantp')
         self.mock = CanTpMocked(self.module)
 
     @property

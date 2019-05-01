@@ -72,12 +72,13 @@ if (${enable_test})
         COMMAND ${PYTHON_EXECUTABLE} setup.py sdist -d ${CMAKE_BINARY_DIR}
         COMMAND ${CMAKE_COMMAND} -E remove_directory build
         COMMAND ${CMAKE_COMMAND} -E remove_directory pycantp.egg-info
+        COMMAND ${CMAKE_COMMAND} -E remove_directory pycantp/input/pycantp
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python
         COMMENT "building python source distribution package")
 
     add_custom_target(sdist_install
         DEPENDS sdist
-        COMMAND ${PYTHON_EXECUTABLE} -m pip install ./*.tar.gz
+        COMMAND ${PYTHON_EXECUTABLE} -m pip install ./*.tar.gz --user
         COMMENT "installing python source distribution package"
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 

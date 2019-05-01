@@ -20,9 +20,6 @@ n_br_timeouts = [pytest.param(t, id='N_Br = {}ms'.format(t)) for t in n_xx_timeo
 n_cr_timeouts = [pytest.param(t, id='N_Cr = {}ms'.format(t)) for t in n_xx_timeouts]
 
 
-# CanTp(recompile=True)
-
-
 @pytest.fixture()
 def handle():
-    return CanTp(recompile=True)
+    return CanTp()
