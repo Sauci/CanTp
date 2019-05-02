@@ -1171,7 +1171,15 @@ static CanTp_FrameStateType CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduIn
       CanTp_StartNetworkLayerTimeout(p_n_sdu, 0x01u);
     }
 
-    p_n_sdu->tx.shared.flag |= 0x01u << 0x0Au;
+    if (p_n_sdu->tx.bs == 0x00u)
+    {
+      p_n_sdu->tx.shared.flag |= (0x01u << 0x0Au) | (0x01u << 0x0Du);
+    }
+    else
+    {
+      p_n_sdu->tx.shared.flag |= 0x01u << 0x0Au;
+    }
+
     result = CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION;
   }
 
@@ -1202,7 +1210,7 @@ static CanTp_FrameStateType CanTp_LDataConTCF(CanTp_NSduType *pNSdu)
   if (p_n_sdu->tx.buf.size > p_n_sdu->tx.buf.done)
   {
     p_n_sdu->tx.bs--;
-    if (p_n_sdu->tx.bs != 0x00u)
+    if ((p_n_sdu->tx.bs != 0x00u) || ((p_n_sdu->tx.shared.flag & (0x01u << 0x0Du)) != 0x00u))
     {
       p_n_sdu->tx.shared.flag |= 0x01u << 0x0Au;
       result = CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION;

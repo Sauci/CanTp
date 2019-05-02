@@ -82,6 +82,8 @@ extern "C"
 
 #define CANTP_FLAG_LAST_CF (0x01u << 0x0Cu)
 
+#define CANTP_FLAG_SKIP_BS (0x01u << 0x0Du)
+
 #define CANTP_MS_TO_INTERNAL(timeout) (timeout * 1000u)
 
 #define CANTP_INTERNAL_TO_MS(timeout) (timeout / 1000u)
@@ -1522,10 +1524,25 @@ static CanTp_FrameStateType CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduIn
             CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BS);
         }
 
-        /* we might initialize the consecutive frame here, but as this function might be called
-         * from interrupt context, we should keep the function as short as possible, that's why
-         * it is handled in CanTp_MainFunction. */
-        p_n_sdu->tx.shared.flag |= CANTP_FLAG_COPY_TX_DATA;
+        /* ISO15765:
+         * 00: The BS parameter value zero (0) shall be used to indicate to the sender that no more
+         * FC frames shall be sent during the transmission of the segmented message. The sending
+         * network layer entity shall send all remaining consecutive frames without any stop for
+         * further FC frames from the receiving network layer entity.
+         * 01-FF: This range of BS parameter values shall be used to indicate to the sender the
+         * maximum number of consecutive frames that can be received without an intermediate FC
+         * frame from the receiving network entity.*/
+        if (p_n_sdu->tx.bs == 0x00u)
+        {
+            p_n_sdu->tx.shared.flag |= (CANTP_FLAG_COPY_TX_DATA | CANTP_FLAG_SKIP_BS);
+        }
+        else
+        {
+            /* we might initialize the consecutive frame here, but as this function might be called
+             * from interrupt context, we should keep the function as short as possible, that's why
+             * it is handled in CanTp_MainFunction. */
+            p_n_sdu->tx.shared.flag |= CANTP_FLAG_COPY_TX_DATA;
+        }
 
         result = CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION;
     }
@@ -1571,7 +1588,7 @@ static CanTp_FrameStateType CanTp_LDataConTCF(CanTp_NSduType *pNSdu)
     {
         p_n_sdu->tx.bs--;
 
-        if (p_n_sdu->tx.bs != 0x00u)
+        if ((p_n_sdu->tx.bs != 0x00u) || ((p_n_sdu->tx.shared.flag & CANTP_FLAG_SKIP_BS) != 0x00u))
         {
             p_n_sdu->tx.shared.flag |= CANTP_FLAG_COPY_TX_DATA;
             result = CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION;

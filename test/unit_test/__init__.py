@@ -1,5 +1,5 @@
 import pytest
-from .helper import *
+from helper import *
 
 try:
     from unittest.mock import ANY

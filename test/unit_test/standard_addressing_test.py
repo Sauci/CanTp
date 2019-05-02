@@ -32,7 +32,8 @@ class TestSWS00350:
 
 
 @pytest.mark.parametrize('data_size', multi_frames_sizes)
-@pytest.mark.parametrize('bs', [pytest.param(1, id='BS = 1'),
+@pytest.mark.parametrize('bs', [pytest.param(0, id='BS = 0'),
+                                pytest.param(1, id='BS = 1'),
                                 pytest.param(10, id='BS = 10'),
                                 pytest.param(15, id='BS = 15')])
 def test_sequence_number(handle, data_size, bs):
@@ -64,7 +65,10 @@ def test_sequence_number(handle, data_size, bs):
     handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
     handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, fc_frame))
     expected_sn = 1
-    num_of_blocks = ceil(((data_size - ff_payload_size) / cf_payload_size) / bs)
+    if bs != 0:
+        num_of_blocks = ceil(((data_size - ff_payload_size) / cf_payload_size) / bs)
+    else:
+        num_of_blocks = 1
     num_of_frames_in_last_block = ceil(
         ((data_size - ff_payload_size) - ((num_of_blocks - 1) * bs * cf_payload_size)) / cf_payload_size)
     for block_index in range(num_of_blocks):

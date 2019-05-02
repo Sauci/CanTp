@@ -65,6 +65,8 @@ class Helper:
 
     @staticmethod
     def create_pdu_info(handle, payload, meta_data=None):
+        if isinstance(payload, str):
+            payload = [ord(c) for c in payload]
         data = handle.ffi.new('uint8 []', list(payload))
         pdu_info = handle.ffi.new('PduInfoType *')
         pdu_info.SduDataPtr = data
