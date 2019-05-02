@@ -11,7 +11,7 @@ CANTP_E_OPER_NOT_SUPPORTED = 0xA0
 
 @given('DET is enabled')
 def step_impl(context):
-    assert context.can_tp.Det_ReportError is not None
+    assert context.can_tp.lib.Det_ReportError is not None
 
 
 @step('the static configuration of the CanTp module is valid')
@@ -37,10 +37,10 @@ def step_impl(context):
 
 @step('the CanTp module is initialized')
 def step_impl(context):
-    context.can_tp.CanTp_Init(context.can_tp_config)
+    context.can_tp.lib.CanTp_Init(context.can_tp_config)
 
 
-@step('versionInfo parameter is a NULL pointer')
+@step('pVersionInfo parameter is a NULL pointer')
 def step_impl(context):
     context.version_info = context.can_tp.ffi.NULL
 
@@ -86,20 +86,15 @@ def step_impl(context):
     context.pdu_info = pdu_info
 
 
-@when('we call CanTp_GetVersion')
-def step_impl(context):
-    context.return_value = context.can_tp.CanTp_GetVersionInfo(context.can_tp.ffi.NULL)
-
-
 @when('we call CanTp_Transmit')
 def step_impl(context):
-    context.return_value = context.can_tp.CanTp_Transmit(context.tx_pdu_id, context.pdu_info)
+    context.return_value = context.can_tp.lib.CanTp_Transmit(context.tx_pdu_id, context.pdu_info)
     print(context.return_value)
 
 
 @when('we call CanTp_CancelReceive')
 def step_impl(context):
-    context.return_value = context.can_tp.CanTp_CancelReceive(context.rx_pdu_id)
+    context.return_value = context.can_tp.lib.CanTp_CancelReceive(context.rx_pdu_id)
 
 
 @then('the Det_ReportError function is called')

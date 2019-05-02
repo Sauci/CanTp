@@ -719,9 +719,9 @@ void CanTp_GetVersionInfo(Std_VersionInfoType *pVersionInfo)
 
     pVersionInfo->vendorID = 0x00u;
     pVersionInfo->moduleID = (uint16)CANTP_MODULE_ID;
-    pVersionInfo->sw_major_version = 0x00u;
-    pVersionInfo->sw_minor_version = 0x01u;
-    pVersionInfo->sw_patch_version = 0x00u;
+    pVersionInfo->sw_major_version = CANTP_SW_MAJOR_VERSION;
+    pVersionInfo->sw_minor_version = CANTP_SW_MINOR_VERSION;
+    pVersionInfo->sw_patch_version = CANTP_SW_PATCH_VERSION;
 }
 
 void CanTp_Shutdown(void)

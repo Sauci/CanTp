@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13.0)
 
-project(CanTp VERSION 0.1.0 LANGUAGES C CXX)
+project(CanTp VERSION 0.1.0 LANGUAGES C)
 
 
 option(enable_test "enable/add test-related target(s) of CanTp module." ON)
@@ -13,6 +13,9 @@ set(CMAKE_INSTALL_RPATH ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 add_library(CanTp STATIC source/CanTp.c source/CanTp_PBcfg.c)
 
 target_compile_definitions(CanTp
+    PRIVATE CANTP_SW_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+    PRIVATE CANTP_SW_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+    PRIVATE CANTP_SW_VERSION_PATCH=${PROJECT_VERSION_PATCH}
     PUBLIC CANTP_API=STD_ON
     PUBLIC CANTP_INIT_API=STD_ON
     PUBLIC CANTP_GET_VERSION_INFO_API=STD_ON
@@ -86,5 +89,10 @@ if (${enable_test})
         COMMAND ${PYTHON_EXECUTABLE} -m pytest test/unit_test --junitxml=./report/ut.xml
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
+    add_test(NAME CanTp_FuncTest
+        COMMAND ${PYTHON_EXECUTABLE} -m behave test/func_test --junit-directory=./report --junit
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
     set_tests_properties(CanTp_UnitTest PROPERTIES DEPENDS sdist_install)
+    set_tests_properties(CanTp_FuncTest PROPERTIES DEPENDS sdist_install)
 endif ()
