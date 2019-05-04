@@ -16,6 +16,8 @@ func_test/*
 python/build
 python/dist
 python/pycantp.egg-info
+python/pycantp/input/header.h
+python/pycantp/input/source.c
 python/pycantp/input/pycantp
 report/*
 test/unit_test/__pycache__
