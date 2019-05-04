@@ -76,8 +76,6 @@ extern "C"
 
 #define CANTP_FLAG_COPY_RX_DATA (0x01u << 0x09u)
 
-#define CANTP_FLAG_COPY_TX_DATA (0x01u << 0x0Au)
-
 #define CANTP_FLAG_FIRST_CF (0x01u << 0x0Bu)
 
 #define CANTP_FLAG_LAST_CF (0x01u << 0x0Cu)
@@ -131,8 +129,11 @@ typedef enum {
     CANTP_FRAME_STATE_INVALID = 0x00u,
     CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION,
     CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION,
+    CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST,
     CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION,
+    CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST,
     CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION,
+    CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST,
     CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION,
     CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION,
     CANTP_FRAME_STATE_OK
@@ -812,21 +813,15 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
             {
                 case CANTP_N_PCI_TYPE_SF:
                 {
-                    if (ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_SF](p_n_sdu) == BUFREQ_OK)
-                    {
-                        p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION;
-                        tmp_return = E_OK;
-                    }
+                    p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST;
+                    tmp_return = E_OK;
 
                     break;
                 }
                 case CANTP_N_PCI_TYPE_FF:
                 {
-                    if (ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_FF](p_n_sdu) == BUFREQ_OK)
-                    {
-                        p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION;
-                        tmp_return = E_OK;
-                    }
+                    p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST;
+                    tmp_return = E_OK;
 
                     break;
                 }
@@ -839,7 +834,6 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
             if (tmp_return == E_OK)
             {
                 p_n_sdu->tx.taskState = CANTP_PROCESSING;
-                p_n_sdu->tx.shared.flag |= CANTP_FLAG_SEND_TX_DATA;
             }
         }
     }
@@ -1195,51 +1189,29 @@ static boolean CanTp_NetworkLayerTimedOut(CanTp_NSduType *pNSdu, const uint8 ins
     return result;
 }
 
-static void CanTp_StartFlowControlTimeout(CanTp_NSduType *pNSdu, const uint8 direction)
+static void CanTp_StartFlowControlTimeout(CanTp_NSduType *pNSdu)
 {
-    if (((direction & CANTP_DIRECTION_RX) != 0x00u) &&
-        ((pNSdu->rx.shared.flag & CANTP_I_ST_MIN) == 0x00u))
-    {
-        pNSdu->rx.shared.flag |= CANTP_I_ST_MIN;
-        pNSdu->rx.st_min = 0x00u;
-    }
-
-    if (((direction & CANTP_DIRECTION_TX) != 0x00u) &&
-        ((pNSdu->tx.shared.flag & CANTP_I_ST_MIN) == 0x00u))
+    if ((pNSdu->tx.shared.flag & CANTP_I_ST_MIN) == 0x00u)
     {
         pNSdu->tx.shared.flag |= CANTP_I_ST_MIN;
         pNSdu->tx.st_min = 0x00u;
     }
 }
 
-static void CanTp_StopFlowControlTimeout(CanTp_NSduType *pNSdu, const uint8 direction)
+static boolean CanTp_FlowControlActive(CanTp_NSduType *pNSdu)
 {
-    if ((direction & CANTP_DIRECTION_RX) != 0x00u)
-    {
-        pNSdu->rx.shared.flag &= ~(CANTP_I_ST_MIN);
-    }
-    if ((direction & CANTP_DIRECTION_TX) != 0x00u)
-    {
-        pNSdu->tx.shared.flag &= ~(CANTP_I_ST_MIN);
-    }
+    return (boolean)((pNSdu->tx.shared.flag & CANTP_I_ST_MIN) != 0x00u);
 }
 
-static boolean CanTp_FlowControlTimedOut(CanTp_NSduType *pNSdu, const uint8 direction)
+static boolean CanTp_FlowControlExpired(CanTp_NSduType *pNSdu)
 {
     boolean result = FALSE;
-    uint32 st_min;
 
-    if ((direction & CANTP_DIRECTION_RX) != 0x00u)
+    if ((pNSdu->tx.st_min >= pNSdu->tx.target_st_min) &&
+        ((pNSdu->tx.shared.flag & CANTP_I_ST_MIN) != 0x00u))
     {
-        CANTP_CRITICAL_SECTION(st_min = pNSdu->rx.shared.m_param.st_min;)
-
-        result = (boolean)((pNSdu->rx.st_min >= st_min) &&
-                           ((pNSdu->rx.shared.flag & CANTP_I_ST_MIN) != 0x00u));
-    }
-    else if ((direction & CANTP_DIRECTION_TX) != 0x00u)
-    {
-        result = (boolean)((pNSdu->tx.st_min >= pNSdu->tx.target_st_min) &&
-                           ((pNSdu->tx.shared.flag & CANTP_I_ST_MIN) != 0x00u));
+        result = TRUE;
+        pNSdu->tx.shared.flag &= ~(CANTP_I_ST_MIN);
     }
 
     return result;
@@ -1531,17 +1503,10 @@ static CanTp_FrameStateType CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduIn
          * frame from the receiving network entity.*/
         if (p_n_sdu->tx.bs == 0x00u)
         {
-            p_n_sdu->tx.shared.flag |= (CANTP_FLAG_COPY_TX_DATA | CANTP_FLAG_SKIP_BS);
-        }
-        else
-        {
-            /* we might initialize the consecutive frame here, but as this function might be called
-             * from interrupt context, we should keep the function as short as possible, that's why
-             * it is handled in CanTp_MainFunction. */
-            p_n_sdu->tx.shared.flag |= CANTP_FLAG_COPY_TX_DATA;
+            p_n_sdu->tx.shared.flag |= CANTP_FLAG_SKIP_BS;
         }
 
-        result = CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION;
+        result = CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST;
     }
 
     return result;
@@ -1579,7 +1544,7 @@ static CanTp_FrameStateType CanTp_LDataConTCF(CanTp_NSduType *pNSdu)
 
     /* ISO15765: the measurement of the STmin starts after completion of transmission of a
      * ConsecutiveFrame (CF) and ends at the request for the transmission of the next CF. */
-    CanTp_StartFlowControlTimeout(p_n_sdu, CANTP_DIRECTION_TX);
+    CanTp_StartFlowControlTimeout(p_n_sdu);
 
     if (p_n_sdu->tx.buf.size > p_n_sdu->tx.buf.done)
     {
@@ -1587,8 +1552,7 @@ static CanTp_FrameStateType CanTp_LDataConTCF(CanTp_NSduType *pNSdu)
 
         if ((p_n_sdu->tx.bs != 0x00u) || ((p_n_sdu->tx.shared.flag & CANTP_FLAG_SKIP_BS) != 0x00u))
         {
-            p_n_sdu->tx.shared.flag |= CANTP_FLAG_COPY_TX_DATA;
-            result = CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION;
+            result = CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST;
         }
         else
         {
@@ -2138,50 +2102,53 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
     {
         switch (p_n_sdu->tx.state)
         {
-            case CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION:
-            case CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION:
+            case CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST:
             {
-                if ((p_n_sdu->tx.shared.flag & CANTP_FLAG_SEND_TX_DATA) != 0x00u)
+                if (ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_SF](p_n_sdu) == BUFREQ_OK)
                 {
-                    p_n_sdu->tx.shared.flag &= ~(CANTP_FLAG_SEND_TX_DATA);
-
                     CanTp_TransmitTxCANData(p_n_sdu);
+
+                    p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION;
                 }
 
                 break;
             }
-            case CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION:
+            case CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST:
             {
+                if (ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_FF](p_n_sdu) == BUFREQ_OK)
+                {
+                    CanTp_TransmitTxCANData(p_n_sdu);
+
+                    p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION;
+                }
+
+                break;
+            }
+            case CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST:
+            {
+                if ((CanTp_FlowControlExpired(p_n_sdu) == TRUE) ||
+                    (CanTp_FlowControlActive(p_n_sdu) == FALSE))
+                {
+                    if (ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_CF](p_n_sdu) == BUFREQ_OK)
+                    {
+                        CanTp_TransmitTxCANData(p_n_sdu);
+
+                        p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION;
+                    }
+                }
+
                 break;
             }
             case CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION:
             {
-                /* check if data have been copied. */
-                if ((p_n_sdu->tx.shared.flag & CANTP_FLAG_COPY_TX_DATA) != 0x00u)
+                /* TODO: handle this somewhere else... */
+                if (p_n_sdu->tx.buf.done < p_n_sdu->tx.buf.size)
                 {
-                    if (ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_CF](p_n_sdu) == BUFREQ_OK)
-                    {
-                        /* data successfully copied. clear the copy flag and clear N_As timeout. */
-                        p_n_sdu->tx.shared.flag &= ~(CANTP_FLAG_COPY_TX_DATA);
-
-                        /* check if it is the last consecutive frame, and set the flag accordingly. */
-                        if (p_n_sdu->tx.buf.done < p_n_sdu->tx.buf.size)
-                        {
-                            p_n_sdu->tx.shared.flag &= ~(CANTP_FLAG_LAST_CF);
-                        }
-                        else
-                        {
-                            p_n_sdu->tx.shared.flag |= (CANTP_FLAG_LAST_CF);
-                        }
-                    }
+                    p_n_sdu->tx.shared.flag &= ~(CANTP_FLAG_LAST_CF);
                 }
-
-                if (((p_n_sdu->tx.shared.flag & CANTP_FLAG_COPY_TX_DATA) == 0x00u)
-                    && ((CanTp_FlowControlTimedOut(p_n_sdu, CANTP_DIRECTION_TX) == TRUE) ||
-                        ((p_n_sdu->tx.shared.flag & CANTP_I_ST_MIN) == 0x00u)))
+                else
                 {
-                    CanTp_StopFlowControlTimeout(p_n_sdu, CANTP_DIRECTION_TX);
-                    CanTp_TransmitTxCANData(p_n_sdu);
+                    p_n_sdu->tx.shared.flag |= (CANTP_FLAG_LAST_CF);
                 }
 
                 break;
@@ -2197,6 +2164,10 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
 
                 break;
             }
+            case CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION:
+            case CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION:
+            case CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION:
+            // case CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION:
             default:
             {
                 break;
