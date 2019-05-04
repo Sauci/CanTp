@@ -48,67 +48,11 @@ CANTP_E_RX_COM = 0xC0
 CANTP_E_TX_COM = 0xD0
 
 
-def mock_callback(func):
-    def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
 class PduInfoType:
     def __init__(self, handle, pdu_info):
         self.sdu_length = pdu_info.SduLength
         self.sdu_data = list(handle.ffi.cast('uint8[{}]'.format(pdu_info.SduLength), pdu_info.SduDataPtr))
         self.meta_data = pdu_info.MetaDataPtr
-
-
-class CanTpMocked:
-    def __init__(self, handle):
-        self.handle = handle
-        self.can_if_transmit_args = list()
-        self.pdu_r_can_tp_copy_rx_data_args = list()
-        self.pdu_r_can_tp_start_of_reception_args = list()
-        self.can_if_transmit = MagicMock(return_value=E_OK)
-        self.det_report_error = MagicMock(return_value=E_OK)
-        self.det_report_runtime_error = MagicMock(return_value=E_OK)
-        self.pdu_r_can_tp_copy_rx_data = MagicMock(return_value=handle.lib.BUFREQ_OK)
-        self.pdu_r_can_tp_copy_tx_data = MagicMock(return_value=handle.lib.BUFREQ_OK)
-        self.pdu_r_can_tp_rx_indication = MagicMock(return_value=None)
-        self.pdu_r_can_tp_start_of_reception = MagicMock(return_value=handle.lib.BUFREQ_OK)
-        self.pdu_r_can_tp_tx_confirmation = MagicMock(return_value=None)
-        handle.ffi.def_extern('CanIf_Transmit')(self._can_if_transmit)
-        handle.ffi.def_extern('Det_ReportError')(self.det_report_error)
-        handle.ffi.def_extern('Det_ReportRuntimeError')(self.det_report_runtime_error)
-        handle.ffi.def_extern('PduR_CanTpCopyRxData')(self._pdu_r_can_tp_copy_rx_data)
-        handle.ffi.def_extern('PduR_CanTpCopyTxData')(self._pdu_r_can_tp_copy_tx_data)
-        handle.ffi.def_extern('PduR_CanTpRxIndication')(self.pdu_r_can_tp_rx_indication)
-        handle.ffi.def_extern('PduR_CanTpStartOfReception')(self._pdu_r_can_tp_start_of_reception)
-        handle.ffi.def_extern('PduR_CanTpTxConfirmation')(self.pdu_r_can_tp_tx_confirmation)
-
-    @mock_callback
-    def _can_if_transmit(self, tx_pdu_id, pdu_info):
-        self.can_if_transmit_args.append((tx_pdu_id, PduInfoType(self.handle, pdu_info)))
-        return self.can_if_transmit(tx_pdu_id, pdu_info)
-
-    @mock_callback
-    def _pdu_r_can_tp_copy_rx_data(self, rx_pdu_id, pdu_info, available_data):
-        self.pdu_r_can_tp_copy_rx_data_args.append((rx_pdu_id,
-                                                    PduInfoType(self.handle, pdu_info),
-                                                    available_data))
-        return self.pdu_r_can_tp_copy_rx_data(rx_pdu_id, pdu_info, available_data)
-
-    @mock_callback
-    def _pdu_r_can_tp_copy_tx_data(self, tx_pdu_id, pdu_info, retry_info, available_data):
-        available_data = available_data[0]
-        return self.pdu_r_can_tp_copy_tx_data(tx_pdu_id, pdu_info, retry_info, available_data)
-
-    @mock_callback
-    def _pdu_r_can_tp_start_of_reception(self, rx_pdu_id, pdu_info, tp_sdu_length, buffer_size):
-        self.pdu_r_can_tp_start_of_reception_args.append((rx_pdu_id,
-                                                          PduInfoType(self.handle, pdu_info),
-                                                          tp_sdu_length,
-                                                          buffer_size))
-        return self.pdu_r_can_tp_start_of_reception(rx_pdu_id, pdu_info, tp_sdu_length, buffer_size)
 
 
 class CanTp(object):
@@ -120,7 +64,55 @@ class CanTp(object):
             library_path = os.path.dirname(builder.compile())
         sys.path.append(library_path)
         self.module = import_module('_cantp', package='pycantp')
-        self.mock = CanTpMocked(self.module)
+        self.can_tp_transmit_args = dict()
+        self.can_if_transmit = MagicMock(return_value=E_OK)
+        self.det_report_error = MagicMock(return_value=E_OK)
+        self.det_report_runtime_error = MagicMock(return_value=E_OK)
+        self.pdu_r_can_tp_copy_rx_data = MagicMock(return_value=self.lib.BUFREQ_OK)
+        self.pdu_r_can_tp_copy_tx_data = MagicMock(side_effect=self._copy_tx_data,
+                                                   return_value=self.lib.BUFREQ_OK)
+        self.pdu_r_can_tp_rx_indication = MagicMock(return_value=None)
+        self.pdu_r_can_tp_start_of_reception = MagicMock(return_value=self.lib.BUFREQ_OK)
+        self.pdu_r_can_tp_tx_confirmation = MagicMock(return_value=None)
+        self.ffi.def_extern('CanIf_Transmit')(self._can_if_transmit)
+        self.ffi.def_extern('Det_ReportError')(self.det_report_error)
+        self.ffi.def_extern('Det_ReportRuntimeError')(self.det_report_runtime_error)
+        self.ffi.def_extern('PduR_CanTpCopyRxData')(self.pdu_r_can_tp_copy_rx_data)
+        self.ffi.def_extern('PduR_CanTpCopyTxData')(self.pdu_r_can_tp_copy_tx_data)
+        self.ffi.def_extern('PduR_CanTpRxIndication')(self.pdu_r_can_tp_rx_indication)
+        self.ffi.def_extern('PduR_CanTpStartOfReception')(self.pdu_r_can_tp_start_of_reception)
+        self.ffi.def_extern('PduR_CanTpTxConfirmation')(self.pdu_r_can_tp_tx_confirmation)
+
+    def _can_if_transmit(self, tx_pdu_id, pdu_info):
+        result = self.can_if_transmit(tx_pdu_id, pdu_info)
+        type_name = self.ffi.typeof(self.can_if_transmit.call_args_list[-1][0][1].SduDataPtr).cname
+        p_value = [pdu_info.SduDataPtr[i] for i in range(pdu_info.SduLength)]
+        c_value = self.ffi.new('uint8[]', p_value)
+        self.can_if_transmit.call_args_list[-1][0][1].SduDataPtr = self.ffi.cast(type_name, c_value)
+        print(p_value)
+        return result
+
+    def _copy_tx_data(self, tx_pdu_id, pdu_info, retry_info, available_data):
+        try:
+            args = self.can_tp_transmit_args[tx_pdu_id][-1]
+        except KeyError:
+            pass
+        else:
+            if args['pdu_info'] is not None and pdu_info.SduDataPtr != self.ffi.NULL:
+                for idx in range(pdu_info.SduLength):
+                    try:
+                        pdu_info.SduDataPtr[idx] = args['pdu_info'].sdu_data.pop(0)
+                    except IndexError:
+                        pass
+        return self.pdu_r_can_tp_copy_tx_data.return_value
+
+    def can_tp_transmit(self, tx_pdu_id, pdu_info):
+        if pdu_info != self.ffi.NULL:
+            pdu_info_python = PduInfoType(self, pdu_info)
+        else:
+            pdu_info_python = None
+        self.can_tp_transmit_args[tx_pdu_id] = dict(tx_pdu_id=tx_pdu_id, pdu_info=pdu_info_python)
+        return self.lib.CanTp_Transmit(tx_pdu_id, pdu_info)
 
     @property
     def ffi(self):

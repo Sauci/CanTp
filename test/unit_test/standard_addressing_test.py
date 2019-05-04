@@ -18,7 +18,7 @@ class TestSWS00350:
         can_frame = Helper.create_rx_sf_can_frame(payload=[Helper.dummy_byte] * data_size)
         pdu_info = Helper.create_pdu_info(handle, can_frame)
         handle.lib.CanTp_RxIndication(pdu_id, pdu_info)
-        handle.mock.pdu_r_can_tp_start_of_reception.assert_called_once_with(ANY, ANY, 8, ANY)
+        handle.pdu_r_can_tp_start_of_reception.assert_called_once_with(ANY, ANY, 8, ANY)
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     def test_first_frame(self, handle, data_size):
@@ -28,7 +28,7 @@ class TestSWS00350:
         can_frame = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * data_size)
         handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, can_frame))
         handle.lib.CanTp_MainFunction()
-        handle.mock.pdu_r_can_tp_start_of_reception.assert_called_once_with(ANY, ANY, data_size, ANY)
+        handle.pdu_r_can_tp_start_of_reception.assert_called_once_with(ANY, ANY, data_size, ANY)
 
 
 @pytest.mark.parametrize('data_size', multi_frames_sizes)
@@ -75,8 +75,7 @@ def test_sequence_number(handle, data_size, bs):
         for frame_index in range(bs if block_index < (num_of_blocks - 1) else num_of_frames_in_last_block):
             handle.lib.CanTp_MainFunction()
             handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-            print(handle.mock.can_if_transmit_args[-1][1].sdu_data)
-            assert handle.mock.can_if_transmit_args[-1][1].sdu_data[0] & 0x0F == expected_sn
+            assert handle.can_if_transmit.call_args_list[-1][0][1].SduDataPtr[0] & 0x0F == expected_sn
             if expected_sn < 15:
                 expected_sn += 1
             else:
