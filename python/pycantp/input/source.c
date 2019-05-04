@@ -284,7 +284,6 @@ typedef struct
   boolean has_meta_data;
   uint8_least dir;
   uint32 t_flag;
-  PduIdType id;
 } CanTp_NSduType;
 typedef struct 
 {
@@ -375,7 +374,6 @@ void CanTp_Init(const CanTp_ConfigType *pConfig)
                   p_rt_sdu->dir |= 0x01u;
                   p_rt_sdu->rx.cfg = p_cfg_rx_sdu;
                   p_rt_sdu->rx.shared.taskState = CANTP_WAIT;
-                  p_rt_sdu->id = p_cfg_rx_sdu->nSduId;
                   p_rt_sdu->rx.shared.m_param.st_min = p_cfg_rx_sdu->sTMin;
                   p_rt_sdu->rx.shared.m_param.bs = p_cfg_rx_sdu->bs;
                 }
@@ -404,7 +402,6 @@ void CanTp_Init(const CanTp_ConfigType *pConfig)
                   p_rt_sdu->dir |= 0x02u;
                   p_rt_sdu->tx.cfg = p_cfg_tx_sdu;
                   p_rt_sdu->tx.taskState = CANTP_WAIT;
-                  p_rt_sdu->id = p_cfg_tx_sdu->nSduId;
                 }
 
               }
@@ -1079,7 +1076,7 @@ static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduIn
   {
     p_n_sdu->rx.buf.size = dl;
     PduLengthType pdu_length;
-    PduR_CanTpStartOfReception(p_n_sdu->id, &p_n_sdu->rx.pdu_info, p_n_sdu->rx.buf.size, &pdu_length);
+    PduR_CanTpStartOfReception(p_n_sdu->rx.cfg->nSduId, &p_n_sdu->rx.pdu_info, p_n_sdu->rx.buf.size, &pdu_length);
     result = CANTP_FRAME_STATE_OK;
   }
 
@@ -1263,7 +1260,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
         {
           if ((p_n_sdu->rx.shared.taskState == CANTP_PROCESSING) && (p_n_sdu->dir == (0x01u | 0x02u)))
           {
-            PduR_CanTpRxIndication(p_n_sdu->id, 0x01u);
+            PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, 0x01u);
             if (p_n_sdu->pci == CANTP_N_PCI_TYPE_SF)
             {
               instance_id = 0x85u;
@@ -1418,12 +1415,23 @@ static Std_ReturnType CanTp_GetNSduFromPduId(PduIdType pduId, CanTp_NSduType **p
     if (pduId < ((sizeof(p_channel_rt->sdu)) / (sizeof(p_channel_rt->sdu[0x00u]))))
     {
       p_n_sdu = &p_channel_rt->sdu[pduId];
-      if ((p_n_sdu != ((void *) 0x00u)) && (p_n_sdu->id == pduId))
+      if ((p_n_sdu->rx.cfg != ((void *) 0x00u)) && (p_n_sdu->rx.cfg->nSduId == pduId))
       {
         *pNSdu = p_n_sdu;
         tmp_return = 0x00u;
         break;
       }
+      else
+        if ((p_n_sdu->tx.cfg != ((void *) 0x00u)) && (p_n_sdu->tx.cfg->nSduId == pduId))
+      {
+        *pNSdu = p_n_sdu;
+        tmp_return = 0x00u;
+        break;
+      }
+      else
+      {
+      }
+
 
     }
 
@@ -1597,7 +1605,7 @@ static void CanTp_AbortTxSession(CanTp_NSduType *pNSdu, const uint8 instanceId, 
 static void CanTp_TransmitRxCANData(CanTp_NSduType *pNSdu)
 {
   CanTp_StartNetworkLayerTimeout(pNSdu, 0x03u);
-  if (CanIf_Transmit(1, &pNSdu->rx.pdu_info) != 0x00u)
+  if (CanIf_Transmit(pNSdu->rx.cfg->rxNSduRef, &pNSdu->rx.pdu_info) != 0x00u)
   {
     CanTp_AbortRxSession(pNSdu, 0xFFu, 0x00u);
   }
@@ -1607,7 +1615,7 @@ static void CanTp_TransmitRxCANData(CanTp_NSduType *pNSdu)
 static void CanTp_TransmitTxCANData(CanTp_NSduType *pNSdu)
 {
   CanTp_StartNetworkLayerTimeout(pNSdu, 0x00u);
-  if (CanIf_Transmit(1, &pNSdu->tx.pdu_info) != 0x00u)
+  if (CanIf_Transmit(pNSdu->tx.cfg->txNSduRef, &pNSdu->tx.pdu_info) != 0x00u)
   {
     CanTp_AbortTxSession(pNSdu, 0xFFu, 0x00u);
   }
@@ -1648,7 +1656,7 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
         {
           pNSdu->rx.pdu_info.SduLength = 0x00u;
           pNSdu->rx.pdu_info.SduDataPtr = (void *) 0x00u;
-          PduR_CanTpCopyRxData(pNSdu->id, &pNSdu->rx.pdu_info, &pNSdu->rx.buf.rmng);
+          PduR_CanTpCopyRxData(pNSdu->rx.cfg->nSduId, &pNSdu->rx.pdu_info, &pNSdu->rx.buf.rmng);
         }
 
         break;
@@ -1777,11 +1785,11 @@ static BufReq_ReturnType CanTp_FillRxPayload(CanTp_NSduType *pNSdu)
   if ((pNSdu->rx.shared.flag & (0x01u << 0x0Bu)) != 0x00u)
   {
     pNSdu->rx.shared.flag &= ~(0x01u << 0x0Bu);
-    result = PduR_CanTpStartOfReception(pNSdu->id, &pNSdu->rx.pdu_info, pNSdu->rx.buf.size, &pNSdu->rx.buf.rmng);
+    result = PduR_CanTpStartOfReception(pNSdu->rx.cfg->nSduId, &pNSdu->rx.pdu_info, pNSdu->rx.buf.size, &pNSdu->rx.buf.rmng);
   }
   else
   {
-    result = PduR_CanTpCopyRxData(0x01u, &pNSdu->rx.pdu_info, &pNSdu->rx.buf.rmng);
+    result = PduR_CanTpCopyRxData(pNSdu->rx.cfg->nSduId, &pNSdu->rx.pdu_info, &pNSdu->rx.buf.rmng);
   }
 
   return result;
@@ -1804,7 +1812,7 @@ static BufReq_ReturnType CanTp_FillTxPayload(CanTp_NSduType *pNSdu, PduLengthTyp
   }
 
   CanTp_StartNetworkLayerTimeout(p_n_sdu, 0x02u);
-  result = PduR_CanTpCopyTxData(0x01u, &tmp_pdu, (void *) 0x00u, &pNSdu->tx.buf.rmng);
+  result = PduR_CanTpCopyTxData(pNSdu->tx.cfg->nSduId, &tmp_pdu, (void *) 0x00u, &pNSdu->tx.buf.rmng);
   switch (result)
   {
     case BUFREQ_OK:

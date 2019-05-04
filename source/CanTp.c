@@ -210,7 +210,6 @@ typedef struct
     boolean has_meta_data;
     uint8_least dir;
     uint32 t_flag;
-    PduIdType id;
 } CanTp_NSduType;
 
 typedef struct
@@ -644,7 +643,6 @@ void CanTp_Init(const CanTp_ConfigType *pConfig)
                                     p_rt_sdu->dir |= CANTP_DIRECTION_RX;
                                     p_rt_sdu->rx.cfg = p_cfg_rx_sdu;
                                     p_rt_sdu->rx.shared.taskState = CANTP_WAIT;
-                                    p_rt_sdu->id = p_cfg_rx_sdu->nSduId;
                                     p_rt_sdu->rx.shared.m_param.st_min = p_cfg_rx_sdu->sTMin;
                                     p_rt_sdu->rx.shared.m_param.bs = p_cfg_rx_sdu->bs;
                                 }
@@ -675,7 +673,6 @@ void CanTp_Init(const CanTp_ConfigType *pConfig)
                                     p_rt_sdu->dir |= CANTP_DIRECTION_TX;
                                     p_rt_sdu->tx.cfg = p_cfg_tx_sdu;
                                     p_rt_sdu->tx.taskState = CANTP_WAIT;
-                                    p_rt_sdu->id = p_cfg_tx_sdu->nSduId;
                                 }
                             }
                             else
@@ -1413,7 +1410,7 @@ static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduIn
         PduLengthType pdu_length;
 
         /* TODO: call from CanTp_MainFunction. */
-        PduR_CanTpStartOfReception(p_n_sdu->id,
+        PduR_CanTpStartOfReception(p_n_sdu->rx.cfg->nSduId,
                                    &p_n_sdu->rx.pdu_info,
                                    p_n_sdu->rx.buf.size,
                                    &pdu_length);
@@ -1652,7 +1649,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
                         /* SWS_CanTp_00057: Terminate the current reception, report an indication,
                          * with parameter Result set to E_NOT_OK, to the upper layer, and process
                          * the SF/FF N-PDU as the start of a new reception */
-                        PduR_CanTpRxIndication(p_n_sdu->id, E_NOT_OK);
+                        PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
                         if (p_n_sdu->pci == CANTP_N_PCI_TYPE_SF)
                         {
@@ -1804,12 +1801,23 @@ static Std_ReturnType CanTp_GetNSduFromPduId(PduIdType pduId, CanTp_NSduType **p
         {
             p_n_sdu = &p_channel_rt->sdu[pduId];
 
-            if ((p_n_sdu != NULL_PTR) && (p_n_sdu->id == pduId))
+            if ((p_n_sdu->rx.cfg != NULL_PTR) && (p_n_sdu->rx.cfg->nSduId == pduId))
             {
                 *pNSdu = p_n_sdu;
                 tmp_return = E_OK;
 
                 break;
+            }
+            else if ((p_n_sdu->tx.cfg != NULL_PTR) && (p_n_sdu->tx.cfg->nSduId == pduId))
+            {
+                *pNSdu = p_n_sdu;
+                tmp_return = E_OK;
+
+                break;
+            }
+            else
+            {
+                /* MISRA C, do nothing. */
             }
         }
     }
@@ -2013,7 +2021,7 @@ static void CanTp_TransmitRxCANData(CanTp_NSduType *pNSdu)
 {
     CanTp_StartNetworkLayerTimeout(pNSdu, CANTP_I_N_AR);
 
-    if (CanIf_Transmit(1, &pNSdu->rx.pdu_info) != E_OK)
+    if (CanIf_Transmit(pNSdu->rx.cfg->rxNSduRef, &pNSdu->rx.pdu_info) != E_OK)
     {
         CanTp_AbortRxSession(pNSdu, CANTP_I_NONE, FALSE);
     }
@@ -2023,7 +2031,7 @@ static void CanTp_TransmitTxCANData(CanTp_NSduType *pNSdu)
 {
     CanTp_StartNetworkLayerTimeout(pNSdu, CANTP_I_N_AS);
 
-    if (CanIf_Transmit(1, &pNSdu->tx.pdu_info) != E_OK)
+    if (CanIf_Transmit(pNSdu->tx.cfg->txNSduRef, &pNSdu->tx.pdu_info) != E_OK)
     {
         CanTp_AbortTxSession(pNSdu, CANTP_I_NONE, FALSE);
     }
@@ -2072,7 +2080,9 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
                      * as data buffer during each processing of the MainFunction. */
                     pNSdu->rx.pdu_info.SduLength = 0x00u;
                     pNSdu->rx.pdu_info.SduDataPtr = NULL_PTR;
-                    PduR_CanTpCopyRxData(pNSdu->id, &pNSdu->rx.pdu_info, &pNSdu->rx.buf.rmng);
+                    PduR_CanTpCopyRxData(pNSdu->rx.cfg->nSduId,
+                                         &pNSdu->rx.pdu_info,
+                                         &pNSdu->rx.buf.rmng);
                 }
 
                 break;
