@@ -2245,16 +2245,16 @@ static BufReq_ReturnType CanTp_FillRxPayload(CanTp_NSduType *pNSdu)
     {
         pNSdu->rx.shared.flag &= ~(CANTP_FLAG_FIRST_CF);
 
-        /* TODO: use correct PDU ID. */
-        result = PduR_CanTpStartOfReception(pNSdu->id,
+        result = PduR_CanTpStartOfReception(pNSdu->rx.cfg->nSduId,
                                             &pNSdu->rx.pdu_info,
                                             pNSdu->rx.buf.size,
                                             &pNSdu->rx.buf.rmng);
     }
     else
     {
-        /* TODO: use correct PDU ID. */
-        result = PduR_CanTpCopyRxData(0x01u, &pNSdu->rx.pdu_info, &pNSdu->rx.buf.rmng);
+        result = PduR_CanTpCopyRxData(pNSdu->rx.cfg->nSduId,
+                                      &pNSdu->rx.pdu_info,
+                                      &pNSdu->rx.buf.rmng);
     }
 
     return result;
@@ -2279,12 +2279,11 @@ static BufReq_ReturnType CanTp_FillTxPayload(CanTp_NSduType *pNSdu, PduLengthTyp
 
     CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_CS);
 
-    /* TODO: use correct PDU ID. */
     /* SWS_CanTp_00272: the API PduR_CanTpCopyTxData() contains a parameter used for the recovery
      * mechanism – ‘retry’. Because ISO 15765-2 does not support such a mechanism, the CAN Transport
      * Layer does not implement any kind of recovery. Thus, the parameter is always set to NULL
      * pointer. */
-    result = PduR_CanTpCopyTxData(0x01u, &tmp_pdu, NULL_PTR, &pNSdu->tx.buf.rmng);
+    result = PduR_CanTpCopyTxData(pNSdu->tx.cfg->nSduId, &tmp_pdu, NULL_PTR, &pNSdu->tx.buf.rmng);
 
     switch (result)
     {
