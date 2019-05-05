@@ -1,5 +1,5 @@
 from math import ceil
-from unit_test import *
+from .parameter import *
 
 
 class TestSWS00031:

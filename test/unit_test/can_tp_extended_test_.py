@@ -1,4 +1,5 @@
 import pytest
+
 from math import ceil
 from pycantp import *
 
@@ -244,7 +245,7 @@ class TestSWS00229:
             handle.lib.CanTp_MainFunction()
         handle.mock.det_report_error.assert_not_called()
         handle.lib.CanTp_MainFunction()
-        handle.mock.det_report_error.assert_called_once_with(ANY, CANTP_INSTANCE_ID_N_AS, ANY, CANTP_E_TX_COM)
+        handle.mock.det_report_error.assert_called_once_with(ANY, CANTP_I_N_AS, ANY, CANTP_E_TX_COM)
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     @pytest.mark.parametrize('n_as', n_as_timeouts)
@@ -263,7 +264,7 @@ class TestSWS00229:
             handle.lib.CanTp_MainFunction()
         handle.mock.det_report_error.assert_not_called()
         handle.lib.CanTp_MainFunction()
-        handle.mock.det_report_error.assert_called_once_with(ANY, CANTP_INSTANCE_ID_N_BS, ANY, CANTP_E_TX_COM)
+        handle.mock.det_report_error.assert_called_once_with(ANY, CANTP_I_N_BS, ANY, CANTP_E_TX_COM)
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     @pytest.mark.parametrize('n_as', n_as_timeouts)
@@ -287,7 +288,7 @@ class TestSWS00229:
             handle.lib.CanTp_MainFunction()
         handle.mock.det_report_error.assert_not_called()
         handle.lib.CanTp_MainFunction()
-        handle.mock.det_report_error.assert_called_once_with(ANY, CANTP_INSTANCE_ID_N_CS, ANY, CANTP_E_TX_COM)
+        handle.mock.det_report_error.assert_called_once_with(ANY, CANTP_I_N_CS, ANY, CANTP_E_TX_COM)
 
     def test_ar_timeout(self):
         pytest.xfail('not implemented')

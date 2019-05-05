@@ -1,13 +1,9 @@
 import os
 import sys
+
 from imp import find_module
-
 from importlib import import_module
-
-try:
-    from unittest.mock import MagicMock
-except ImportError:
-    from mock import MagicMock
+from unittest.mock import MagicMock
 
 from .ffi_builder import ffi_builder as builder
 
@@ -64,13 +60,13 @@ class CanTp(object):
             library_path = os.path.dirname(builder.compile())
         sys.path.append(library_path)
         self.module = import_module('_cantp', package='pycantp')
+        self.can_if_tx_data = list()
         self.can_tp_transmit_args = dict()
         self.can_if_transmit = MagicMock(return_value=E_OK)
         self.det_report_error = MagicMock(return_value=E_OK)
         self.det_report_runtime_error = MagicMock(return_value=E_OK)
         self.pdu_r_can_tp_copy_rx_data = MagicMock(return_value=self.lib.BUFREQ_OK)
-        self.pdu_r_can_tp_copy_tx_data = MagicMock(side_effect=self._copy_tx_data,
-                                                   return_value=self.lib.BUFREQ_OK)
+        self.pdu_r_can_tp_copy_tx_data = MagicMock(side_effect=self._copy_tx_data, return_value=self.lib.BUFREQ_OK)
         self.pdu_r_can_tp_rx_indication = MagicMock(return_value=None)
         self.pdu_r_can_tp_start_of_reception = MagicMock(return_value=self.lib.BUFREQ_OK)
         self.pdu_r_can_tp_tx_confirmation = MagicMock(return_value=None)
@@ -83,36 +79,44 @@ class CanTp(object):
         self.ffi.def_extern('PduR_CanTpStartOfReception')(self.pdu_r_can_tp_start_of_reception)
         self.ffi.def_extern('PduR_CanTpTxConfirmation')(self.pdu_r_can_tp_tx_confirmation)
 
-    def _can_if_transmit(self, tx_pdu_id, pdu_info):
-        result = self.can_if_transmit(tx_pdu_id, pdu_info)
-        type_name = self.ffi.typeof(self.can_if_transmit.call_args_list[-1][0][1].SduDataPtr).cname
-        p_value = [pdu_info.SduDataPtr[i] for i in range(pdu_info.SduLength)]
-        c_value = self.ffi.new('uint8[]', p_value)
-        self.can_if_transmit.call_args_list[-1][0][1].SduDataPtr = self.ffi.cast(type_name, c_value)
-        print(p_value)
-        return result
-
-    def _copy_tx_data(self, tx_pdu_id, pdu_info, retry_info, available_data):
-        try:
-            args = self.can_tp_transmit_args[tx_pdu_id][-1]
-        except KeyError:
-            pass
-        else:
-            if args['pdu_info'] is not None and pdu_info.SduDataPtr != self.ffi.NULL:
+    def _copy_tx_data(self, tx_pdu_id, pdu_info, _retry_info, _available_data):
+        if tx_pdu_id in self.can_tp_transmit_args.keys():
+            args = self.can_tp_transmit_args[tx_pdu_id]
+            if args is not None and pdu_info.SduDataPtr != self.ffi.NULL:
                 for idx in range(pdu_info.SduLength):
                     try:
-                        pdu_info.SduDataPtr[idx] = args['pdu_info'].sdu_data.pop(0)
+                        pdu_info.SduDataPtr[idx] = args.sdu_data.pop(0)
                     except IndexError:
                         pass
         return self.pdu_r_can_tp_copy_tx_data.return_value
+
+    def _can_if_transmit(self, tx_pdu_id, pdu_info):
+        result = self.can_if_transmit(tx_pdu_id, pdu_info)
+        if pdu_info != self.ffi.NULL and pdu_info.SduDataPtr != self.ffi.NULL:
+            self.can_if_tx_data.append(list(self.ffi.cast('uint8[{}]'.format(pdu_info.SduLength), pdu_info.SduDataPtr)))
+        else:
+            self.can_if_tx_data.append(list())
+        return result
+
+    def can_tp_init(self, config):
+        return self.lib.CanTp_Init(config)
+
+    def can_tp_main_function(self):
+        return self.lib.CanTp_MainFunction()
+
+    def can_tp_rx_indication(self, rx_pdu_id, pdu_info):
+        return self.lib.CanTp_RxIndication(rx_pdu_id, pdu_info)
 
     def can_tp_transmit(self, tx_pdu_id, pdu_info):
         if pdu_info != self.ffi.NULL:
             pdu_info_python = PduInfoType(self, pdu_info)
         else:
             pdu_info_python = None
-        self.can_tp_transmit_args[tx_pdu_id] = dict(tx_pdu_id=tx_pdu_id, pdu_info=pdu_info_python)
+        self.can_tp_transmit_args[tx_pdu_id] = pdu_info_python
         return self.lib.CanTp_Transmit(tx_pdu_id, pdu_info)
+
+    def can_tp_tx_confirmation(self, tx_pdu_id, result):
+        return self.lib.CanTp_TxConfirmation(tx_pdu_id, result)
 
     @property
     def ffi(self):
