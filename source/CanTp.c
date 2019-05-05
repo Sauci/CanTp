@@ -1474,42 +1474,36 @@ static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduIn
 
 static CanTp_FrameStateType CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo)
 {
-    CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
 
-    if (p_n_sdu->tx.state == CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION)
+    CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BS);
+
+    p_n_sdu->fs = (CanTp_FlowStatusType)pPduInfo->SduDataPtr[0x00u] & 0x0Fu;
+    p_n_sdu->tx.bs = pPduInfo->SduDataPtr[0x01u];
+    p_n_sdu->tx.target_st_min = CanTp_DecodeSTMinValue(pPduInfo->SduDataPtr[0x02u]);
+
+    /* SWS_CanTp_00315: the CanTp module shall start a timeout observation for N_Bs time at
+     * confirmation of the FF transmission, last CF of a block transmission and at each
+     * indication of FC with FS=WT (i.e. time until reception of the next FC). */
+    if (p_n_sdu->fs == CANTP_FLOW_STATUS_TYPE_WT)
     {
-        CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BS);
-
-        p_n_sdu->fs = (CanTp_FlowStatusType)pPduInfo->SduDataPtr[0x00u] & 0x0Fu;
-        p_n_sdu->tx.bs = pPduInfo->SduDataPtr[0x01u];
-        p_n_sdu->tx.target_st_min = CanTp_DecodeSTMinValue(pPduInfo->SduDataPtr[0x02u]);
-
-        /* SWS_CanTp_00315: the CanTp module shall start a timeout observation for N_Bs time at
-         * confirmation of the FF transmission, last CF of a block transmission and at each
-         * indication of FC with FS=WT (i.e. time until reception of the next FC). */
-        if (p_n_sdu->fs == CANTP_FLOW_STATUS_TYPE_WT)
-        {
-            CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BS);
-        }
-
-        /* ISO15765:
-         * 00: The BS parameter value zero (0) shall be used to indicate to the sender that no more
-         * FC frames shall be sent during the transmission of the segmented message. The sending
-         * network layer entity shall send all remaining consecutive frames without any stop for
-         * further FC frames from the receiving network layer entity.
-         * 01-FF: This range of BS parameter values shall be used to indicate to the sender the
-         * maximum number of consecutive frames that can be received without an intermediate FC
-         * frame from the receiving network entity.*/
-        if (p_n_sdu->tx.bs == 0x00u)
-        {
-            p_n_sdu->tx.shared.flag |= CANTP_FLAG_SKIP_BS;
-        }
-
-        result = CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST;
+        CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BS);
     }
 
-    return result;
+    /* ISO15765:
+     * 00: The BS parameter value zero (0) shall be used to indicate to the sender that no more
+     * FC frames shall be sent during the transmission of the segmented message. The sending
+     * network layer entity shall send all remaining consecutive frames without any stop for
+     * further FC frames from the receiving network layer entity.
+     * 01-FF: This range of BS parameter values shall be used to indicate to the sender the
+     * maximum number of consecutive frames that can be received without an intermediate FC
+     * frame from the receiving network entity.*/
+    if (p_n_sdu->tx.bs == 0x00u)
+    {
+        p_n_sdu->tx.shared.flag |= CANTP_FLAG_SKIP_BS;
+    }
+
+    return CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST;
 }
 
 static CanTp_FrameStateType CanTp_LDataConTSF(CanTp_NSduType *pNSdu)
@@ -1641,11 +1635,12 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
         if ((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u)
         {
             next_state = CANTP_FRAME_STATE_INVALID;
-            switch (p_n_sdu->pci)
+            switch (p_n_sdu->tx.state)
             {
-                case CANTP_N_PCI_TYPE_FC:
+                case CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION:
                 {
-                    next_state = ISO15765.ind[ISO15765_DIR_TX][p_n_sdu->pci](p_n_sdu, pPduInfo);
+                    next_state = ISO15765.ind[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_FC](p_n_sdu,
+                                                                                    pPduInfo);
                 }
                 default:
                 {
