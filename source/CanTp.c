@@ -423,7 +423,7 @@ static BufReq_ReturnType CanTp_FillTxPayload(CanTp_NSduType *pNSdu, PduLengthTyp
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static void CanTp_FillPadding(uint8 *pBuffer, PduLengthType *pOfs);
+static void CanTp_FillPadding(uint8 *pBuffer, PduLengthType *pOfs, const uint8 value);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -1243,7 +1243,7 @@ static BufReq_ReturnType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
          * ECUC_CanTp_00298). */
         if (p_n_sdu->tx.cfg->padding == CANTP_ON)
         {
-            CanTp_FillPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs);
+            CanTp_FillPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
         }
 
         p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0];
@@ -1282,7 +1282,7 @@ static BufReq_ReturnType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
          * ECUC_CanTp_00298). */
         if (p_n_sdu->tx.cfg->padding == CANTP_ON)
         {
-            CanTp_FillPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs);
+            CanTp_FillPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
         }
 
         p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0];
@@ -1320,7 +1320,7 @@ static BufReq_ReturnType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
          * ECUC_CanTp_00298). */
         if (p_n_sdu->tx.cfg->padding == CANTP_ON)
         {
-            CanTp_FillPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs);
+            CanTp_FillPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
         }
 
         p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0];
@@ -1353,7 +1353,7 @@ static BufReq_ReturnType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
      * ECUC_CanTp_00298). */
     if (p_n_sdu->rx.cfg->padding == CANTP_ON)
     {
-        CanTp_FillPadding(&p_n_sdu->rx.buf.can[0x00u], &ofs);
+        CanTp_FillPadding(&p_n_sdu->rx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
     }
 
     p_pdu_info->SduDataPtr = &p_n_sdu->rx.buf.can[0];
@@ -2294,14 +2294,14 @@ static BufReq_ReturnType CanTp_FillTxPayload(CanTp_NSduType *pNSdu, PduLengthTyp
     return result;
 }
 
-static void CanTp_FillPadding(uint8 *pBuffer, PduLengthType *pOfs)
+static void CanTp_FillPadding(uint8 *pBuffer, PduLengthType *pOfs, const uint8 value)
 {
     uint8 *p_buffer = pBuffer;
     PduLengthType ofs = *pOfs;
 
     for (; ofs < CANTP_CAN_FRAME_SIZE; ofs++)
     {
-        p_buffer[ofs] = CANTP_PADDING_BYTE;
+        p_buffer[ofs] = value;
     }
 
     *pOfs = ofs;

@@ -1,8 +1,9 @@
 class CanTpConfigurator(object):
-    def __init__(self, can_tp_handle, main_function_period=1000):
+    def __init__(self, can_tp_handle, main_function_period=1000, padding_byte=0xDD):
         self.handle = can_tp_handle
         self.config = can_tp_handle.ffi.new('CanTp_ConfigType *')
         self.config.mainFunctionPeriod = main_function_period
+        self.config.paddingByte = padding_byte
 
     def add_channel(self, mode='half duplex'):
         """

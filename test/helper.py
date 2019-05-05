@@ -39,8 +39,11 @@ class Helper:
                                     n_cr=1000,
                                     af='standard',
                                     main_function_period=1,
+                                    padding_byte=None,
                                     channel_mode='half duplex'):
-        configurator = CanTpConfigurator(handle, main_function_period=main_function_period)
+        configurator = CanTpConfigurator(handle,
+                                         main_function_period=main_function_period,
+                                         padding_byte=padding_byte if padding_byte is not None else 0xDD)
         channel = configurator.add_channel(mode=channel_mode)
         if channel_mode == 'full duplex':
             configurator.add_rx_sdu(channel,
@@ -49,6 +52,7 @@ class Helper:
                                     br_timeout=n_br,
                                     cr_timeout=n_cr,
                                     addressing_format=af,
+                                    enable_padding=padding_byte is not None,
                                     network_source_address=handle.ffi.NULL,
                                     network_target_address=handle.ffi.NULL,
                                     network_address_extension=handle.ffi.NULL)
@@ -58,6 +62,7 @@ class Helper:
                                 bs_timeout=n_bs,
                                 cs_timeout=n_cs,
                                 addressing_format=af,
+                                enable_padding=padding_byte is not None,
                                 network_source_address=handle.ffi.NULL,
                                 network_target_address=handle.ffi.NULL,
                                 network_address_extension=handle.ffi.NULL)

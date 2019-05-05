@@ -4,7 +4,7 @@ from test.helper import *
 
 @step('an initialized instance of CanTp module with a single tx N-SDU')
 def step_impl(context):
-    context.configuration = Helper.create_single_tx_sdu_config(context.can_tp).config
+    context.configuration = Helper.create_single_tx_sdu_config(context.can_tp, padding_byte=0xFF).config
     context.tx_pdu_id = 0
     context.can_tp.can_tp_init(context.configuration)
 
@@ -44,6 +44,5 @@ def step_impl(context):
         assert tx_data[fi][0] == (2 << 4) | (sn & 0x0F)
         assert tx_data[fi][1:len(context.tx_data[ss:se]) + 1] == [ord(c) for c in context.tx_data[ss:se]]
 
-    assert tx_data[0][0] == (1 << 4) | ((len(context.tx_data) & 0x0F00) >> 8)
-    assert tx_data[0][1] == len(context.tx_data) & 0x00FF
-    assert tx_data[0][2:] == [ord(c) for c in context.tx_data[0:6]]
+    # last CF padding assertions.
+    assert tx_data[-1][(len(context.tx_data) - 6) % 7 + 1:] == [0xFF] * (8 - ((len(context.tx_data) - 6) % 7 + 1))
