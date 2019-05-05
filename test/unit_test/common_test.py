@@ -661,7 +661,20 @@ class TestSWS00329:
         pytest.xfail()
 
 
-class TestSeparationTimeMinimum:
+@pytest.mark.parametrize('st_min, call_count', [
+    pytest.param(v,
+                 lambda st_min: st_min * 1000,
+                 id='STmin = {} [ms]'.format(v)) for v in range(0x7F + 0x01)] + [
+    pytest.param(v,
+                 lambda st_min: 0x7F * 1000,
+                 id='STmin = rsvd (0x{:02X})'.format(v)) for v in (i + 0x80 for i in range(0xF0 - 0x80 + 0x01))] + [
+    pytest.param(0xF1 + v,
+                 lambda st_min: (st_min & 0x0F) * 100,
+                 id='STmin = {} [us]'.format(100 + v * 100)) for v in range(9)] + [
+    pytest.param(v,
+                 lambda st_min: 0x7F * 1000,
+                 id='STmin = rsvd (0x{:02X})'.format(v)) for v in (i + 0xFA for i in range(0xFF - 0xFA + 0x01))])
+def test_separation_time_minimum_value(handle, st_min, call_count):
     """
     6.5.5.5 Definition of SeparationTime (STmin) parameter
     The STmin parameter shall be encoded in byte #3 of the FC N_PCI.
@@ -694,95 +707,21 @@ class TestSeparationTimeMinimum:
     receiving network entity for the duration of the ongoing segmented message transmission.
     """
 
-    @pytest.mark.parametrize('st_min', [pytest.param(v, id='STmin = {} [ms]'.format(v)) for v in range(0x7F + 0x01)])
-    def test_st_min_range_h00_h7f(self, handle, st_min):
-        pdu_id = 0
-        configurator = Helper.create_single_tx_sdu_config(handle,
-                                                          pdu_id=pdu_id,
-                                                          n_bs=0,
-                                                          main_function_period=1)
-        fc_frame = Helper.create_rx_fc_can_frame(padding=0xFF, bs=0, st_min=st_min)
-        handle.lib.CanTp_Init(configurator.config)
-        handle.can_tp_transmit(pdu_id, Helper.create_pdu_info(handle, [Helper.dummy_byte] * 100))
+    pdu_id = 0
+    configurator = Helper.create_single_tx_sdu_config(handle, pdu_id=pdu_id, main_function_period=1)
+    fc_frame = Helper.create_rx_fc_can_frame(padding=0xFF, bs=0, st_min=st_min)
+    handle.lib.CanTp_Init(configurator.config)
+    handle.can_tp_transmit(pdu_id, Helper.create_pdu_info(handle, [Helper.dummy_byte] * 100))
+    handle.lib.CanTp_MainFunction()
+    assert handle.can_if_transmit.call_count == 1  # sent FF
+    handle.can_if_transmit.assert_called_once()
+    handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
+    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, fc_frame))
+    handle.lib.CanTp_MainFunction()
+    assert handle.can_if_transmit.call_count == 2  # sent first CF
+    handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
+    for _ in range(call_count(st_min)):
         handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 1  # sent FF
-        handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, fc_frame))
-        handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 2  # sent first CF
-        handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-        for _ in range(st_min * 1000):
-            handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 2  # wait for timeout
-        handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 3  # sent next CF after timeout
-
-    @pytest.mark.parametrize('st_min', [pytest.param(v, id='STmin = rsvd (0x{:02X})'.format(v)) for v in
-                                        (i + 0x80 for i in range(0xF0 - 0x80 + 0x01))])
-    def test_st_min_range_h80_hf0(self, handle, st_min):
-        pdu_id = 0
-        configurator = Helper.create_single_tx_sdu_config(handle,
-                                                          pdu_id=pdu_id,
-                                                          main_function_period=1)
-        fc_frame = Helper.create_rx_fc_can_frame(padding=0xFF, bs=0, st_min=st_min)
-        handle.lib.CanTp_Init(configurator.config)
-        handle.can_tp_transmit(pdu_id, Helper.create_pdu_info(handle, [Helper.dummy_byte] * 100))
-        handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 1  # sent FF
-        handle.can_if_transmit.assert_called_once()
-        handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, fc_frame))
-        handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 2  # sent first CF
-        handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-        for _ in range(0x7F * 1000):
-            handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 2  # wait for timeout
-        handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 3  # sent next CF after timeout
-
-    @pytest.mark.parametrize('st_min', [pytest.param(0xF1 + v, id='STmin = {} [us]'.format(100 + v * 100)) for v in
-                                        range(9)])
-    def test_st_min_range_hf1_hf9(self, handle, st_min):
-        pdu_id = 0
-        configurator = Helper.create_single_tx_sdu_config(handle,
-                                                          pdu_id=pdu_id,
-                                                          main_function_period=1)
-        fc_frame = Helper.create_rx_fc_can_frame(padding=0xFF, bs=0, st_min=st_min)
-        handle.lib.CanTp_Init(configurator.config)
-        handle.can_tp_transmit(pdu_id, Helper.create_pdu_info(handle, [Helper.dummy_byte] * 100))
-        handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 1  # sent FF
-        handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, fc_frame))
-        handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 2  # sent first CF
-        handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-        for _ in range((st_min & 0x0F) * 100):
-            handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 2  # wait for timeout
-        handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 3  # sent next CF after timeout
-
-    @pytest.mark.parametrize('st_min', [pytest.param(v, id='STmin = rsvd (0x{:02X})'.format(v)) for v in
-                                        (i + 0xFA for i in range(0xFF - 0xFA + 0x01))])
-    def test_st_min_range_hfa_hff(self, handle, st_min):
-        pdu_id = 0
-        configurator = Helper.create_single_tx_sdu_config(handle,
-                                                          pdu_id=pdu_id,
-                                                          main_function_period=1)
-        fc_frame = Helper.create_rx_fc_can_frame(padding=0xFF, bs=0, st_min=st_min)
-        handle.lib.CanTp_Init(configurator.config)
-        handle.can_tp_transmit(pdu_id, Helper.create_pdu_info(handle, [Helper.dummy_byte] * 100))
-        handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 1  # sent FF
-        handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, fc_frame))
-        handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 2  # sent first CF
-        handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-        for _ in range(0x7F * 1000):
-            handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 2  # wait for timeout
-        handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 3  # sent next CF after timeout
+    assert handle.can_if_transmit.call_count == 2  # wait for timeout
+    handle.lib.CanTp_MainFunction()
+    assert handle.can_if_transmit.call_count == 3  # sent next CF after timeout
