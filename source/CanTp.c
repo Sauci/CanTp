@@ -158,6 +158,7 @@ typedef struct
     const CanTp_RxNSduType *cfg;
     CanTp_NSduBufferType buf;
     CanTp_FrameStateType state;
+    CanTp_FlowStatusType fs;
     uint32 st_min;
     uint8 bs;
     uint8 sn;
@@ -185,6 +186,7 @@ typedef struct
     const CanTp_TxNSduType *cfg;
     CanTp_NSduBufferType buf;
     CanTp_FrameStateType state;
+    CanTp_FlowStatusType fs;
     uint32 target_st_min;
     uint32 st_min;
     uint8 bs;
@@ -207,7 +209,6 @@ typedef struct
     uint8 n_sa;
     uint8 n_ta;
     uint8 n_ae;
-    CanTp_FlowStatusType fs;
     boolean has_meta_data;
     uint8_least dir;
     uint32 t_flag;
@@ -1452,14 +1453,14 @@ static CanTp_FrameStateType CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduIn
 
     CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BS);
 
-    p_n_sdu->fs = (CanTp_FlowStatusType)pPduInfo->SduDataPtr[0x00u] & 0x0Fu;
+    p_n_sdu->tx.fs = (CanTp_FlowStatusType)pPduInfo->SduDataPtr[0x00u] & 0x0Fu;
     p_n_sdu->tx.bs = pPduInfo->SduDataPtr[0x01u];
     p_n_sdu->tx.target_st_min = CanTp_DecodeSTMinValue(pPduInfo->SduDataPtr[0x02u]);
 
     /* SWS_CanTp_00315: the CanTp module shall start a timeout observation for N_Bs time at
      * confirmation of the FF transmission, last CF of a block transmission and at each
      * indication of FC with FS=WT (i.e. time until reception of the next FC). */
-    if (p_n_sdu->fs == CANTP_FLOW_STATUS_TYPE_WT)
+    if (p_n_sdu->tx.fs == CANTP_FLOW_STATUS_TYPE_WT)
     {
         CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BS);
     }
