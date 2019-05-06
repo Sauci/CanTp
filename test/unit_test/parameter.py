@@ -19,6 +19,11 @@ n_ar_timeouts = [pytest.param(t, id='N_Ar = {}ms'.format(t)) for t in n_xx_timeo
 n_br_timeouts = [pytest.param(t, id='N_Br = {}ms'.format(t)) for t in n_xx_timeouts]
 n_cr_timeouts = [pytest.param(t, id='N_Cr = {}ms'.format(t)) for t in n_xx_timeouts]
 
+addresses = (0, 10, 100, 255)
+
+n_sa = [pytest.param(a, id='N_Sa = 0x{:02X}'.format(a)) for a in addresses]
+n_ta = [pytest.param(a, id='N_Ta = 0x{:02X}'.format(a)) for a in addresses]
+
 
 @pytest.fixture()
 def handle():

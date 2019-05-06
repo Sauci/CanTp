@@ -45,8 +45,16 @@ class CanTpConfigurator(object):
         new_rx_sdu = self.handle.ffi.new('CanTp_RxNSduType *')
         if network_source_address is None:
             network_source_address = self.handle.ffi.NULL
+        else:
+            tmp = network_source_address
+            network_source_address = self.handle.ffi.new('CanTp_NSaType *')
+            network_source_address.nSa = tmp
         if network_target_address is None:
             network_target_address = self.handle.ffi.NULL
+        else:
+            tmp = network_target_address
+            network_target_address = self.handle.ffi.new('CanTp_NTaType *')
+            network_target_address.nTa = tmp
         if network_address_extension is None:
             network_address_extension = self.handle.ffi.NULL
         new_rx_sdu.nSduId = identifier
@@ -92,8 +100,16 @@ class CanTpConfigurator(object):
         new_tx_sdu = self.handle.ffi.new('CanTp_TxNSduType *')
         if network_source_address is None:
             network_source_address = self.handle.ffi.NULL
+        else:
+            tmp = network_source_address
+            network_source_address = self.handle.ffi.new('CanTp_NSaType *')
+            network_source_address.nSa = tmp
         if network_target_address is None:
             network_target_address = self.handle.ffi.NULL
+        else:
+            tmp = network_target_address
+            network_target_address = self.handle.ffi.new('CanTp_NTaType *')
+            network_target_address.nTa = tmp
         if network_address_extension is None:
             network_address_extension = self.handle.ffi.NULL
         new_tx_sdu.nSduId = identifier

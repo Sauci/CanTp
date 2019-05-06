@@ -23,8 +23,8 @@ class Helper:
                                 br_timeout=n_br,
                                 cr_timeout=n_cr,
                                 block_size=block_size,
-                                network_source_address=handle.ffi.NULL,
-                                network_target_address=handle.ffi.NULL,
+                                network_source_address=None,
+                                network_target_address=None,
                                 network_address_extension=handle.ffi.NULL)
         return configurator
 
@@ -37,6 +37,8 @@ class Helper:
                                     n_ar=1000,
                                     n_br=0,
                                     n_cr=1000,
+                                    n_sa=None,
+                                    n_ta=None,
                                     af='standard',
                                     main_function_period=1,
                                     padding_byte=None,
@@ -53,8 +55,8 @@ class Helper:
                                     cr_timeout=n_cr,
                                     addressing_format=af,
                                     enable_padding=padding_byte is not None,
-                                    network_source_address=handle.ffi.NULL,
-                                    network_target_address=handle.ffi.NULL,
+                                    network_source_address=n_sa,
+                                    network_target_address=n_ta,
                                     network_address_extension=handle.ffi.NULL)
         configurator.add_tx_sdu(channel,
                                 identifier=pdu_id,
@@ -63,8 +65,8 @@ class Helper:
                                 cs_timeout=n_cs,
                                 addressing_format=af,
                                 enable_padding=padding_byte is not None,
-                                network_source_address=handle.ffi.NULL,
-                                network_target_address=handle.ffi.NULL,
+                                network_source_address=n_sa,
+                                network_target_address=n_ta,
                                 network_address_extension=handle.ffi.NULL)
         return configurator
 

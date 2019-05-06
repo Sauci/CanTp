@@ -661,6 +661,52 @@ class TestSWS00329:
         pytest.xfail()
 
 
+@pytest.mark.parametrize('payload_size', [
+    pytest.param(1, id='single frame'),
+    pytest.param(8, id='multi frame')])
+@pytest.mark.parametrize('source_address', n_sa)
+@pytest.mark.parametrize('target_address', n_ta)
+@pytest.mark.parametrize('addressing_format', [
+    pytest.param('standard'),
+    pytest.param('extended'),
+    pytest.param('mixed 11 bits'),
+    pytest.param('fixed'),
+    pytest.param('mixed 29 bits')])
+def test_sws_00335(handle, payload_size, addressing_format, source_address, target_address):
+    """
+    When calling CanIf_Transmit() for an SF, FF, or CF of a generic connection (N-PDU with MetaData), the CanTp module
+    shall provide the stored addressing information via MetaData of the N-PDU. The addressing information in the
+    MetaData depends on the addressing format:
+    - Normal, Extended, Mixed 11 bit: none
+    - Normal fixed, Mixed 29 bit: N_SA, N_TA.
+    """
+    configurator = Helper.create_single_tx_sdu_config(handle,
+                                                      af=addressing_format,
+                                                      n_sa=source_address,
+                                                      n_ta=target_address)
+    handle.lib.CanTp_Init(configurator.config)
+    handle.can_tp_transmit(0, Helper.create_pdu_info(handle, [Helper.dummy_byte] * payload_size))
+    handle.lib.CanTp_MainFunction()
+    assert handle.can_if_transmit.call_count == 1
+    if addressing_format in ('standard', 'extended', 'mixed 11 bits'):
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr == handle.ffi.NULL
+    else:
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr != handle.ffi.NULL
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[0] == source_address
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[1] == target_address
+    if payload_size == 8:
+        handle.lib.CanTp_TxConfirmation(0, E_OK)
+        handle.lib.CanTp_RxIndication(0, Helper.create_pdu_info(handle, Helper.create_rx_fc_can_frame()))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_count == 2
+        if addressing_format in ('standard', 'extended', 'mixed 11 bits'):
+            assert handle.can_if_transmit.call_args[0][1].MetaDataPtr == handle.ffi.NULL
+        else:
+            assert handle.can_if_transmit.call_args[0][1].MetaDataPtr != handle.ffi.NULL
+            assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[0] == source_address
+            assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[1] == target_address
+
+
 @pytest.mark.parametrize('st_min, call_count', [
     pytest.param(v,
                  lambda st_min: st_min * 1000,

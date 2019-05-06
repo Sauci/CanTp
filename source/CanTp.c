@@ -394,12 +394,7 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu);
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-//static void CanTp_FillAIField(CanTp_AddressingFormatType af,
-//                              uint8 n_sa,
-//                              uint8 n_ta,
-//                              uint8 n_ae,
-//                              uint8 *pBuffer,
-//                              PduLengthType *pOfs);
+static void CanTp_FillTxMetaData(CanTp_NSduType *pNSdu);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -767,42 +762,6 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
             if (pPduInfo->MetaDataPtr != NULL_PTR)
             {
                 p_n_sdu->has_meta_data = TRUE;
-
-                switch (p_n_sdu->tx.cfg->af)
-                {
-                    case CANTP_NORMALFIXED:
-                    {
-                        p_n_sdu->n_sa = pPduInfo->MetaDataPtr[0x00u];
-                        p_n_sdu->n_ta = pPduInfo->MetaDataPtr[0x01u];
-
-                        break;
-                    }
-                    case CANTP_MIXED:
-                    {
-                        p_n_sdu->n_ae = pPduInfo->MetaDataPtr[0x00u];
-
-                        break;
-                    }
-                    case CANTP_MIXED29BIT:
-                    {
-                        p_n_sdu->n_sa = pPduInfo->MetaDataPtr[0x00u];
-                        p_n_sdu->n_ta = pPduInfo->MetaDataPtr[0x01u];
-                        p_n_sdu->n_ae = pPduInfo->MetaDataPtr[0x02u];
-
-                        break;
-                    }
-                    case CANTP_EXTENDED:
-                    {
-                        p_n_sdu->n_ta = pPduInfo->MetaDataPtr[0x00u];
-
-                        break;
-                    }
-                    case CANTP_STANDARD:
-                    default:
-                    {
-                        break;
-                    }
-                }
             }
             else
             {
@@ -1226,6 +1185,12 @@ static BufReq_ReturnType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
 
     p_n_sdu->pci = CANTP_N_PCI_TYPE_SF;
 
+    if ((p_n_sdu->tx.cfg->pNSa != NULL_PTR) &&
+        (p_n_sdu->tx.cfg->pNTa != NULL_PTR))
+    {
+        CanTp_FillTxMetaData(p_n_sdu);
+    }
+
     // CanTp_FillAIField(p_n_sdu, &ofs);
 
     p_n_sdu->tx.buf.can[ofs] = ((uint8)CANTP_N_PCI_TYPE_SF << 0x04u);
@@ -1246,8 +1211,7 @@ static BufReq_ReturnType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
             CanTp_FillPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
         }
 
-        p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0];
-        p_pdu_info->MetaDataPtr = NULL_PTR;
+        p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
         p_pdu_info->SduLength = ofs;
     }
 
@@ -1263,6 +1227,12 @@ static BufReq_ReturnType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
 
     p_n_sdu->pci = CANTP_N_PCI_TYPE_FF;
     p_n_sdu->tx.sn = 0x00u;
+
+    if ((p_n_sdu->tx.cfg->pNSa != NULL_PTR) &&
+        (p_n_sdu->tx.cfg->pNTa != NULL_PTR))
+    {
+        CanTp_FillTxMetaData(p_n_sdu);
+    }
 
     // CanTp_FillAIField(p_n_sdu, &ofs);
 
@@ -1285,8 +1255,7 @@ static BufReq_ReturnType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
             CanTp_FillPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
         }
 
-        p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0];
-        p_pdu_info->MetaDataPtr = NULL_PTR;
+        p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
         p_pdu_info->SduLength = ofs;
     }
 
@@ -1301,6 +1270,12 @@ static BufReq_ReturnType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
     PduLengthType ofs = 0x01u;
 
     p_n_sdu->pci = CANTP_N_PCI_TYPE_CF;
+
+    if ((p_n_sdu->tx.cfg->pNSa != NULL_PTR) &&
+        (p_n_sdu->tx.cfg->pNTa != NULL_PTR))
+    {
+        CanTp_FillTxMetaData(p_n_sdu);
+    }
 
     tmp_return = CanTp_FillTxPayload(p_n_sdu, &ofs);
     if (tmp_return == BUFREQ_OK)
@@ -1323,8 +1298,7 @@ static BufReq_ReturnType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
             CanTp_FillPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
         }
 
-        p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0];
-        p_pdu_info->MetaDataPtr = NULL_PTR;
+        p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
         p_pdu_info->SduLength = ofs;
     }
 
@@ -2163,6 +2137,48 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
             case CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION:
             case CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION:
             // case CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION:
+            default:
+            {
+                break;
+            }
+        }
+    }
+}
+
+static void CanTp_FillTxMetaData(CanTp_NSduType *pNSdu)
+{
+    /* SWS_CanTp_00335 When calling CanIf_Transmit() for an SF, FF, or CF of a generic connection
+     * (N-PDU with MetaData), the CanTp module shall provide the stored addressing information via
+     * MetaData of the N-PDU. The addressing information in the MetaData depends on the addressing
+     * format:
+     * - Normal, Extended, Mixed 11 bit: none
+     * - Normal fixed, Mixed 29 bit: N_SA, N_TA. */
+    if ((pNSdu->pci == CANTP_N_PCI_TYPE_SF) ||
+        (pNSdu->pci == CANTP_N_PCI_TYPE_FF) ||
+        (pNSdu->pci == CANTP_N_PCI_TYPE_CF))
+    {
+        switch (pNSdu->tx.cfg->af)
+        {
+            case CANTP_STANDARD:
+            case CANTP_EXTENDED:
+            case CANTP_MIXED:
+            {
+                pNSdu->tx.pdu_info.MetaDataPtr = NULL_PTR;
+
+                break;
+            }
+            case CANTP_NORMALFIXED:
+            case CANTP_MIXED29BIT:
+            {
+                pNSdu->tx.pdu_info.MetaDataPtr = &pNSdu->tx.meta_data[0x00u];
+
+                pNSdu->tx.meta_data[0x00u] = pNSdu->tx.cfg->pNSa->nSa;
+                pNSdu->tx.meta_data[0x01u] = pNSdu->tx.cfg->pNTa->nTa;
+                pNSdu->tx.meta_data[0x02u] = 0x00u;
+                pNSdu->tx.meta_data[0x03u] = 0x00u;
+
+                break;
+            }
             default:
             {
                 break;
