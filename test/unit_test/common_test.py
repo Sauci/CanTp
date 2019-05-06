@@ -600,6 +600,21 @@ class TestSWS00305:
         handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, CANTP_E_PARAM_ID)
 
 
+def test_sws_00318(handle):
+    """
+    After the reception of a First Frame, if the function PduR_CanTpStartOfReception() returns BUFREQ_E_OVFL to the
+    CanTp module, the CanTp module shall send a Flow Control N-PDU with overflow status (FC(OVFLW)) and abort the N-SDU
+    reception.
+    """
+    configurator = Helper.create_single_rx_sdu_config(handle, n_br=0, pdu_id=0)
+    handle.lib.CanTp_Init(configurator.config)
+    handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_OVFL
+    handle.lib.CanTp_RxIndication(0, Helper.create_pdu_info(handle, Helper.create_rx_ff_can_frame()))
+    handle.lib.CanTp_MainFunction()
+    assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] & 0x0F == 2
+    # TODO: check if session has been aborted.
+
+
 def test_sws_00321(handle):
     """
     If DET is enabled the function CanTp_Transmit shall rise CANTP_E_PARAM_POINTER error if the argument PduInfoPtr is a

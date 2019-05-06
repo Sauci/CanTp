@@ -70,10 +70,6 @@ extern "C"
 
 #define CANTP_CAN_FRAME_SIZE (0x08u)
 
-#define CANTP_FLAG_SEND_RX_DATA (0x01u << 0x07u)
-
-#define CANTP_FLAG_SEND_TX_DATA (0x01u << 0x08u)
-
 #define CANTP_FLAG_COPY_RX_DATA (0x01u << 0x09u)
 
 #define CANTP_FLAG_FIRST_CF (0x01u << 0x0Bu)
@@ -127,6 +123,7 @@ typedef enum
 
 typedef enum {
     CANTP_FRAME_STATE_INVALID = 0x00u,
+    CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST,
     CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION,
     CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION,
     CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST,
@@ -1308,15 +1305,31 @@ static BufReq_ReturnType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
 
 static BufReq_ReturnType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
 {
+    BufReq_ReturnType tmp_return;
     CanTp_NSduType *p_n_sdu = pNSdu;
     PduInfoType *p_pdu_info = &p_n_sdu->rx.pdu_info;
-    uint16_least ofs = 0x00u;
+    uint16_least ofs = 0x03u;
 
     p_n_sdu->pci = CANTP_N_PCI_TYPE_FC;
 
     //CanTp_FillAIField(p_n_sdu, &ofs);
 
-    p_n_sdu->rx.buf.can[0x00u] = (0x03u << 0x04u) | (uint8)CANTP_FLOW_STATUS_TYPE_CTS;
+    tmp_return = CanTp_FillRxPayload(p_n_sdu);
+
+    /* SWS_CanTp_00318: After the reception of a First Frame, if the function
+     * PduR_CanTpStartOfReception() returns BUFREQ_E_OVFL to the CanTp module, the CanTp module
+     * shall send a Flow Control N-PDU with overflow status (FC(OVFLW)) and abort the N-SDU
+     * reception. */
+    if (tmp_return == BUFREQ_E_OVFL)
+    {
+        p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_OVFLW;
+    }
+    else
+    {
+        p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_CTS;
+    }
+
+    p_n_sdu->rx.buf.can[0x00u] = (0x03u << 0x04u) | (uint8)p_n_sdu->rx.fs;
     p_n_sdu->rx.buf.can[0x01u] = p_n_sdu->rx.cfg->bs;
     p_n_sdu->rx.buf.can[0x02u] = CanTp_EncodeSTMinValue(p_n_sdu->rx.shared.m_param.st_min);
 
@@ -1331,11 +1344,11 @@ static BufReq_ReturnType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
         CanTp_FillPadding(&p_n_sdu->rx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
     }
 
-    p_pdu_info->SduDataPtr = &p_n_sdu->rx.buf.can[0];
+    p_pdu_info->SduDataPtr = &p_n_sdu->rx.buf.can[0x00u];
     p_pdu_info->MetaDataPtr = NULL_PTR;
     p_pdu_info->SduLength = ofs;
 
-    return BUFREQ_OK;
+    return tmp_return;
 }
 
 static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo)
@@ -1382,9 +1395,9 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
         p_n_sdu->rx.sn = 0x00u;
         p_n_sdu->rx.bs = p_n_sdu->rx.shared.m_param.bs;
 
-        p_n_sdu->rx.shared.flag |= CANTP_FLAG_SEND_RX_DATA | CANTP_FLAG_FIRST_CF;
+        p_n_sdu->rx.shared.flag |= CANTP_FLAG_FIRST_CF;
         CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
-        result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION;
+        result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
     }
 
     return result;
@@ -1426,7 +1439,7 @@ static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduIn
                                  * the CanTp module shall start a time-out N_Br before calling
                                  * PduR_CanTpStartOfReception or PduR_CanTpCopyRxData. */
                                 CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
-                                result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION;
+                                result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
                             }
                             else
                             {
@@ -1987,7 +2000,7 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
     {
         switch (p_n_sdu->rx.state)
         {
-            case CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION:
+            case CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST:
             {
                 /* SWS_CanTp_00166: At the reception of a FF or last CF of a block, the CanTp module
                  * shall start a time-out N_Br before calling PduR_CanTpStartOfReception or
@@ -1996,16 +2009,23 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
                 {
                     CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
 
-                    CanTp_FillRxPayload(pNSdu);
-
-                    if ((p_n_sdu->rx.shared.flag & CANTP_FLAG_SEND_RX_DATA) != 0x00u)
+                    /* SWS_CanTp_00318: After the reception of a First Frame, if the function
+                     * PduR_CanTpStartOfReception() returns BUFREQ_E_OVFL to the CanTp module, the
+                     * CanTp module shall send a Flow Control N-PDU with overflow status (FC(OVFLW))
+                     * and abort the N-SDU reception. */
+                    if (ISO15765.req[ISO15765_DIR_RX][CANTP_N_PCI_TYPE_FC](p_n_sdu) == BUFREQ_E_OVFL)
                     {
-                        (void)ISO15765.req[ISO15765_DIR_RX][CANTP_N_PCI_TYPE_FC](p_n_sdu);
-
-                        p_n_sdu->rx.shared.flag &= ~(CANTP_FLAG_SEND_RX_DATA);
-
                         CanTp_TransmitRxCANData(p_n_sdu);
+                        CanTp_AbortRxSession(pNSdu, CANTP_I_NONE, FALSE);
+
+                        break;
                     }
+                    else
+                    {
+                        CanTp_TransmitRxCANData(p_n_sdu);
+                        p_n_sdu->rx.state = CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION;
+                    }
+
                 }
                 else
                 {
@@ -2017,9 +2037,9 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
                     PduR_CanTpCopyRxData(pNSdu->rx.cfg->nSduId,
                                          &pNSdu->rx.pdu_info,
                                          &pNSdu->rx.buf.rmng);
-                }
 
-                break;
+                    break;
+                }
             }
             case CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION:
             {
