@@ -70,8 +70,6 @@ extern "C"
 
 #define CANTP_CAN_FRAME_SIZE (0x08u)
 
-#define CANTP_FLAG_LAST_CF (0x01u << 0x0Cu)
-
 #define CANTP_FLAG_SKIP_BS (0x01u << 0x0Du)
 
 #define CANTP_MS_TO_INTERNAL(timeout) (timeout * 1000u)
@@ -839,8 +837,7 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
              * Consecutive Frame of the N-SDU (i.e. the service is called after N-Cr timeout is
              * started for the last Consecutive Frame). In this case the CanTp shall return
              * E_NOT_OK. */
-            if ((p_n_sdu->pci != CANTP_N_PCI_TYPE_SF) &&
-                ((p_n_sdu->rx.shared.flag & CANTP_FLAG_LAST_CF) == 0x00u))
+            if ((p_n_sdu->rx.buf.size - p_n_sdu->rx.buf.done) > 0x07u)
             {
                 CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_WAIT;)
 
@@ -1321,7 +1318,7 @@ static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduIn
 
     if (CanTp_DecodeDLValue(&dl, &pPduInfo->SduDataPtr[0x00u]) == E_OK)
     {
-        p_n_sdu->rx.buf.size = dl;
+        p_n_sdu->rx.buf.size = pPduInfo->SduLength;
 
         pdu_info.MetaDataPtr = NULL_PTR;
         pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[0x01u];
@@ -2084,20 +2081,6 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
 
                         p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION;
                     }
-                }
-
-                break;
-            }
-            case CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION:
-            {
-                /* TODO: handle this somewhere else... */
-                if (p_n_sdu->tx.buf.done < p_n_sdu->tx.buf.size)
-                {
-                    p_n_sdu->tx.shared.flag &= ~(CANTP_FLAG_LAST_CF);
-                }
-                else
-                {
-                    p_n_sdu->tx.shared.flag |= (CANTP_FLAG_LAST_CF);
                 }
 
                 break;
