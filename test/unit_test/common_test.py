@@ -229,44 +229,6 @@ class TestSWS00079:
         handle.pdu_r_can_tp_start_of_reception.assert_called_once()
 
 
-class TestSWS00166:
-    """
-    At the reception of a FF or last CF of a block, the CanTp module shall start a time-out N_Br before calling
-    PduR_CanTpStartOfReception or PduR_CanTpCopyRxData.
-    """
-
-    @pytest.mark.parametrize('n_br', n_br_timeouts)
-    def test_first_frame(self, handle, n_br):
-        pdu_id = 0
-        configurator = Helper.create_single_rx_sdu_config(handle, n_br=n_br)
-        ff = Helper.create_rx_ff_can_frame()
-        handle.lib.CanTp_Init(configurator.config)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, ff))
-        for _ in range(int(n_br / configurator.config.mainFunctionPeriod)):
-            handle.lib.CanTp_MainFunction()
-        handle.pdu_r_can_tp_start_of_reception.assert_not_called()
-        handle.lib.CanTp_MainFunction()
-        handle.pdu_r_can_tp_start_of_reception.assert_called_once()
-
-    @pytest.mark.parametrize('n_br', n_br_timeouts)
-    def test_last_consecutive_frame(self, handle, n_br):
-        pdu_id = 0
-        configurator = Helper.create_single_rx_sdu_config(handle, n_br=n_br)
-        ff = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * 10)
-        cf = Helper.create_rx_cf_can_frame(sn=1)
-        handle.lib.CanTp_Init(configurator.config)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, ff))
-        cnt = 0
-        for _ in range(int(n_br / configurator.config.mainFunctionPeriod)):
-            handle.lib.CanTp_MainFunction()
-        handle.lib.CanTp_MainFunction()
-        handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, cf))
-        for cnt in range(int(n_br / configurator.config.mainFunctionPeriod)):
-            handle.lib.CanTp_MainFunction()
-        assert handle.pdu_r_can_tp_copy_rx_data.call_count == 2 * (cnt + 1)  # see SWS00222
-
-
 def test_sws_00176(handle):
     """
     The function CanTp_Transmit() shall be asynchronous.
