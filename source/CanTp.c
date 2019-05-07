@@ -195,7 +195,6 @@ typedef struct
     CanTp_RxConnectionType rx;
     CanTp_TxConnectionType tx;
     uint32 n[0x06u];
-    CanTp_NPciType pci;
     uint8 n_sa;
     uint8 n_ta;
     uint8 n_ae;
@@ -377,7 +376,7 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu);
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static void CanTp_FillTxMetaData(CanTp_NSduType *pNSdu);
+static void CanTp_FillTxMetaData(CanTp_NSduType *pNSdu, const CanTp_NPciType pci);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -1146,12 +1145,10 @@ static BufReq_ReturnType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
     PduLengthType ofs = 0x00u;
 
-    p_n_sdu->pci = CANTP_N_PCI_TYPE_SF;
-
     if ((p_n_sdu->tx.cfg->pNSa != NULL_PTR) &&
         (p_n_sdu->tx.cfg->pNTa != NULL_PTR))
     {
-        CanTp_FillTxMetaData(p_n_sdu);
+        CanTp_FillTxMetaData(p_n_sdu, CANTP_N_PCI_TYPE_SF);
     }
 
     // CanTp_FillAIField(p_n_sdu, &ofs);
@@ -1188,13 +1185,12 @@ static BufReq_ReturnType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
     PduLengthType ofs = 0x00u;
 
-    p_n_sdu->pci = CANTP_N_PCI_TYPE_FF;
     p_n_sdu->tx.sn = 0x00u;
 
     if ((p_n_sdu->tx.cfg->pNSa != NULL_PTR) &&
         (p_n_sdu->tx.cfg->pNTa != NULL_PTR))
     {
-        CanTp_FillTxMetaData(p_n_sdu);
+        CanTp_FillTxMetaData(p_n_sdu, CANTP_N_PCI_TYPE_FF);
     }
 
     // CanTp_FillAIField(p_n_sdu, &ofs);
@@ -1232,12 +1228,10 @@ static BufReq_ReturnType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
     PduLengthType ofs = 0x01u;
 
-    p_n_sdu->pci = CANTP_N_PCI_TYPE_CF;
-
     if ((p_n_sdu->tx.cfg->pNSa != NULL_PTR) &&
         (p_n_sdu->tx.cfg->pNTa != NULL_PTR))
     {
-        CanTp_FillTxMetaData(p_n_sdu);
+        CanTp_FillTxMetaData(p_n_sdu, CANTP_N_PCI_TYPE_CF);
     }
 
     tmp_return = CanTp_FillTxPayload(p_n_sdu, &ofs);
@@ -1274,8 +1268,6 @@ static BufReq_ReturnType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
     CanTp_NSduType *p_n_sdu = pNSdu;
     PduInfoType *p_pdu_info = &p_n_sdu->rx.can_if_pdu_info;
     uint16_least ofs = 0x03u;
-
-    p_n_sdu->pci = CANTP_N_PCI_TYPE_FC;
 
     //CanTp_FillAIField(p_n_sdu, &ofs);
 
@@ -1555,6 +1547,7 @@ static CanTp_FrameStateType CanTp_LDataConRFC(CanTp_NSduType *pNSdu)
 void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
 {
     CanTp_FrameStateType next_state;
+    CanTp_NPciType pci;
     CanTp_NSduType *p_n_sdu;
     uint8 instance_id = CANTP_I_FULL_DUPLEX_RX_FF;
 
@@ -1565,12 +1558,12 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
                            return)
 
     if ((CanTp_GetNSduFromPduId(rxPduId, &p_n_sdu) == E_OK) &&
-        (CanTp_DecodePCIValue(&p_n_sdu->pci, &pPduInfo->SduDataPtr[0x00u]) == E_OK))
+        (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[0x00u]) == E_OK))
     {
         next_state = CANTP_FRAME_STATE_INVALID;
         if ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u)
         {
-            switch (p_n_sdu->pci)
+            switch (pci)
             {
                 case CANTP_N_PCI_TYPE_SF:
                 case CANTP_N_PCI_TYPE_FF:
@@ -1583,7 +1576,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
                          * the SF/FF N-PDU as the start of a new reception */
                         PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
-                        if (p_n_sdu->pci == CANTP_N_PCI_TYPE_SF)
+                        if (pci == CANTP_N_PCI_TYPE_SF)
                         {
                             instance_id = CANTP_I_FULL_DUPLEX_RX_SF;
                         }
@@ -1593,7 +1586,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
                 }
                 case CANTP_N_PCI_TYPE_CF:
                 {
-                    next_state = ISO15765.ind[ISO15765_DIR_RX][p_n_sdu->pci](p_n_sdu, pPduInfo);
+                    next_state = ISO15765.ind[ISO15765_DIR_RX][pci](p_n_sdu, pPduInfo);
                 }
                 default:
                 {
@@ -2110,7 +2103,7 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
     }
 }
 
-static void CanTp_FillTxMetaData(CanTp_NSduType *pNSdu)
+static void CanTp_FillTxMetaData(CanTp_NSduType *pNSdu, const CanTp_NPciType pci)
 {
     /* SWS_CanTp_00335 When calling CanIf_Transmit() for an SF, FF, or CF of a generic connection
      * (N-PDU with MetaData), the CanTp module shall provide the stored addressing information via
@@ -2118,9 +2111,9 @@ static void CanTp_FillTxMetaData(CanTp_NSduType *pNSdu)
      * format:
      * - Normal, Extended, Mixed 11 bit: none
      * - Normal fixed, Mixed 29 bit: N_SA, N_TA. */
-    if ((pNSdu->pci == CANTP_N_PCI_TYPE_SF) ||
-        (pNSdu->pci == CANTP_N_PCI_TYPE_FF) ||
-        (pNSdu->pci == CANTP_N_PCI_TYPE_CF))
+    if ((pci == CANTP_N_PCI_TYPE_SF) ||
+        (pci == CANTP_N_PCI_TYPE_FF) ||
+        (pci == CANTP_N_PCI_TYPE_CF))
     {
         switch (pNSdu->tx.cfg->af)
         {
