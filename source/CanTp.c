@@ -1359,17 +1359,12 @@ static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduIn
 
     CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;)
 
-    p_n_sdu->rx.sn = 0x00u;
-
-    CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
-
     if (CanTp_DecodeDLValue(&dl, &pPduInfo->SduDataPtr[0x00u]) == E_OK)
     {
         p_n_sdu->rx.buf.size = dl;
 
         PduLengthType pdu_length;
 
-        /* TODO: call from CanTp_MainFunction. */
         PduR_CanTpStartOfReception(p_n_sdu->rx.cfg->nSduId,
                                    &p_n_sdu->rx.pdu_info,
                                    p_n_sdu->rx.buf.size,
