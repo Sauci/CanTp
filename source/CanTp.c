@@ -70,7 +70,7 @@ extern "C"
 
 #define CANTP_CAN_FRAME_SIZE (0x08u)
 
-#define CANTP_FLAG_SKIP_BS (0x01u << 0x0Du)
+#define CANTP_BS_INFINITE (0x0100u)
 
 #define CANTP_MS_TO_INTERNAL(timeout) (timeout * 1000u)
 
@@ -158,7 +158,6 @@ typedef struct
     PduInfoType can_if_pdu_info;
     struct
     {
-        uint32 flag;
         CanTp_TaskStateType taskState;
 
         /**
@@ -180,7 +179,7 @@ typedef struct
     CanTp_FlowStatusType fs;
     uint32 target_st_min;
     uint32 st_min;
-    uint8 bs;
+    uint16 bs;
     uint8 sn;
     uint8 meta_data[0x04u];
     PduInfoType can_if_pdu_info;
@@ -1474,7 +1473,7 @@ static CanTp_FrameStateType CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduIn
      * frame from the receiving network entity.*/
     if (p_n_sdu->tx.bs == 0x00u)
     {
-        p_n_sdu->tx.shared.flag |= CANTP_FLAG_SKIP_BS;
+        p_n_sdu->tx.bs = CANTP_BS_INFINITE;
     }
 
     return CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST;
@@ -1516,9 +1515,12 @@ static CanTp_FrameStateType CanTp_LDataConTCF(CanTp_NSduType *pNSdu)
 
     if (p_n_sdu->tx.buf.size > p_n_sdu->tx.buf.done)
     {
-        p_n_sdu->tx.bs--;
+        if (p_n_sdu->tx.bs != CANTP_BS_INFINITE)
+        {
+            p_n_sdu->tx.bs--;
+        }
 
-        if ((p_n_sdu->tx.bs != 0x00u) || ((p_n_sdu->tx.shared.flag & CANTP_FLAG_SKIP_BS) != 0x00u))
+        if (p_n_sdu->tx.bs != 0x00u)
         {
             result = CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST;
         }
