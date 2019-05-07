@@ -70,10 +70,6 @@ extern "C"
 
 #define CANTP_CAN_FRAME_SIZE (0x08u)
 
-#define CANTP_FLAG_COPY_RX_DATA (0x01u << 0x09u)
-
-#define CANTP_FLAG_FIRST_CF (0x01u << 0x0Bu)
-
 #define CANTP_FLAG_LAST_CF (0x01u << 0x0Cu)
 
 #define CANTP_FLAG_SKIP_BS (0x01u << 0x0Du)
@@ -361,14 +357,6 @@ static uint8 CanTp_EncodeSTMinValue(uint16 value);
 #include "CanTp_MemMap.h"
 
 static void CanTp_AbortTxSession(CanTp_NSduType *pNSdu, const uint8 instanceId, boolean confirm);
-
-#define CanTp_STOP_SEC_CODE_FAST
-#include "CanTp_MemMap.h"
-
-#define CanTp_START_SEC_CODE_FAST
-#include "CanTp_MemMap.h"
-
-static CanTp_NPciType CanTp_EncodePCIValue(CanTp_AddressingFormatType af, uint16 ps);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -758,32 +746,21 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
                 p_n_sdu->has_meta_data = FALSE;
             }
 
-            switch (CanTp_EncodePCIValue(p_n_sdu->tx.cfg->af, p_n_sdu->tx.buf.size))
+            if ((((p_n_sdu->tx.cfg->af == CANTP_STANDARD) ||
+                  (p_n_sdu->tx.cfg->af == CANTP_NORMALFIXED)) && (pPduInfo->SduLength <= 0x07u)) ||
+                (((p_n_sdu->tx.cfg->af == CANTP_EXTENDED) ||
+                  (p_n_sdu->tx.cfg->af == CANTP_MIXED) ||
+                  (p_n_sdu->tx.cfg->af == CANTP_MIXED29BIT)) && pPduInfo->SduLength <= 0x06u))
             {
-                case CANTP_N_PCI_TYPE_SF:
-                {
-                    p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST;
-                    tmp_return = E_OK;
-
-                    break;
-                }
-                case CANTP_N_PCI_TYPE_FF:
-                {
-                    p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST;
-                    tmp_return = E_OK;
-
-                    break;
-                }
-                default:
-                {
-                    break;
-                }
+                p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST;
+            }
+            else
+            {
+                p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST;
             }
 
-            if (tmp_return == E_OK)
-            {
-                p_n_sdu->tx.taskState = CANTP_PROCESSING;
-            }
+            p_n_sdu->tx.taskState = CANTP_PROCESSING;
+            tmp_return = E_OK;
         }
     }
 
@@ -1573,8 +1550,6 @@ static CanTp_FrameStateType CanTp_LDataConRFC(CanTp_NSduType *pNSdu)
     CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_AR);
     CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_CR);
 
-    p_n_sdu->rx.shared.flag |= CANTP_FLAG_COPY_RX_DATA;
-
     return CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION;
 }
 
@@ -1782,23 +1757,6 @@ static Std_ReturnType CanTp_GetNSduFromPduId(PduIdType pduId, CanTp_NSduType **p
     }
 
     return tmp_return;
-}
-
-static CanTp_NPciType CanTp_EncodePCIValue(const CanTp_AddressingFormatType af, const uint16 ps)
-{
-    CanTp_NPciType n_pci;
-
-    if (((af == CANTP_STANDARD || af == CANTP_NORMALFIXED) && ps <= 0x07u) ||
-        ((af == CANTP_EXTENDED || af == CANTP_MIXED || af == CANTP_MIXED29BIT) && ps <= 0x06u))
-    {
-        n_pci = CANTP_N_PCI_TYPE_SF;
-    }
-    else
-    {
-        n_pci = CANTP_N_PCI_TYPE_FF;
-    }
-
-    return n_pci;
 }
 
 static Std_ReturnType CanTp_DecodePCIValue(CanTp_NPciType *pPci, const uint8 *pData)
