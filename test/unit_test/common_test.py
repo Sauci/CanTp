@@ -106,7 +106,6 @@ class TestSWS00057:
                                                           main_function_period=1)
         handle.lib.CanTp_Init(configurator.config)
         ff_frame = Helper.create_rx_ff_can_frame(list(ord(c) for c in self.rx_data))
-        a = ''.join(chr(c) for c in ff_frame)
         handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_pdu_info(handle, ff_frame))
         handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_pdu_info(handle, can_frame))
         for cf_index in range(ceil((len(self.rx_data) - 6) / 7)):
@@ -227,6 +226,38 @@ class TestSWS00079:
         handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, can_frame))
         handle.lib.CanTp_MainFunction()
         handle.pdu_r_can_tp_start_of_reception.assert_called_once()
+
+
+class TestSWS00081:
+    """
+    After the reception of a First Frame or Single Frame, if the function PduR_CanTpStartOfReception() returns
+    BUFREQ_E_NOT_OK to the CanTp module, the CanTp module shall abort the reception of this N-SDU. No Flow Control will
+    be sent and PduR_CanTpRxIndication() will not be called in this case.
+    """
+
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    def test_single_frame(self, handle, data_size):
+        pdu_id = 0
+        configurator = Helper.create_single_rx_sdu_config(handle, n_br=0)
+        handle.lib.CanTp_Init(configurator.config)
+        sf = Helper.create_rx_sf_can_frame()
+        handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, sf))
+        handle.pdu_r_can_tp_rx_indication.assert_not_called()
+        handle.lib.CanTp_MainFunction()
+        handle.can_if_transmit.assert_not_called()
+
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    def test_first_frame(self, handle, data_size):
+        pdu_id = 0
+        configurator = Helper.create_single_rx_sdu_config(handle, n_br=0)
+        handle.lib.CanTp_Init(configurator.config)
+        ff = Helper.create_rx_sf_can_frame()
+        handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, ff))
+        handle.pdu_r_can_tp_rx_indication.assert_not_called()
+        handle.lib.CanTp_MainFunction()
+        handle.can_if_transmit.assert_not_called()
 
 
 def test_sws_00176(handle):
@@ -574,7 +605,9 @@ def test_sws_00318(handle):
     handle.lib.CanTp_RxIndication(0, Helper.create_pdu_info(handle, Helper.create_rx_ff_can_frame()))
     handle.lib.CanTp_MainFunction()
     assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] & 0x0F == 2
-    # TODO: check if session has been aborted.
+    handle.det_report_error.assert_called_once_with(ANY, CANTP_I_N_BUFFER_OVFLW, ANY, CANTP_E_RX_COM)
+    handle.lib.CanTp_MainFunction()
+    handle.can_if_transmit.assert_called_once()
 
 
 def test_sws_00321(handle):
@@ -682,6 +715,50 @@ def test_sws_00335(handle, payload_size, addressing_format, source_address, targ
             assert handle.can_if_transmit.call_args[0][1].MetaDataPtr != handle.ffi.NULL
             assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[0] == source_address
             assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[1] == target_address
+
+
+class TestSWS00339:
+    """
+    After the reception of a First Frame or Single Frame, if the function PduR_CanTpStartOfReception() returns BUFREQ_OK
+    with a smaller available buffer size than needed for the already received data, the CanTp module shall abort the
+    reception of the N-SDU and call PduR_CanTpRxIndication() with the result E_NOT_OK.
+    """
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    def test_single_frame(self, data_size):
+        handle = CanTp(rx_buffer_size=data_size - 1)
+        configurator = Helper.create_single_rx_sdu_config(handle)
+        handle.lib.CanTp_Init(configurator.config)
+        ff_frame = Helper.create_rx_sf_can_frame(payload=[Helper.dummy_byte] * data_size)
+        handle.lib.CanTp_RxIndication(0, Helper.create_pdu_info(handle, ff_frame))
+        handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, E_NOT_OK)
+        handle.lib.CanTp_MainFunction()
+        handle.can_if_transmit.assert_not_called()
+
+    @pytest.mark.parametrize('handle', [dict(rx_buffer_size=6)], indirect=True)
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    def test_multi_frame(self, handle, data_size):
+        configurator = Helper.create_single_rx_sdu_config(handle)
+        handle.lib.CanTp_Init(configurator.config)
+        ff_frame = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * data_size)
+        handle.lib.CanTp_RxIndication(0, Helper.create_pdu_info(handle, ff_frame))
+        handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, E_NOT_OK)
+        handle.lib.CanTp_MainFunction()
+        handle.can_if_transmit.assert_not_called()
+
+
+@pytest.mark.parametrize('data_size', single_frame_sizes)
+def test_sws_00353(handle, data_size):
+    """
+    After the reception of a Single Frame, if the function PduR_CanTpStartOfReception()returns BUFREQ_E_OVFL to the
+    CanTp module, the CanTp module shall abort the N-SDU reception.
+    """
+    configurator = Helper.create_single_rx_sdu_config(handle)
+    handle.lib.CanTp_Init(configurator.config)
+    handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_OVFL
+    ff = Helper.create_rx_sf_can_frame(payload=[Helper.dummy_byte] * data_size)
+    handle.lib.CanTp_RxIndication(0, Helper.create_pdu_info(handle, ff))
+    handle.lib.CanTp_MainFunction()
+    handle.can_if_transmit.assert_not_called()
 
 
 @pytest.mark.parametrize('st_min, call_count', [

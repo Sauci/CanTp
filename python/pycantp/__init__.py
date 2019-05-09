@@ -25,6 +25,7 @@ from .pycantp import CanTp, \
     CANTP_I_FULL_DUPLEX_RX_FF, \
     CANTP_I_FULL_DUPLEX_RX_CF, \
     CANTP_I_FULL_DUPLEX_RX_FC, \
-    CANTP_I_FULL_DUPLEX_RX_UNDEF
+    CANTP_I_FULL_DUPLEX_RX_UNDEF, \
+    CANTP_I_N_BUFFER_OVFLW
 
 from .config_gen import CanTpConfigurator

@@ -3,6 +3,7 @@
 .idea
 build*
 cmake-*
+docker_build
 debug/*
 src/*
 swig/*

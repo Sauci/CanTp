@@ -42,6 +42,7 @@ class Helper:
                                     af='standard',
                                     main_function_period=1,
                                     padding_byte=None,
+                                    wait_for_transmission_max=3,
                                     channel_mode='half duplex'):
         configurator = CanTpConfigurator(handle,
                                          main_function_period=main_function_period,
@@ -53,6 +54,7 @@ class Helper:
                                     ar_timeout=n_ar,
                                     br_timeout=n_br,
                                     cr_timeout=n_cr,
+                                    wait_for_transmission_max=wait_for_transmission_max,
                                     addressing_format=af,
                                     enable_padding=padding_byte is not None,
                                     network_source_address=n_sa,

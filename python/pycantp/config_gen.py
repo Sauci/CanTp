@@ -36,7 +36,7 @@ class CanTpConfigurator(object):
                    ar_timeout=1000,
                    br_timeout=0,
                    cr_timeout=1000,
-                   wait_for_transmission_max=0,
+                   wait_for_transmission_max=3,
                    separation_time_minimum=0,
                    addressing_format='standard',
                    enable_padding=True,

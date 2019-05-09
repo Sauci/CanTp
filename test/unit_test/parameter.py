@@ -26,5 +26,7 @@ n_ta = [pytest.param(a, id='N_Ta = 0x{:02X}'.format(a)) for a in addresses]
 
 
 @pytest.fixture()
-def handle():
+def handle(request):
+    if hasattr(request, 'param'):
+        return CanTp(**request.param)
     return CanTp()

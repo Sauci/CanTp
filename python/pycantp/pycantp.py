@@ -29,6 +29,8 @@ CANTP_I_FULL_DUPLEX_RX_CF = 0x87
 CANTP_I_FULL_DUPLEX_RX_FC = 0x88
 CANTP_I_FULL_DUPLEX_RX_UNDEF = 0x89
 
+CANTP_I_N_BUFFER_OVFLW = 0x90
+
 CANTP_E_UNEXP_PDU = 0x85
 
 CANTP_E_PARAM_CONFIG = 0x01
@@ -52,7 +54,7 @@ class PduInfoType:
 
 
 class CanTp(object):
-    def __init__(self, recompile=False):
+    def __init__(self, rx_buffer_size=0x0FFF, recompile=False):
         if recompile is False:
             _, module_path, _ = find_module('pycantp')
             library_path = os.path.join(module_path, 'input', 'pycantp')
@@ -61,14 +63,19 @@ class CanTp(object):
         sys.path.append(library_path)
         self.module = import_module('_cantp', package='pycantp')
         self.can_if_tx_data = list()
+        self.can_tp_rx_data = list()
+        self.available_rx_buffer = rx_buffer_size
         self.can_tp_transmit_args = dict()
         self.can_if_transmit = MagicMock(return_value=E_OK)
         self.det_report_error = MagicMock(return_value=E_OK)
         self.det_report_runtime_error = MagicMock(return_value=E_OK)
-        self.pdu_r_can_tp_copy_rx_data = MagicMock(return_value=self.lib.BUFREQ_OK)
-        self.pdu_r_can_tp_copy_tx_data = MagicMock(side_effect=self._copy_tx_data, return_value=self.lib.BUFREQ_OK)
+        self.pdu_r_can_tp_copy_rx_data = MagicMock(side_effect=self._pdu_r_can_tp_copy_rx_data,
+                                                   return_value=self.lib.BUFREQ_OK)
+        self.pdu_r_can_tp_copy_tx_data = MagicMock(side_effect=self._pdu_r_can_tp_copy_tx_data,
+                                                   return_value=self.lib.BUFREQ_OK)
         self.pdu_r_can_tp_rx_indication = MagicMock(return_value=None)
-        self.pdu_r_can_tp_start_of_reception = MagicMock(return_value=self.lib.BUFREQ_OK)
+        self.pdu_r_can_tp_start_of_reception = MagicMock(side_effect=self._pdu_r_can_tp_start_of_reception,
+                                                         return_value=self.lib.BUFREQ_OK)
         self.pdu_r_can_tp_tx_confirmation = MagicMock(return_value=None)
         self.ffi.def_extern('CanIf_Transmit')(self._can_if_transmit)
         self.ffi.def_extern('Det_ReportError')(self.det_report_error)
@@ -79,7 +86,21 @@ class CanTp(object):
         self.ffi.def_extern('PduR_CanTpStartOfReception')(self.pdu_r_can_tp_start_of_reception)
         self.ffi.def_extern('PduR_CanTpTxConfirmation')(self.pdu_r_can_tp_tx_confirmation)
 
-    def _copy_tx_data(self, tx_pdu_id, pdu_info, _retry_info, _available_data):
+    def _pdu_r_can_tp_start_of_reception(self, i_pdu_id, pdu_info, tp_sdu_length, buffer_size):
+        if pdu_info.SduDataPtr != self.ffi.NULL and pdu_info.SduLength != 0:
+            for idx in range(pdu_info.SduLength):
+                self.can_tp_rx_data.append(pdu_info.SduDataPtr[idx])
+        buffer_size[0] = self.available_rx_buffer
+        return self.pdu_r_can_tp_start_of_reception.return_value
+
+    def _pdu_r_can_tp_copy_rx_data(self, i_pdu_id, pdu_info, buffer_size):
+        if pdu_info.SduDataPtr != self.ffi.NULL and pdu_info.SduLength != 0:
+            for idx in range(pdu_info.SduLength):
+                self.can_tp_rx_data.append(pdu_info.SduDataPtr[idx])
+        buffer_size[0] = self.available_rx_buffer
+        return self.pdu_r_can_tp_copy_rx_data.return_value
+
+    def _pdu_r_can_tp_copy_tx_data(self, tx_pdu_id, pdu_info, _retry_info, _available_data):
         if tx_pdu_id in self.can_tp_transmit_args.keys():
             args = self.can_tp_transmit_args[tx_pdu_id]
             if args is not None and pdu_info.SduDataPtr != self.ffi.NULL:
@@ -117,6 +138,14 @@ class CanTp(object):
 
     def can_tp_tx_confirmation(self, tx_pdu_id, result):
         return self.lib.CanTp_TxConfirmation(tx_pdu_id, result)
+
+    @property
+    def available_rx_buffer(self):
+        return self._available_rx_buffer - len(self.can_tp_rx_data)
+
+    @available_rx_buffer.setter
+    def available_rx_buffer(self, value):
+        self._available_rx_buffer = value
 
     @property
     def ffi(self):
