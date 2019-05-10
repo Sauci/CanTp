@@ -45,7 +45,7 @@ class TestSWS00057:
 
     CanTp     | Reception of
     ----------+--------------------+--------------------+--------------------+--------------------+--------------------+
-    status    | SF N-PDU           | FF N-PDU           | CF N-PDU           | FC N-PDU           | Unknow n N-PDU
+    status    | SF N-PDU           | FF N-PDU           | CF N-PDU           | FC N-PDU           | Unknown n N-PDU
     ----------+--------------------+--------------------+--------------------+--------------------+--------------------+
     Segmented | Full-duplex:       | Full-duplex:       | Full-duplex:       | If awaited,        | Ignore
     transmit  | If a reception is  | If a reception is  | If a reception is  | process the FC     |
@@ -111,7 +111,6 @@ class TestSWS00057:
         for cf_index in range(ceil((len(self.rx_data) - 6) / 7)):
             cf_frame = Helper.create_rx_cf_can_frame(list(ord(c) for c in self.rx_data[6 + (cf_index * 7):]))
             handle.lib.CanTp_MainFunction()
-            a = ''.join(chr(c) for c in cf_frame)
             handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_pdu_info(handle, cf_frame))
         handle.lib.CanTp_MainFunction()
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, E_OK)
@@ -749,7 +748,7 @@ class TestSWS00339:
 @pytest.mark.parametrize('data_size', single_frame_sizes)
 def test_sws_00353(handle, data_size):
     """
-    After the reception of a Single Frame, if the function PduR_CanTpStartOfReception()returns BUFREQ_E_OVFL to the
+    After the reception of a Single Frame, if the function PduR_CanTpStartOfReception() returns BUFREQ_E_OVFL to the
     CanTp module, the CanTp module shall abort the N-SDU reception.
     """
     configurator = Helper.create_single_rx_sdu_config(handle)
@@ -767,13 +766,13 @@ def test_sws_00353(handle, data_size):
                  id='STmin = {} [ms]'.format(v)) for v in range(0x7F + 0x01)] + [
     pytest.param(v,
                  lambda st_min: 0x7F * 1000,
-                 id='STmin = rsvd (0x{:02X})'.format(v)) for v in (i + 0x80 for i in range(0xF0 - 0x80 + 0x01))] + [
+                 id='STmin = reserved (0x{:02X})'.format(v)) for v in (i + 0x80 for i in range(0xF0 - 0x80 + 0x01))] + [
     pytest.param(0xF1 + v,
                  lambda st_min: (st_min & 0x0F) * 100,
                  id='STmin = {} [us]'.format(100 + v * 100)) for v in range(9)] + [
     pytest.param(v,
                  lambda st_min: 0x7F * 1000,
-                 id='STmin = rsvd (0x{:02X})'.format(v)) for v in (i + 0xFA for i in range(0xFF - 0xFA + 0x01))])
+                 id='STmin = reserved (0x{:02X})'.format(v)) for v in (i + 0xFA for i in range(0xFF - 0xFA + 0x01))])
 def test_separation_time_minimum_value(handle, st_min, call_count):
     """
     6.5.5.5 Definition of SeparationTime (STmin) parameter
