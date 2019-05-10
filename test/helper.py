@@ -103,7 +103,7 @@ class Helper:
         return tmp_return
 
     @staticmethod
-    def create_rx_ff_can_frame(payload=(dummy_byte,), ai=None):
+    def create_rx_ff_can_frame(payload=(dummy_byte,) * 8, ai=None):
         if ai is None:
             ai = []
         else:
