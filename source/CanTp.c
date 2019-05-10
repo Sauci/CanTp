@@ -129,7 +129,8 @@ typedef enum
 
 typedef enum {
     CANTP_FRAME_STATE_INVALID = 0x00u,
-    CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST,
+    CANTP_RX_FRAME_STATE_WAIT_FC_CTS_TX_REQUEST,
+    CANTP_RX_FRAME_STATE_WAIT_FC_OVFLW_TX_REQUEST,
     CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION,
     CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION,
     CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST,
@@ -1304,11 +1305,7 @@ static BufReq_ReturnType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
     p_pdu_info->MetaDataPtr = NULL_PTR;
     p_pdu_info->SduLength = ofs;
 
-    if (p_n_sdu->rx.fs == CANTP_FLOW_STATUS_TYPE_OVFLW)
-    {
-        tmp_return = BUFREQ_E_OVFL;
-    }
-    else if ((p_n_sdu->rx.fs == CANTP_FLOW_STATUS_TYPE_WT) && (p_n_sdu->rx.wft_max == 0x00u))
+    if ((p_n_sdu->rx.fs == CANTP_FLOW_STATUS_TYPE_WT) && (p_n_sdu->rx.wft_max == 0x00u))
     {
         tmp_return = BUFREQ_E_NOT_OK;
     }
@@ -1409,7 +1406,7 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
                  * module shall send a Flow Control N-PDU with overflow status (FC(OVFLW)) and abort
                  * the N-SDU reception. */
                 p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_OVFLW;
-                result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
+                result = CANTP_RX_FRAME_STATE_WAIT_FC_OVFLW_TX_REQUEST;
 
                 break;
             }
@@ -1428,8 +1425,7 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
                 }
                 else
                 {
-                    p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_CTS;
-                    result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
+                    result = CANTP_RX_FRAME_STATE_WAIT_FC_CTS_TX_REQUEST;
                 }
 
                 break;
@@ -1498,7 +1494,7 @@ static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduIn
                                  * the CanTp module shall start a time-out N_Br before calling
                                  * PduR_CanTpStartOfReception or PduR_CanTpCopyRxData. */
                                 CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
-                                result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
+                                result = CANTP_RX_FRAME_STATE_WAIT_FC_CTS_TX_REQUEST;
                             }
                             else
                             {
@@ -2044,7 +2040,7 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
     {
         switch (p_n_sdu->rx.state)
         {
-            case CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST:
+            case CANTP_RX_FRAME_STATE_WAIT_FC_CTS_TX_REQUEST:
             {
                 /* SWS_CanTp_00166: At the reception of a FF or last CF of a block, the CanTp module
                  * shall start a time-out N_Br before calling PduR_CanTpStartOfReception or
@@ -2053,10 +2049,6 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
                 {
                     CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
 
-                    /* SWS_CanTp_00318: After the reception of a First Frame, if the function
-                     * PduR_CanTpStartOfReception() returns BUFREQ_E_OVFL to the CanTp module, the
-                     * CanTp module shall send a Flow Control N-PDU with overflow status (FC(OVFLW))
-                     * and abort the N-SDU reception. */
                     switch (ISO15765.req[ISO15765_DIR_RX][CANTP_N_PCI_TYPE_FC](p_n_sdu))
                     {
                         case BUFREQ_OK:
@@ -2091,6 +2083,18 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
                                          &pNSdu->rx.can_if_pdu_info,
                                          &pNSdu->rx.buf.rmng);
                 }
+
+                break;
+            }
+            case CANTP_RX_FRAME_STATE_WAIT_FC_OVFLW_TX_REQUEST:
+            {
+                /* SWS_CanTp_00318: After the reception of a First Frame, if the function
+                 * PduR_CanTpStartOfReception() returns BUFREQ_E_OVFL to the CanTp module, the CanTp
+                 * module shall send a Flow Control N-PDU with overflow status (FC(OVFLW)) and abort
+                 * the N-SDU reception. */
+                (void)ISO15765.req[ISO15765_DIR_RX][CANTP_N_PCI_TYPE_FC](p_n_sdu);
+                CanTp_TransmitRxCANData(p_n_sdu);
+                CanTp_AbortRxSession(pNSdu, CANTP_I_N_BUFFER_OVFLW, FALSE);
 
                 break;
             }
