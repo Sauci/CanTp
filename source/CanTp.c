@@ -1434,10 +1434,18 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
 
                 break;
             }
-            default:
+            case BUFREQ_E_NOT_OK:
             {
+                /* SWS_CanTp_00081: After the reception of a First Frame or Single Frame, if the
+                 * function PduR_CanTpStartOfReception()returns BUFREQ_E_NOT_OK to the CanTp module,
+                 * the CanTp module shall abort the reception of this N-SDU. No Flow Control will be
+                 * sent and PduR_CanTpRxIndication() will not be called in this case. */
                 result = CANTP_FRAME_STATE_ABORT;
 
+                break;
+            }
+            default:
+            {
                 break;
             }
         }
