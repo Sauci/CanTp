@@ -1415,13 +1415,13 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
             }
             case BUFREQ_OK:
             {
-                /* SWS_CanTp_00339: After the reception of a First Frame or Single Frame, if the
-                 * function PduR_CanTpStartOfReception() returns BUFREQ_OK with a smaller available
-                 * buffer size than needed for the already received data, the CanTp module shall
-                 * abort the reception of the N-SDU and call PduR_CanTpRxIndication() with the
-                 * result E_NOT_OK. */
                 if (p_n_sdu->rx.buf.rmng < CANTP_FF_PAYLOAD_SIZE)
                 {
+                    /* SWS_CanTp_00339: After the reception of a First Frame or Single Frame, if the
+                     * function PduR_CanTpStartOfReception() returns BUFREQ_OK with a smaller
+                     * available buffer size than needed for the already received data, the CanTp
+                     * module shall abort the reception of the N-SDU and call
+                     * PduR_CanTpRxIndication() with the result E_NOT_OK. */
                     PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
                     result = CANTP_FRAME_STATE_ABORT;
@@ -1456,6 +1456,7 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
 
 static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo)
 {
+    PduInfoType tmp_pdu;
     CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
 
@@ -1480,6 +1481,13 @@ static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduIn
                     {
                         p_n_sdu->rx.bs --;
 
+                        tmp_pdu.MetaDataPtr = pPduInfo->MetaDataPtr;
+                        tmp_pdu.SduDataPtr = &pPduInfo->SduDataPtr[CANTP_CF_PCI_SIZE];
+                        tmp_pdu.SduLength = CANTP_CF_PAYLOAD_SIZE;
+                        PduR_CanTpCopyRxData(pNSdu->rx.cfg->nSduId,
+                                             &tmp_pdu,
+                                             &pNSdu->rx.buf.rmng);
+
                         if ((p_n_sdu->rx.buf.size - p_n_sdu->rx.buf.done) != 0x00u)
                         {
                             if (p_n_sdu->rx.bs == 0x00u)
@@ -1502,14 +1510,6 @@ static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduIn
                         {
                             result = CANTP_FRAME_STATE_OK;
                         }
-
-                        PduInfoType tmp_pdu;
-                        tmp_pdu.MetaDataPtr = pPduInfo->MetaDataPtr;
-                        tmp_pdu.SduDataPtr = &pPduInfo->SduDataPtr[CANTP_CF_PCI_SIZE];
-                        tmp_pdu.SduLength = CANTP_CF_PAYLOAD_SIZE;
-                        PduR_CanTpCopyRxData(pNSdu->rx.cfg->nSduId,
-                                             &tmp_pdu,
-                                             &pNSdu->rx.buf.rmng);
                     }
                 }
             }
