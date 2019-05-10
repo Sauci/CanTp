@@ -13,6 +13,7 @@ class Helper:
                                     block_size=1,
                                     af='standard',
                                     main_function_period=1,
+                                    wait_for_transmission_max=3,
                                     channel_mode='half duplex'):
         configurator = CanTpConfigurator(handle, main_function_period=main_function_period)
         channel = configurator.add_channel(mode=channel_mode)
@@ -22,6 +23,7 @@ class Helper:
                                 ar_timeout=n_ar,
                                 br_timeout=n_br,
                                 cr_timeout=n_cr,
+                                wait_for_transmission_max=wait_for_transmission_max,
                                 block_size=block_size,
                                 network_source_address=None,
                                 network_target_address=None,
