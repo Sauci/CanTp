@@ -24,6 +24,7 @@ addresses = (0, 10, 100, 255)
 n_sa = [pytest.param(a, id='N_Sa = 0x{:02X}'.format(a)) for a in addresses]
 n_ta = [pytest.param(a, id='N_Ta = 0x{:02X}'.format(a)) for a in addresses]
 
+block_sizes = [pytest.param(bs, id='BS = {}'.format(bs)) for bs in (0, 1, 10, 15)]
 
 @pytest.fixture()
 def handle(request):

@@ -33,10 +33,7 @@ class TestSWS00350:
 
 @pytest.mark.skip('non-deterministic fails, should be investigated...')
 @pytest.mark.parametrize('data_size', multi_frames_sizes)
-@pytest.mark.parametrize('bs', [pytest.param(0, id='BS = 0'),
-                                pytest.param(1, id='BS = 1'),
-                                pytest.param(10, id='BS = 10'),
-                                pytest.param(15, id='BS = 15')])
+@pytest.mark.parametrize('bs', block_sizes)
 def test_sequence_number(handle, data_size, bs):
     """
     6.5.4.2 SequenceNumber (SN) parameter definition
