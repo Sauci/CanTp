@@ -209,20 +209,18 @@ class TestSWS00079:
 
     @pytest.mark.parametrize('data_size', single_frame_sizes)
     def test_single_frame(self, handle, data_size):
-        pdu_id = 0
         configurator = Helper.create_single_rx_sdu_config(handle, n_br=0)
         handle.lib.CanTp_Init(configurator.config)
         can_frame = Helper.create_rx_sf_can_frame()
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, can_frame))
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, can_frame))
         handle.pdu_r_can_tp_start_of_reception.assert_called_once()
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     def test_first_frame(self, handle, data_size):
-        pdu_id = 0
         configurator = Helper.create_single_rx_sdu_config(handle, n_br=0)
         handle.lib.CanTp_Init(configurator.config)
         can_frame = Helper.create_rx_ff_can_frame()
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, can_frame))
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, can_frame))
         handle.lib.CanTp_MainFunction()
         handle.pdu_r_can_tp_start_of_reception.assert_called_once()
 
@@ -236,24 +234,22 @@ class TestSWS00081:
 
     @pytest.mark.parametrize('data_size', single_frame_sizes)
     def test_single_frame(self, handle, data_size):
-        pdu_id = 0
         configurator = Helper.create_single_rx_sdu_config(handle, n_br=0)
         handle.lib.CanTp_Init(configurator.config)
         sf = Helper.create_rx_sf_can_frame()
         handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_NOT_OK
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, sf))
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, sf))
         handle.pdu_r_can_tp_rx_indication.assert_not_called()
         handle.lib.CanTp_MainFunction()
         handle.can_if_transmit.assert_not_called()
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     def test_first_frame(self, handle, data_size):
-        pdu_id = 0
         configurator = Helper.create_single_rx_sdu_config(handle, n_br=0)
         handle.lib.CanTp_Init(configurator.config)
         ff = Helper.create_rx_sf_can_frame()
         handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_NOT_OK
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, ff))
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, ff))
         handle.pdu_r_can_tp_rx_indication.assert_not_called()
         handle.lib.CanTp_MainFunction()
         handle.can_if_transmit.assert_not_called()
@@ -278,11 +274,11 @@ def test_sws_00222(handle, n_br):
     (zero) and NULL_PTR as data buffer during each processing of the MainFunction.
     """
 
-    pdu_id = 0
+
     configurator = Helper.create_single_rx_sdu_config(handle, n_br=n_br)
     ff = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * 10)
     handle.lib.CanTp_Init(configurator.config)
-    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, ff))
+    handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, ff))
     cnt = 0
     for cnt in range(int(n_br / configurator.config.mainFunctionPeriod)):
         handle.lib.CanTp_MainFunction()
@@ -323,12 +319,11 @@ class TestSWS00229:
     @pytest.mark.parametrize('n_bs', n_bs_timeouts)
     @pytest.mark.parametrize('n_cs', n_cs_timeouts)
     def test_as_timeout(self, handle, data_size, n_as, n_bs, n_cs):
-        pdu_id = 0
         configurator = Helper.create_single_tx_sdu_config(handle, n_as=n_as, n_bs=n_bs, n_cs=n_cs)
         pdu_info = Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * data_size)
 
         handle.lib.CanTp_Init(configurator.config)
-        handle.can_tp_transmit(pdu_id, pdu_info)
+        handle.can_tp_transmit(0, pdu_info)
         for _ in range(int(n_as / configurator.config.mainFunctionPeriod)):
             handle.pdu_r_can_tp_copy_tx_data.return_value = handle.lib.BUFREQ_OK
             handle.lib.CanTp_MainFunction()
@@ -341,14 +336,13 @@ class TestSWS00229:
     @pytest.mark.parametrize('n_bs', n_bs_timeouts)
     @pytest.mark.parametrize('n_cs', n_cs_timeouts)
     def test_bs_timeout(self, handle, data_size, n_as, n_bs, n_cs):
-        pdu_id = 0
         configurator = Helper.create_single_tx_sdu_config(handle, n_as=n_as, n_bs=n_bs, n_cs=n_cs)
         pdu_info = Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * data_size)
 
         handle.lib.CanTp_Init(configurator.config)
-        handle.can_tp_transmit(pdu_id, pdu_info)
+        handle.can_tp_transmit(0, pdu_info)
         handle.lib.CanTp_MainFunction()
-        handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
+        handle.lib.CanTp_TxConfirmation(0, E_OK)
         for _ in range(int(n_bs / configurator.config.mainFunctionPeriod)):
             handle.lib.CanTp_MainFunction()
         handle.det_report_error.assert_not_called()
@@ -360,17 +354,17 @@ class TestSWS00229:
     @pytest.mark.parametrize('n_bs', n_bs_timeouts)
     @pytest.mark.parametrize('n_cs', n_cs_timeouts)
     def test_cs_timeout(self, handle, data_size, n_as, n_bs, n_cs):
-        pdu_id = 0
+
         configurator = Helper.create_single_tx_sdu_config(handle, n_as=n_as, n_bs=n_bs, n_cs=n_cs)
         pdu_info = Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * data_size)
         fc_frame = Helper.create_rx_fc_can_frame(padding=0xFF, bs=1, st_min=0)
         handle.lib.CanTp_Init(configurator.config)
 
         handle.pdu_r_can_tp_copy_tx_data.return_value = handle.lib.BUFREQ_OK
-        handle.can_tp_transmit(pdu_id, pdu_info)
+        handle.can_tp_transmit(0, pdu_info)
         handle.lib.CanTp_MainFunction()
-        handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, fc_frame))
+        handle.lib.CanTp_TxConfirmation(0, E_OK)
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, fc_frame))
         # TODO: add test for busy and overflow return values.
         handle.pdu_r_can_tp_copy_tx_data.return_value = handle.lib.BUFREQ_E_BUSY
         for _ in range(int(n_cs / configurator.config.mainFunctionPeriod)):
@@ -383,11 +377,10 @@ class TestSWS00229:
     @pytest.mark.parametrize('n_ar', n_ar_timeouts)
     @pytest.mark.parametrize('n_cr', n_cr_timeouts)
     def test_ar_timeout(self, handle, data_size, n_ar, n_cr):
-        pdu_id = 0
         configurator = Helper.create_single_rx_sdu_config(handle, n_ar=n_ar, n_br=0, n_cr=n_cr)
         ff = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * data_size)
         handle.lib.CanTp_Init(configurator.config)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, ff))
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, ff))
         for _ in range(int(n_ar / configurator.config.mainFunctionPeriod)):
             handle.lib.CanTp_MainFunction()
         handle.det_report_error.assert_not_called()
@@ -456,11 +449,11 @@ def test_sws_00255(handle):
     If the CanTp_CancelTransmit service has been successfully executed the CanTp shall call the PduR_CanTpTxConfirmation
     with notification result E_NOT_OK.
     """
-    pdu_id = 0
-    configurator = Helper.create_single_tx_sdu_config(handle, pdu_id=pdu_id)
+
+    configurator = Helper.create_single_tx_sdu_config(handle)
     handle.lib.CanTp_Init(configurator.config)
-    handle.can_tp_transmit(pdu_id, Helper.create_tx_pdu_info(handle, [Helper.dummy_byte]))
-    handle.lib.CanTp_CancelTransmit(pdu_id)
+    handle.can_tp_transmit(0, Helper.create_tx_pdu_info(handle, [Helper.dummy_byte]))
+    handle.lib.CanTp_CancelTransmit(0)
     handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, E_NOT_OK)
 
 
@@ -468,11 +461,10 @@ def test_sws_00256(handle):
     """
     The CanTp shall abort the transmission of the current N-SDU if the service returns E_OK.
     """
-    pdu_id = 0
-    configurator = Helper.create_single_tx_sdu_config(handle, pdu_id=pdu_id)
+    configurator = Helper.create_single_tx_sdu_config(handle)
     handle.lib.CanTp_Init(configurator.config)
-    handle.can_tp_transmit(pdu_id, Helper.create_tx_pdu_info(handle, [Helper.dummy_byte]))
-    assert handle.lib.CanTp_CancelTransmit(pdu_id) == E_OK
+    handle.can_tp_transmit(0, Helper.create_tx_pdu_info(handle, [Helper.dummy_byte]))
+    assert handle.lib.CanTp_CancelTransmit(0) == E_OK
 
 
 class TestSWS00260:
@@ -502,11 +494,10 @@ def test_sws_00261(handle):
     """
     The CanTp shall abort the reception of the current N-SDU if the service returns E_OK.
     """
-    pdu_id = 0
-    configurator = Helper.create_single_rx_sdu_config(handle, pdu_id=pdu_id)
+    configurator = Helper.create_single_rx_sdu_config(handle)
     handle.lib.CanTp_Init(configurator.config)
-    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, Helper.create_rx_ff_can_frame()))
-    assert handle.lib.CanTp_CancelReceive(pdu_id) == E_OK
+    handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, Helper.create_rx_ff_can_frame()))
+    assert handle.lib.CanTp_CancelReceive(0) == E_OK
 
 
 class TestSWS00262:
@@ -517,22 +508,20 @@ class TestSWS00262:
     """
 
     def test_single_frame(self, handle):
-        pdu_id = 0
-        configurator = Helper.create_single_rx_sdu_config(handle, pdu_id=pdu_id)
+        configurator = Helper.create_single_rx_sdu_config(handle)
         handle.lib.CanTp_Init(configurator.config)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, Helper.create_rx_sf_can_frame()))
-        assert handle.lib.CanTp_CancelReceive(pdu_id) == E_NOT_OK
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, Helper.create_rx_sf_can_frame()))
+        assert handle.lib.CanTp_CancelReceive(0) == E_NOT_OK
 
     def test_last_consecutive_frame(self, handle):
-        pdu_id = 0
         configurator = Helper.create_single_tx_sdu_config(handle)
         fc_frame = Helper.create_rx_fc_can_frame(padding=0xFF, bs=1)
         handle.lib.CanTp_Init(configurator.config)
-        handle.can_tp_transmit(pdu_id, Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * 8))
-        handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, fc_frame))
+        handle.can_tp_transmit(0, Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * 8))
+        handle.lib.CanTp_TxConfirmation(0, E_OK)
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, fc_frame))
         handle.lib.CanTp_MainFunction()
-        assert handle.lib.CanTp_CancelReceive(pdu_id) == E_NOT_OK
+        assert handle.lib.CanTp_CancelReceive(0) == E_NOT_OK
 
 
 def test_sws_00263(handle):
@@ -540,11 +529,10 @@ def test_sws_00263(handle):
     If the CanTp_CancelReceive service has been successfully executed the CanTp shall call the PduR_CanTpRxIndication
     with notification result E_NOT_OK.
     """
-    pdu_id = 0
-    configurator = Helper.create_single_rx_sdu_config(handle, pdu_id=pdu_id)
+    configurator = Helper.create_single_rx_sdu_config(handle)
     handle.lib.CanTp_Init(configurator.config)
-    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, Helper.create_rx_ff_can_frame()))
-    handle.lib.CanTp_CancelReceive(pdu_id)
+    handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, Helper.create_rx_ff_can_frame()))
+    handle.lib.CanTp_CancelReceive(0)
     handle.pdu_r_can_tp_rx_indication.called_once_with(ANY, E_NOT_OK)
 
 
@@ -553,11 +541,10 @@ def test_sws_00304(handle):
     If the change of a parameter is requested for an N-SDU that is on reception process the service
     CanTp_ChangeParameter immediately returns E_NOT_OK and no parameter value is changed
     """
-    pdu_id = 0
-    configurator = Helper.create_single_rx_sdu_config(handle, pdu_id=pdu_id)
+    configurator = Helper.create_single_rx_sdu_config(handle)
     handle.lib.CanTp_Init(configurator.config)
-    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, Helper.create_rx_ff_can_frame()))
-    assert handle.lib.CanTp_ChangeParameter(pdu_id, handle.lib.TP_STMIN, 0) == E_NOT_OK
+    handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, Helper.create_rx_ff_can_frame()))
+    assert handle.lib.CanTp_ChangeParameter(0, handle.lib.TP_STMIN, 0) == E_NOT_OK
     handle.det_report_error.assert_not_called()
 
 
@@ -572,23 +559,21 @@ class TestSWS00305:
         pdu_id = 0
         configurator = Helper.create_single_rx_sdu_config(handle, pdu_id=pdu_id)
         handle.lib.CanTp_Init(configurator.config)
-        assert handle.lib.CanTp_ChangeParameter(1, handle.lib.TP_STMIN, 0) == E_NOT_OK
+        assert handle.lib.CanTp_ChangeParameter(pdu_id + 1, handle.lib.TP_STMIN, 0) == E_NOT_OK
         handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, CANTP_E_PARAM_ID)
 
     def test_invalid_parameter(self, handle):
-        pdu_id = 0
-        configurator = Helper.create_single_rx_sdu_config(handle, pdu_id=pdu_id)
+        configurator = Helper.create_single_rx_sdu_config(handle)
         handle.lib.CanTp_Init(configurator.config)
-        assert handle.lib.CanTp_ChangeParameter(pdu_id, handle.lib.TP_STMIN + handle.lib.TP_BS + 1, 0) == E_NOT_OK
+        assert handle.lib.CanTp_ChangeParameter(0, handle.lib.TP_STMIN + handle.lib.TP_BS + 1, 0) == E_NOT_OK
         handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, CANTP_E_PARAM_ID)
 
     @pytest.mark.parametrize('parameter, value', [pytest.param('TP_STMIN', 0xFF + 1, id='STmin out of range'),
                                                   pytest.param('TP_BS', 0xFF + 1, id='BS out of range')])
     def test_invalid_value(self, handle, parameter, value):
-        pdu_id = 0
-        configurator = Helper.create_single_rx_sdu_config(handle, pdu_id=pdu_id)
+        configurator = Helper.create_single_rx_sdu_config(handle)
         handle.lib.CanTp_Init(configurator.config)
-        assert handle.lib.CanTp_ChangeParameter(pdu_id, getattr(handle.lib, parameter), value) == E_NOT_OK
+        assert handle.lib.CanTp_ChangeParameter(0, getattr(handle.lib, parameter), value) == E_NOT_OK
         handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, CANTP_E_PARAM_ID)
 
 
@@ -598,7 +583,7 @@ def test_sws_00318(handle):
     CanTp module, the CanTp module shall send a Flow Control N-PDU with overflow status (FC(OVFLW)) and abort the N-SDU
     reception.
     """
-    configurator = Helper.create_single_rx_sdu_config(handle, n_br=0, pdu_id=0)
+    configurator = Helper.create_single_rx_sdu_config(handle, n_br=0)
     handle.lib.CanTp_Init(configurator.config)
     handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_OVFL
     handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, Helper.create_rx_ff_can_frame()))
@@ -614,10 +599,9 @@ def test_sws_00321(handle):
     If DET is enabled the function CanTp_Transmit shall rise CANTP_E_PARAM_POINTER error if the argument PduInfoPtr is a
     NULL pointer and return without any action.
     """
-    pdu_id = 0
     configurator = Helper.create_single_tx_sdu_config(handle)
     handle.lib.CanTp_Init(configurator.config)
-    handle.can_tp_transmit(pdu_id, handle.ffi.NULL)
+    handle.can_tp_transmit(0, handle.ffi.NULL)
     handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, CANTP_E_PARAM_POINTER)
 
 
@@ -626,10 +610,9 @@ def test_sws_00322(handle):
     If DET is enabled the function CanTp_RxIndication shall rise CANTP_E_PARAM_POINTER error if the argument PduInfoPtr
     is a NULL pointer and return without any action.
     """
-    pdu_id = 0
-    configurator = Helper.create_single_rx_sdu_config(handle, pdu_id=pdu_id)
+    configurator = Helper.create_single_rx_sdu_config(handle)
     handle.lib.CanTp_Init(configurator.config)
-    handle.lib.CanTp_RxIndication(pdu_id, handle.ffi.NULL)
+    handle.lib.CanTp_RxIndication(0, handle.ffi.NULL)
     handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, CANTP_E_PARAM_POINTER)
 
 
@@ -649,11 +632,10 @@ class TestSWS00324:
         handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, CANTP_E_PARAM_ID)
 
     def test_invalid_parameter(self, handle):
-        pdu_id = 0
-        configurator = Helper.create_single_rx_sdu_config(handle, pdu_id=pdu_id)
+        configurator = Helper.create_single_rx_sdu_config(handle)
         parameter = handle.ffi.new('uint16 *', 0)
         handle.lib.CanTp_Init(configurator.config)
-        assert handle.lib.CanTp_ReadParameter(pdu_id, handle.lib.TP_STMIN + handle.lib.TP_BS + 1, parameter) == E_NOT_OK
+        assert handle.lib.CanTp_ReadParameter(0, handle.lib.TP_STMIN + handle.lib.TP_BS + 1, parameter) == E_NOT_OK
         handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, CANTP_E_PARAM_ID)
 
 
@@ -806,19 +788,18 @@ def test_separation_time_minimum_value(handle, st_min, call_count):
     receiving network entity for the duration of the ongoing segmented message transmission.
     """
 
-    pdu_id = 0
-    configurator = Helper.create_single_tx_sdu_config(handle, pdu_id=pdu_id, main_function_period=1)
+    configurator = Helper.create_single_tx_sdu_config(handle, main_function_period=1)
     fc_frame = Helper.create_rx_fc_can_frame(padding=0xFF, bs=0, st_min=st_min)
     handle.lib.CanTp_Init(configurator.config)
-    handle.can_tp_transmit(pdu_id, Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * 100))
+    handle.can_tp_transmit(0, Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * 100))
     handle.lib.CanTp_MainFunction()
     assert handle.can_if_transmit.call_count == 1  # sent FF
     handle.can_if_transmit.assert_called_once()
-    handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, fc_frame))
+    handle.lib.CanTp_TxConfirmation(0, E_OK)
+    handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, fc_frame))
     handle.lib.CanTp_MainFunction()
     assert handle.can_if_transmit.call_count == 2  # sent first CF
-    handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
+    handle.lib.CanTp_TxConfirmation(0, E_OK)
     for _ in range(call_count(st_min)):
         handle.lib.CanTp_MainFunction()
     assert handle.can_if_transmit.call_count == 2  # wait for timeout
