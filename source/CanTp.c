@@ -224,7 +224,7 @@ typedef struct
 } CanTp_ChannelRtType;
 
 typedef struct {
-    BufReq_ReturnType (*const req[2][4])(CanTp_NSduType *pNSdu);
+    CanTp_FrameStateType (*const req[2][4])(CanTp_NSduType *pNSdu);
     CanTp_FrameStateType (*const ind[2][4])(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo);
     CanTp_FrameStateType (*const con[2][4])(CanTp_NSduType *pNSdu);
 } CanTp_ISO15765Type;
@@ -412,11 +412,11 @@ static void CanTp_FillPadding(uint8 *pBuffer, PduLengthType *pOfs, const uint8 v
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static BufReq_ReturnType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu);
+static CanTp_FrameStateType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu);
 
-static BufReq_ReturnType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu);
+static CanTp_FrameStateType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu);
 
-static BufReq_ReturnType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu);
+static CanTp_FrameStateType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu);
 
 static BufReq_ReturnType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu);
 
@@ -1153,9 +1153,9 @@ static boolean CanTp_FlowControlExpired(CanTp_NSduType *pNSdu)
     return result;
 }
 
-static BufReq_ReturnType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
+static CanTp_FrameStateType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
 {
-    BufReq_ReturnType tmp_return;
+    CanTp_FrameStateType tmp_return = CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST;
     CanTp_NSduType *p_n_sdu = pNSdu;
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
     PduLengthType ofs = 0x00u;
@@ -1172,9 +1172,10 @@ static BufReq_ReturnType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
     p_n_sdu->tx.buf.can[ofs] |= pNSdu->tx.buf.size;
     ofs = ofs + 0x01u;
 
-    tmp_return = CanTp_FillTxPayload(p_n_sdu, &ofs);
-    if (tmp_return == BUFREQ_OK)
+    if (CanTp_FillTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
     {
+        tmp_return = CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION;
+
         /* SWS_CanTp_00348: if frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
          * frames) are used for a Tx N-SDU and if CanTpTxPaddingActivation is equal to CANTP_ON,
          * CanTp shall transmit by means of CanIf_Transmit() call, SF Tx N-PDU or last CF Tx N-PDU
@@ -1193,9 +1194,9 @@ static BufReq_ReturnType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
     return tmp_return;
 }
 
-static BufReq_ReturnType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
+static CanTp_FrameStateType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
 {
-    BufReq_ReturnType tmp_return;
+    CanTp_FrameStateType tmp_return = CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST;
     CanTp_NSduType *p_n_sdu = pNSdu;
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
     PduLengthType ofs = 0x00u;
@@ -1215,9 +1216,10 @@ static BufReq_ReturnType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
     p_n_sdu->tx.buf.can[ofs + 0x01u] = pNSdu->tx.buf.size & 0xFFu;
     ofs = ofs + 0x02u;
 
-    tmp_return = CanTp_FillTxPayload(p_n_sdu, &ofs);
-    if (tmp_return == BUFREQ_OK)
+    if (CanTp_FillTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
     {
+        tmp_return = CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION;
+
         /* SWS_CanTp_00348: if frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
          * frames) are used for a Tx N-SDU and if CanTpTxPaddingActivation is equal to CANTP_ON,
          * CanTp shall transmit by means of CanIf_Transmit() call, SF Tx N-PDU or last CF Tx N-PDU
@@ -1236,9 +1238,9 @@ static BufReq_ReturnType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
     return tmp_return;
 }
 
-static BufReq_ReturnType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
+static CanTp_FrameStateType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
 {
-    BufReq_ReturnType tmp_return;
+    CanTp_FrameStateType tmp_return = CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST;
     CanTp_NSduType *p_n_sdu = pNSdu;
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
     PduLengthType ofs = 0x01u;
@@ -1249,9 +1251,10 @@ static BufReq_ReturnType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
         CanTp_FillTxMetaData(p_n_sdu, CANTP_N_PCI_TYPE_CF);
     }
 
-    tmp_return = CanTp_FillTxPayload(p_n_sdu, &ofs);
-    if (tmp_return == BUFREQ_OK)
+    if (CanTp_FillTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
     {
+        tmp_return = CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION;
+
         p_n_sdu->tx.sn ++;
 
         // CanTp_FillAIField(p_n_sdu, &ofs);
@@ -2143,22 +2146,22 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
         {
             case CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST:
             {
-                if (ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_SF](p_n_sdu) == BUFREQ_OK)
+                p_n_sdu->tx.state = ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_SF](p_n_sdu);
+
+                if (p_n_sdu->tx.state == CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION)
                 {
                     CanTp_TransmitTxCANData(p_n_sdu);
-
-                    p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION;
                 }
 
                 break;
             }
             case CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST:
             {
-                if (ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_FF](p_n_sdu) == BUFREQ_OK)
+                p_n_sdu->tx.state = ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_FF](p_n_sdu);
+
+                if (p_n_sdu->tx.state == CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION)
                 {
                     CanTp_TransmitTxCANData(p_n_sdu);
-
-                    p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION;
                 }
 
                 break;
@@ -2168,11 +2171,11 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
                 if ((CanTp_FlowControlExpired(p_n_sdu) == TRUE) ||
                     (CanTp_FlowControlActive(p_n_sdu) == FALSE))
                 {
-                    if (ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_CF](p_n_sdu) == BUFREQ_OK)
+                    p_n_sdu->tx.state = ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_CF](p_n_sdu);
+
+                    if (p_n_sdu->tx.state == CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION)
                     {
                         CanTp_TransmitTxCANData(p_n_sdu);
-
-                        p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION;
                     }
                 }
 
@@ -2180,8 +2183,8 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
             }
             case CANTP_FRAME_STATE_OK:
             {
-                /* SWS_CanTp_00090: when the transport transmission session is successfully completed,
-                 * the CanTp module shall call a notification service of the upper layer,
+                /* SWS_CanTp_00090: when the transport transmission session is successfully
+                 * completed, the CanTp module shall call a notification service of the upper layer,
                  * PduR_CanTpTxConfirmation(), with the result E_OK. */
                 PduR_CanTpTxConfirmation(p_n_sdu->tx.cfg->nSduId, E_OK);
 
