@@ -8,9 +8,7 @@ RUN apk update && apk add \
     build-base \
     cmake \
     git \
-    libffi \
     libffi-dev \
-    python3 \
     python3-dev
 
 RUN git clone https://github.com/Sauci/CanTp $PROJECT_DIR
