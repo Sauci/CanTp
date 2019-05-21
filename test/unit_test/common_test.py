@@ -267,6 +267,7 @@ def test_sws_00176(handle):
     handle.can_if_transmit.assert_called_once()
 
 
+@pytest.mark.parametrize('handle', [dict(rx_buffer_size=8)], indirect=True)
 @pytest.mark.parametrize('n_br', n_br_timeouts)
 def test_sws_00222(handle, n_br):
     """
@@ -274,36 +275,58 @@ def test_sws_00222(handle, n_br):
     (zero) and NULL_PTR as data buffer during each processing of the MainFunction.
     """
 
-
-    configurator = Helper.create_single_rx_sdu_config(handle, n_br=n_br)
+    configurator = Helper.create_single_rx_sdu_config(handle, n_br=n_br, block_size=0, wait_for_transmission_max=1)
     ff = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * 10)
     handle.lib.CanTp_Init(configurator.config)
     handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, ff))
-    cnt = 0
-    for cnt in range(int(n_br / configurator.config.mainFunctionPeriod)):
+    for _ in range(int(n_br / configurator.config.mainFunctionPeriod)):
         handle.lib.CanTp_MainFunction()
         assert handle.pdu_r_can_tp_copy_rx_data.call_args[0][1].SduLength == 0
         assert handle.pdu_r_can_tp_copy_rx_data.call_args[0][1].SduDataPtr == handle.ffi.NULL
-    assert handle.pdu_r_can_tp_copy_rx_data.call_count == cnt + 1
+    assert handle.pdu_r_can_tp_copy_rx_data.call_count == int(n_br / configurator.config.mainFunctionPeriod) + 1
 
 
-def test_sws_00223(handle):
+@pytest.mark.parametrize('handle', [dict(rx_buffer_size=8)], indirect=True)
+@pytest.mark.parametrize('wft_max', wait_for_tx_max)
+def test_sws_00223(handle, wft_max):
     """
     The CanTp module shall send a maximum of WFTmax consecutive FC(WAIT) N-PDU. If this number is reached, the CanTp
     module shall abort the reception of this N-SDU (the receiver did not send any FC N-PDU, so the N_Bs timer expires on
     the sender side and then the transmission is aborted) and a receiving indication with E_NOT_OK occurs.
     """
-    pytest.mark.xfail()
+    configurator = Helper.create_single_rx_sdu_config(handle, n_br=0, block_size=0, wait_for_transmission_max=wft_max)
+    ff = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * 10)
+    handle.lib.CanTp_Init(configurator.config)
+    handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, ff))
+    for _ in range(wft_max):
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, E_OK)
+    handle.lib.CanTp_MainFunction()
+    assert handle.can_if_transmit.call_count == wft_max
+    handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, E_NOT_OK)
 
 
-def test_sws_00224(handle):
+@pytest.mark.parametrize('bs', block_sizes)
+@pytest.mark.parametrize('data_size', multi_frames_sizes)
+def test_sws_00224(bs, data_size):
     """
     When the Rx buffer is large enough for the next block (directly after the First Frame or the last Consecutive Frame
     of a block, or after repeated calls to PduR_CanTpCopyRxData() according to SWS_CanTp_00222), the CanTp module shall
     send a Flow Control N-PDU with ClearToSend status (FC(CTS)) and shall then expect the reception of Consecutive Frame
     N-PDUs.
     """
-    pytest.mark.xfail()
+
+    handle = CanTp(rx_buffer_size=data_size)
+    configurator = Helper.create_single_rx_sdu_config(handle, block_size=bs)
+    ff = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * data_size)
+    cf = Helper.create_rx_cf_can_frame()
+    handle.lib.CanTp_Init(configurator.config)
+    handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, ff))
+    handle.lib.CanTp_MainFunction()
+    handle.lib.CanTp_TxConfirmation(0, E_OK)
+    handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, cf))
+    assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] & 0x0F == 0
+    handle.det_report_error.assert_not_called()
 
 
 class TestSWS00229:
@@ -316,10 +339,8 @@ class TestSWS00229:
 
     @pytest.mark.parametrize('data_size', single_frame_sizes + multi_frames_sizes)
     @pytest.mark.parametrize('n_as', n_as_timeouts)
-    @pytest.mark.parametrize('n_bs', n_bs_timeouts)
-    @pytest.mark.parametrize('n_cs', n_cs_timeouts)
-    def test_as_timeout(self, handle, data_size, n_as, n_bs, n_cs):
-        configurator = Helper.create_single_tx_sdu_config(handle, n_as=n_as, n_bs=n_bs, n_cs=n_cs)
+    def test_as_timeout(self, handle, data_size, n_as):
+        configurator = Helper.create_single_tx_sdu_config(handle, n_as=n_as)
         pdu_info = Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * data_size)
 
         handle.lib.CanTp_Init(configurator.config)
@@ -332,11 +353,9 @@ class TestSWS00229:
         handle.det_report_error.assert_called_once_with(ANY, CANTP_I_N_AS, ANY, CANTP_E_TX_COM)
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
-    @pytest.mark.parametrize('n_as', n_as_timeouts)
     @pytest.mark.parametrize('n_bs', n_bs_timeouts)
-    @pytest.mark.parametrize('n_cs', n_cs_timeouts)
-    def test_bs_timeout(self, handle, data_size, n_as, n_bs, n_cs):
-        configurator = Helper.create_single_tx_sdu_config(handle, n_as=n_as, n_bs=n_bs, n_cs=n_cs)
+    def test_bs_timeout(self, handle, data_size, n_bs):
+        configurator = Helper.create_single_tx_sdu_config(handle, n_bs=n_bs)
         pdu_info = Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * data_size)
 
         handle.lib.CanTp_Init(configurator.config)
@@ -350,16 +369,12 @@ class TestSWS00229:
         handle.det_report_error.assert_called_once_with(ANY, CANTP_I_N_BS, ANY, CANTP_E_TX_COM)
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
-    @pytest.mark.parametrize('n_as', n_as_timeouts)
-    @pytest.mark.parametrize('n_bs', n_bs_timeouts)
     @pytest.mark.parametrize('n_cs', n_cs_timeouts)
-    def test_cs_timeout(self, handle, data_size, n_as, n_bs, n_cs):
-
-        configurator = Helper.create_single_tx_sdu_config(handle, n_as=n_as, n_bs=n_bs, n_cs=n_cs)
+    def test_cs_timeout(self, handle, data_size, n_cs):
+        configurator = Helper.create_single_tx_sdu_config(handle, n_cs=n_cs)
         pdu_info = Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * data_size)
-        fc_frame = Helper.create_rx_fc_can_frame(padding=0xFF, bs=1, st_min=0)
+        fc_frame = Helper.create_rx_fc_can_frame(padding=0xFF, bs=0, st_min=0)
         handle.lib.CanTp_Init(configurator.config)
-
         handle.pdu_r_can_tp_copy_tx_data.return_value = handle.lib.BUFREQ_OK
         handle.can_tp_transmit(0, pdu_info)
         handle.lib.CanTp_MainFunction()
@@ -375,9 +390,8 @@ class TestSWS00229:
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     @pytest.mark.parametrize('n_ar', n_ar_timeouts)
-    @pytest.mark.parametrize('n_cr', n_cr_timeouts)
-    def test_ar_timeout(self, handle, data_size, n_ar, n_cr):
-        configurator = Helper.create_single_rx_sdu_config(handle, n_ar=n_ar, n_br=0, n_cr=n_cr)
+    def test_ar_timeout(self, handle, data_size, n_ar):
+        configurator = Helper.create_single_rx_sdu_config(handle, n_ar=n_ar)
         ff = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * data_size)
         handle.lib.CanTp_Init(configurator.config)
         handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, ff))
@@ -387,33 +401,29 @@ class TestSWS00229:
         handle.lib.CanTp_MainFunction()
         handle.det_report_error.assert_called_once_with(ANY, CANTP_I_N_AR, ANY, CANTP_E_RX_COM)
 
+    @pytest.mark.parametrize('handle', [dict(rx_buffer_size=6)], indirect=True)
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
-    @pytest.mark.parametrize('n_ar', n_ar_timeouts)
     @pytest.mark.parametrize('n_br', n_br_timeouts)
-    @pytest.mark.parametrize('n_cr', n_cr_timeouts)
-    def test_br_timeout(self, handle, data_size, n_ar, n_br, n_cr):
-        pdu_id = 0
-        configurator = Helper.create_single_rx_sdu_config(handle, n_ar=n_ar, n_br=n_br, n_cr=n_cr)
-        ff = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * data_size)
+    def test_br_timeout(self, handle, data_size, n_br):
+        configurator = Helper.create_single_rx_sdu_config(handle, n_br=n_br)
+        ff = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte])
         handle.lib.CanTp_Init(configurator.config)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, ff))
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, ff))
         for _ in range(int(n_br / configurator.config.mainFunctionPeriod)):
             handle.lib.CanTp_MainFunction()
-        handle.can_if_transmit.assert_not_called()
+        handle.det_report_error.assert_not_called()
         handle.lib.CanTp_MainFunction()
-        handle.can_if_transmit.assert_called_once()
+        handle.det_report_error.assert_called_once_with(ANY, CANTP_I_N_BR, ANY, CANTP_E_RX_COM)
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
-    @pytest.mark.parametrize('n_ar', n_ar_timeouts)
     @pytest.mark.parametrize('n_cr', n_cr_timeouts)
-    def test_cr_timeout(self, handle, data_size, n_ar, n_cr):
-        pdu_id = 0
-        configurator = Helper.create_single_rx_sdu_config(handle, n_ar=n_ar, n_br=0, n_cr=n_cr)
+    def test_cr_timeout(self, handle, data_size, n_cr):
+        configurator = Helper.create_single_rx_sdu_config(handle, n_cr=n_cr)
         ff = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * data_size)
         handle.lib.CanTp_Init(configurator.config)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, ff))
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, ff))
         handle.lib.CanTp_MainFunction()
-        handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
+        handle.lib.CanTp_TxConfirmation(0, E_OK)
         for _ in range(int(n_cr / configurator.config.mainFunctionPeriod)):
             handle.lib.CanTp_MainFunction()
         handle.det_report_error.assert_not_called()
@@ -727,10 +737,10 @@ class TestSWS00339:
         handle.lib.CanTp_MainFunction()
         handle.can_if_transmit.assert_not_called()
 
-    @pytest.mark.parametrize('handle', [dict(rx_buffer_size=6)], indirect=True)
+    @pytest.mark.parametrize('handle', [dict(rx_buffer_size=5)], indirect=True)
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     def test_multi_frame(self, handle, data_size):
-        configurator = Helper.create_single_rx_sdu_config(handle)
+        configurator = Helper.create_single_rx_sdu_config(handle, block_size=0)
         handle.lib.CanTp_Init(configurator.config)
         ff = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * data_size)
         handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, ff))

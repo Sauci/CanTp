@@ -25,6 +25,8 @@ n_sa = [pytest.param(a, id='N_Sa = 0x{:02X}'.format(a)) for a in addresses]
 n_ta = [pytest.param(a, id='N_Ta = 0x{:02X}'.format(a)) for a in addresses]
 
 block_sizes = [pytest.param(bs, id='BS = {}'.format(bs)) for bs in (0, 1, 10, 15)]
+wait_for_tx_max = [pytest.param(i, id='WFT max = {}'.format(i)) for i in (1, 2, 3, 4, 5, 6, 7)]
+
 
 @pytest.fixture()
 def handle(request):

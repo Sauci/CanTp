@@ -130,8 +130,8 @@ typedef enum
 typedef enum {
     CANTP_FRAME_STATE_INVALID = 0x00u,
     CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST,
-    CANTP_RX_FRAME_STATE_WAIT_FC_OVFLW_TX_REQUEST,
     CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION,
+    CANTP_RX_FRAME_STATE_WAIT_FC_OVFLW_TX_CONFIRMATION,
     CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION,
     CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST,
     CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION,
@@ -367,7 +367,15 @@ static uint8 CanTp_EncodeSTMinValue(uint16 value);
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static void CanTp_AbortTxSession(CanTp_NSduType *pNSdu, const uint8 instanceId, boolean confirm);
+static PduLengthType CanTp_GetRxBlockSize(CanTp_NSduType *pNSdu);
+
+#define CanTp_STOP_SEC_CODE_FAST
+#include "CanTp_MemMap.h"
+
+#define CanTp_START_SEC_CODE_FAST
+#include "CanTp_MemMap.h"
+
+static void CanTp_AbortTxSession(CanTp_NSduType *pNSdu, uint8 instanceId, boolean confirm);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -418,7 +426,7 @@ static CanTp_FrameStateType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu);
 
 static CanTp_FrameStateType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu);
 
-static BufReq_ReturnType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu);
+static CanTp_FrameStateType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu);
 
 static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo);
 
@@ -1056,25 +1064,19 @@ void CanTp_MainFunction(void)
 
 static void CanTp_StartNetworkLayerTimeout(CanTp_NSduType *pNSdu, const uint8 instanceId)
 {
-    if (instanceId < (sizeof(pNSdu->n) / sizeof(pNSdu->n[0x00u])))
+    if ((pNSdu->t_flag & (0x01u << instanceId)) == 0x00u)
     {
-        if ((pNSdu->t_flag & (0x01u << instanceId)) == 0x00u)
-        {
-            pNSdu->t_flag |= (0x01u << instanceId);
-            pNSdu->n[instanceId] = 0x00u;
-        }
+        pNSdu->t_flag |= (0x01u << instanceId);
+        pNSdu->n[instanceId] = 0x00u;
     }
 }
 
 static void CanTp_StopNetworkLayerTimeout(CanTp_NSduType *pNSdu, const uint8 instanceId)
 {
-    if (instanceId < (sizeof(pNSdu->n) / sizeof(pNSdu->n[0x00u])))
-    {
-        pNSdu->t_flag &= ~(0x01u << instanceId);
-    }
+    pNSdu->t_flag &= ~(0x01u << instanceId);
 }
 
-static boolean CanTp_NetworkLayerTimedOut(CanTp_NSduType *pNSdu, const uint8 instanceId)
+static boolean CanTp_NetworkLayerTimeoutExpired(CanTp_NSduType *pNSdu, const uint8 instanceId)
 {
     boolean result = FALSE;
 
@@ -1120,6 +1122,22 @@ static boolean CanTp_NetworkLayerTimedOut(CanTp_NSduType *pNSdu, const uint8 ins
         {
             break;
         }
+    }
+
+    return result;
+}
+
+static boolean CanTp_NetworkLayerIsActive(CanTp_NSduType *pNSdu, const uint8 instanceId)
+{
+    boolean result;
+
+    if ((pNSdu->t_flag & (0x01u << instanceId)) == 0x00u)
+    {
+        result = FALSE;
+    }
+    else
+    {
+        result = TRUE;
     }
 
     return result;
@@ -1280,16 +1298,65 @@ static CanTp_FrameStateType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
     return tmp_return;
 }
 
-static BufReq_ReturnType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
+static CanTp_FrameStateType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
 {
-    BufReq_ReturnType tmp_return;
+    CanTp_FrameStateType tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
     CanTp_NSduType *p_n_sdu = pNSdu;
     PduInfoType *p_pdu_info = &p_n_sdu->rx.can_if_pdu_info;
     uint16_least ofs = 0x03u;
 
     //CanTp_FillAIField(p_n_sdu, &ofs);
 
-    p_n_sdu->rx.wft_max --;
+    if (p_n_sdu->rx.fs == CANTP_FLOW_STATUS_TYPE_WT)
+    {
+        if (CanTp_NetworkLayerTimeoutExpired(p_n_sdu, CANTP_I_N_BR) == TRUE)
+        {
+            if (p_n_sdu->rx.wft_max != 0x00u)
+            {
+                p_n_sdu->rx.wft_max--;
+
+                CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
+
+                if (p_n_sdu->rx.buf.rmng < CanTp_GetRxBlockSize(p_n_sdu))
+                {
+                    /* SWS_CanTp_00341: If the N_Br timer expires and the available buffer size is
+                     * still not big enough, the CanTp module shall send a new FC(WAIT) to suspend
+                     * the N-SDU reception and reload the N_Br timer. */
+                    CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
+                }
+
+                tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION;
+            }
+            else
+            {
+                /* SWS_CanTp_00223: The CanTp module shall send a maximum of WFTmax consecutive
+                 * FC(WAIT) N-PDU. If this number is reached, the CanTp module shall abort the
+                 * reception of this N-SDU (the receiver did not send any FC N-PDU, so the N_Bs
+                 * timer expires on the sender side and then the transmission is aborted) and a
+                 * receiving indication with E_NOT_OK occurs. */
+                tmp_return = CANTP_FRAME_STATE_ABORT;
+            }
+        }
+        else
+        {
+            if (p_n_sdu->rx.buf.rmng >= CanTp_GetRxBlockSize(p_n_sdu))
+            {
+                CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
+                p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_CTS;
+
+                tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION;
+            }
+        }
+    }
+    else if (p_n_sdu->rx.fs == CANTP_FLOW_STATUS_TYPE_OVFLW)
+    {
+        tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_OVFLW_TX_CONFIRMATION;
+    }
+    else
+    {
+        tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION;
+    }
+
     p_n_sdu->rx.buf.can[0x00u] = (0x03u << 0x04u) | (uint8)p_n_sdu->rx.fs;
     p_n_sdu->rx.buf.can[0x01u] = p_n_sdu->rx.cfg->bs;
     p_n_sdu->rx.buf.can[0x02u] = CanTp_EncodeSTMinValue(p_n_sdu->rx.shared.m_param.st_min);
@@ -1308,15 +1375,6 @@ static BufReq_ReturnType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
     p_pdu_info->SduDataPtr = &p_n_sdu->rx.buf.can[0x00u];
     p_pdu_info->MetaDataPtr = NULL_PTR;
     p_pdu_info->SduLength = ofs;
-
-    if ((p_n_sdu->rx.fs == CANTP_FLOW_STATUS_TYPE_WT) && (p_n_sdu->rx.wft_max == 0x00u))
-    {
-        tmp_return = BUFREQ_E_NOT_OK;
-    }
-    else
-    {
-        tmp_return = BUFREQ_OK;
-    }
 
     return tmp_return;
 }
@@ -1391,10 +1449,12 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
         p_n_sdu->rx.pdu_r_pdu_info.SduLength = CANTP_FF_PAYLOAD_SIZE;
         p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr = pPduInfo->MetaDataPtr;
 
+        /* TODO: as I understand, the N_Br is the time allowed for the upper layer to provide the
+         *  required buffer. thus, the N_Br timeout will be handled according to SWS_CanTp_00082. */
         /* SWS_CanTp_00166: At the reception of a FF or last CF of a block, the CanTp module shall
          * start a time-out N_Br before calling PduR_CanTpStartOfReception or PduR_CanTpCopyRxData.
-         */
-        CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
+         *
+         * CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR); */
 
         switch (PduR_CanTpStartOfReception(p_n_sdu->rx.cfg->nSduId,
                                            &p_n_sdu->rx.pdu_r_pdu_info,
@@ -1407,8 +1467,8 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
                  * PduR_CanTpStartOfReception() returns BUFREQ_E_OVFL to the CanTp module, the CanTp
                  * module shall send a Flow Control N-PDU with overflow status (FC(OVFLW)) and abort
                  * the N-SDU reception. */
+                result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
                 p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_OVFLW;
-                result = CANTP_RX_FRAME_STATE_WAIT_FC_OVFLW_TX_REQUEST;
 
                 break;
             }
@@ -1428,6 +1488,25 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
                 else
                 {
                     result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
+
+                    if (p_n_sdu->rx.buf.rmng < CanTp_GetRxBlockSize(p_n_sdu))
+                    {
+                        /* SWS_CanTp_00082: After the reception of a First Frame, if the function
+                         * PduR_CanTpStartOfReception() returns BUFREQ_OK with a smaller available
+                         * buffer size than needed for the next block, the CanTp module shall start
+                         * the timer N_Br. */
+                        CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
+
+                        p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_WT;
+                    }
+                    else
+                    {
+                        p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_CTS;
+                    }
+
+                    PduR_CanTpCopyRxData(p_n_sdu->rx.cfg->nSduId,
+                                         &p_n_sdu->rx.pdu_r_pdu_info,
+                                         &p_n_sdu->rx.buf.rmng);
                 }
 
                 break;
@@ -1616,12 +1695,22 @@ static CanTp_FrameStateType CanTp_LDataConTCF(CanTp_NSduType *pNSdu)
 
 static CanTp_FrameStateType CanTp_LDataConRFC(CanTp_NSduType *pNSdu)
 {
+    CanTp_FrameStateType result;
     CanTp_NSduType *p_n_sdu = pNSdu;
 
     CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_AR);
     CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_CR);
 
-    return CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION;
+    if (CanTp_NetworkLayerIsActive(p_n_sdu, CANTP_I_N_BR) == FALSE)
+    {
+        result = CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION;
+    }
+    else
+    {
+        result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
+    }
+
+    return result;
 }
 
 void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
@@ -1966,6 +2055,24 @@ static uint8 CanTp_EncodeSTMinValue(const uint16 value)
     return result;
 }
 
+static PduLengthType CanTp_GetRxBlockSize(CanTp_NSduType *pNSdu)
+{
+    PduLengthType result;
+    const PduLengthType full_bs = pNSdu->rx.shared.m_param.bs * CANTP_CF_PAYLOAD_SIZE;
+    const PduLengthType last_bs = pNSdu->rx.buf.size - pNSdu->rx.buf.done;
+
+    if ((last_bs < full_bs) || (full_bs == 0x00u))
+    {
+        result = last_bs;
+    }
+    else
+    {
+        result = full_bs;
+    }
+
+    return result;
+}
+
 static void CanTp_AbortRxSession(CanTp_NSduType *pNSdu, const uint8 instanceId, const boolean confirm)
 {
     pNSdu->rx.shared.taskState = CANTP_WAIT;
@@ -2030,11 +2137,28 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
 {
     CanTp_NSduType *p_n_sdu = pNSdu;
 
-    if (CanTp_NetworkLayerTimedOut(p_n_sdu, CANTP_I_N_AR) == TRUE)
+    if (CanTp_NetworkLayerIsActive(p_n_sdu, CANTP_I_N_BR) == TRUE)
+    {
+        /* SWS_CanTp_00222: wWhile the timer N_Br is active, the CanTp module shall call the service
+         * PduR_CanTpCopyRxData() with a data length 0 (zero) and NULL_PTR as data buffer during
+         * each processing of the MainFunction. */
+        p_n_sdu->rx.pdu_r_pdu_info.SduLength = 0x00u;
+        p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = NULL_PTR;
+        PduR_CanTpCopyRxData(p_n_sdu->rx.cfg->nSduId,
+                             &p_n_sdu->rx.pdu_r_pdu_info,
+                             &p_n_sdu->rx.buf.rmng);
+    }
+
+    if (CanTp_NetworkLayerTimeoutExpired(p_n_sdu, CANTP_I_N_BR) == TRUE)
+    {
+        CANTP_DET_ASSERT_ERROR(TRUE, CANTP_I_N_BR, 0x00u, CANTP_E_RX_COM)
+    }
+
+    if (CanTp_NetworkLayerTimeoutExpired(p_n_sdu, CANTP_I_N_AR) == TRUE)
     {
         CanTp_AbortRxSession(pNSdu, CANTP_I_N_AR, TRUE);
     }
-    else if (CanTp_NetworkLayerTimedOut(p_n_sdu, CANTP_I_N_CR) == TRUE)
+    else if (CanTp_NetworkLayerTimeoutExpired(p_n_sdu, CANTP_I_N_CR) == TRUE)
     {
         CanTp_AbortRxSession(pNSdu, CANTP_I_N_CR, TRUE);
     }
@@ -2044,65 +2168,43 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
         {
             case CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST:
             {
-                /* SWS_CanTp_00166: At the reception of a FF or last CF of a block, the CanTp module
-                 * shall start a time-out N_Br before calling PduR_CanTpStartOfReception or
-                 * PduR_CanTpCopyRxData. */
-                if (CanTp_NetworkLayerTimedOut(p_n_sdu, CANTP_I_N_BR) == TRUE)
+                p_n_sdu->rx.state = ISO15765.req[ISO15765_DIR_RX][CANTP_N_PCI_TYPE_FC](p_n_sdu);
+
+                switch (p_n_sdu->rx.state)
                 {
-                    CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
-
-                    switch (ISO15765.req[ISO15765_DIR_RX][CANTP_N_PCI_TYPE_FC](p_n_sdu))
+                    case CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION:
                     {
-                        case BUFREQ_OK:
-                        {
-                            CanTp_TransmitRxCANData(p_n_sdu);
-                            p_n_sdu->rx.state = CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION;
+                        CanTp_TransmitRxCANData(p_n_sdu);
 
-                            break;
-                        }
-                        case BUFREQ_E_OVFL:
-                        {
-                            CanTp_TransmitRxCANData(p_n_sdu);
-                            CanTp_AbortRxSession(pNSdu, CANTP_I_N_BUFFER_OVFLW, FALSE);
+                        break;
+                    }
+                    case CANTP_RX_FRAME_STATE_WAIT_FC_OVFLW_TX_CONFIRMATION:
+                    {
+                        CanTp_TransmitRxCANData(p_n_sdu);
 
-                            break;
-                        }
-                        case BUFREQ_E_NOT_OK:
-                        default:
-                        {
-                            break;
-                        }
+                        CanTp_AbortRxSession(pNSdu, CANTP_I_N_BUFFER_OVFLW, FALSE);
+
+                        break;
+                    }
+                    case CANTP_FRAME_STATE_ABORT:
+                    {
+                        CanTp_AbortRxSession(pNSdu, CANTP_I_NONE, TRUE);
+
+                        break;
+                    }
+                    default:
+                    {
+                        break;
                     }
                 }
-                else
-                {
-                    /* SWS_CanTp_00222: wWhile the timer N_Br is active, the CanTp module shall call
-                     * the service PduR_CanTpCopyRxData() with a data length 0 (zero) and NULL_PTR
-                     * as data buffer during each processing of the MainFunction. */
-                    pNSdu->rx.can_if_pdu_info.SduLength = 0x00u;
-                    pNSdu->rx.can_if_pdu_info.SduDataPtr = NULL_PTR;
-                    PduR_CanTpCopyRxData(pNSdu->rx.cfg->nSduId,
-                                         &pNSdu->rx.can_if_pdu_info,
-                                         &pNSdu->rx.buf.rmng);
-                }
-
-                break;
-            }
-            case CANTP_RX_FRAME_STATE_WAIT_FC_OVFLW_TX_REQUEST:
-            {
-                /* SWS_CanTp_00318: After the reception of a First Frame, if the function
-                 * PduR_CanTpStartOfReception() returns BUFREQ_E_OVFL to the CanTp module, the CanTp
-                 * module shall send a Flow Control N-PDU with overflow status (FC(OVFLW)) and abort
-                 * the N-SDU reception. */
-                (void)ISO15765.req[ISO15765_DIR_RX][CANTP_N_PCI_TYPE_FC](p_n_sdu);
-                CanTp_TransmitRxCANData(p_n_sdu);
-                CanTp_AbortRxSession(pNSdu, CANTP_I_N_BUFFER_OVFLW, FALSE);
 
                 break;
             }
             case CANTP_FRAME_STATE_ABORT:
             {
                 CanTp_AbortRxSession(p_n_sdu, CANTP_I_NONE, FALSE);
+
+                break;
             }
             case CANTP_FRAME_STATE_OK:
             {
@@ -2122,18 +2224,18 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
 {
     CanTp_NSduType *p_n_sdu = pNSdu;
 
-    if (CanTp_NetworkLayerTimedOut(p_n_sdu, CANTP_I_N_AS) == TRUE)
+    if (CanTp_NetworkLayerTimeoutExpired(p_n_sdu, CANTP_I_N_AS) == TRUE)
     {
         CanTp_AbortTxSession(pNSdu, CANTP_I_N_AS, TRUE);
     }
-    else if (CanTp_NetworkLayerTimedOut(p_n_sdu, CANTP_I_N_BS) == TRUE)
+    else if (CanTp_NetworkLayerTimeoutExpired(p_n_sdu, CANTP_I_N_BS) == TRUE)
     {
         /* SWS_CanTp_00316: in case of N_Bs timeout occurrence the CanTp module shall abort
          * transmission of this message and notify the upper layer by calling the callback function
          * PduR_CanTpTxConfirmation() with the result E_NOT_OK. */
         CanTp_AbortTxSession(pNSdu, CANTP_I_N_BS, TRUE);
     }
-    else if (CanTp_NetworkLayerTimedOut(p_n_sdu, CANTP_I_N_CS) == TRUE)
+    else if (CanTp_NetworkLayerTimeoutExpired(p_n_sdu, CANTP_I_N_CS) == TRUE)
     {
         /* SWS_CanTp_00280: if data is not available within N_Cs timeout the CanTp module shall
          * notify the upper layer of this failure by calling the callback function

@@ -86,14 +86,11 @@ class CanTp(object):
         self.ffi.def_extern('PduR_CanTpStartOfReception')(self.pdu_r_can_tp_start_of_reception)
         self.ffi.def_extern('PduR_CanTpTxConfirmation')(self.pdu_r_can_tp_tx_confirmation)
 
-    def _pdu_r_can_tp_start_of_reception(self, i_pdu_id, pdu_info, tp_sdu_length, buffer_size):
-        if pdu_info.SduDataPtr != self.ffi.NULL and pdu_info.SduLength != 0:
-            for idx in range(pdu_info.SduLength):
-                self.can_tp_rx_data.append(pdu_info.SduDataPtr[idx])
+    def _pdu_r_can_tp_start_of_reception(self, _i_pdu_id, _pdu_info, _tp_sdu_length, buffer_size):
         buffer_size[0] = self.available_rx_buffer
         return self.pdu_r_can_tp_start_of_reception.return_value
 
-    def _pdu_r_can_tp_copy_rx_data(self, i_pdu_id, pdu_info, buffer_size):
+    def _pdu_r_can_tp_copy_rx_data(self, _rx_pdu_id, pdu_info, buffer_size):
         if pdu_info.SduDataPtr != self.ffi.NULL and pdu_info.SduLength != 0:
             for idx in range(pdu_info.SduLength):
                 self.can_tp_rx_data.append(pdu_info.SduDataPtr[idx])
