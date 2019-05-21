@@ -75,7 +75,21 @@ class Helper:
         return configurator
 
     @staticmethod
-    def create_pdu_info(handle, payload, meta_data=None):
+    def create_rx_pdu_info(handle, payload, meta_data=None):
+        if isinstance(payload, str):
+            payload = [ord(c) for c in payload]
+        data = handle.ffi.new('uint8 []', list(payload))
+        pdu_info = handle.ffi.new('PduInfoType *')
+        pdu_info.SduDataPtr = data
+        pdu_info.SduLength = len(payload)
+        if meta_data:
+            raise NotImplementedError
+        else:
+            pdu_info.MetaDataPtr = handle.ffi.NULL
+        return pdu_info
+
+    @staticmethod
+    def create_tx_pdu_info(handle, payload, meta_data=None):
         if isinstance(payload, str):
             payload = [ord(c) for c in payload]
         data = handle.ffi.new('uint8 []', list(payload))

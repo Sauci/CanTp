@@ -12,21 +12,18 @@ class TestSWS00350:
 
     @pytest.mark.parametrize('data_size', single_frame_sizes)
     def test_single_frame(self, handle, data_size):
-        pdu_id = 0
         configurator = Helper.create_single_rx_sdu_config(handle)
         handle.lib.CanTp_Init(configurator.config)
         can_frame = Helper.create_rx_sf_can_frame(payload=[Helper.dummy_byte] * data_size)
-        pdu_info = Helper.create_pdu_info(handle, can_frame)
-        handle.lib.CanTp_RxIndication(pdu_id, pdu_info)
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, can_frame))
         handle.pdu_r_can_tp_start_of_reception.assert_called_once_with(ANY, ANY, 8, ANY)
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     def test_first_frame(self, handle, data_size):
-        pdu_id = 0
         configurator = Helper.create_single_rx_sdu_config(handle, n_br=0)
         handle.lib.CanTp_Init(configurator.config)
         can_frame = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * data_size)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, can_frame))
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, can_frame))
         handle.lib.CanTp_MainFunction()
         handle.pdu_r_can_tp_start_of_reception.assert_called_once_with(ANY, ANY, data_size, ANY)
 
@@ -54,14 +51,14 @@ def test_sequence_number(handle, data_size, bs):
 
     pdu_id = 0
     configurator = Helper.create_single_tx_sdu_config(handle)
-    user_pdu = Helper.create_pdu_info(handle, [Helper.dummy_byte] * data_size)
+    user_pdu = Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * data_size)
     fc_frame = Helper.create_rx_fc_can_frame(padding=0xFF, bs=bs, st_min=0)
 
     handle.lib.CanTp_Init(configurator.config)
     handle.lib.CanTp_Transmit(pdu_id, user_pdu)
     handle.lib.CanTp_MainFunction()
     handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, fc_frame))
+    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, fc_frame))
     expected_sn = 1
     if bs != 0:
         num_of_blocks = ceil(((data_size - ff_payload_size) / cf_payload_size) / bs)
@@ -78,4 +75,4 @@ def test_sequence_number(handle, data_size, bs):
                 expected_sn += 1
             else:
                 expected_sn = 0
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, fc_frame))
+        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, fc_frame))

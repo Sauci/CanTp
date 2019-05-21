@@ -12,7 +12,7 @@ def step_impl(context):
 @when('we call CanTp_Transmit for a large block of tx data')
 def step_impl(context):
     context.tx_data = 'I am a very large block of tx data, which will be transmitted over segmented transmission...'
-    context.tx_pdu_info = Helper.create_pdu_info(context.can_tp, context.tx_data)
+    context.tx_pdu_info = Helper.create_tx_pdu_info(context.can_tp, context.tx_data)
     context.return_value = context.can_tp.can_tp_transmit(context.tx_pdu_id, context.tx_pdu_info)
 
 
@@ -25,7 +25,7 @@ def step_impl(context):
             context.can_tp.can_tp_tx_confirmation(context.tx_pdu_id, E_OK)
             if context.can_tp.can_if_transmit.call_count == 1:
                 fc = Helper.create_rx_fc_can_frame(bs=0)
-                context.can_tp.can_tp_rx_indication(context.tx_pdu_id, Helper.create_pdu_info(context.can_tp, fc))
+                context.can_tp.can_tp_rx_indication(context.tx_pdu_id, Helper.create_rx_pdu_info(context.can_tp, fc))
             current_can_if_transmit_count = context.can_tp.can_if_transmit.call_count
     assert context.can_tp.pdu_r_can_tp_tx_confirmation.called_once_with(context.tx_pdu_id, E_OK)
 

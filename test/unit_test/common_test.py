@@ -89,11 +89,11 @@ class TestSWS00057:
                                                           n_cs=0,
                                                           main_function_period=1)
         handle.lib.CanTp_Init(configurator.config)
-        handle.can_tp_transmit(self.pdu_id, Helper.create_pdu_info(handle, list(ord(c) for c in self.tx_data)))
+        handle.can_tp_transmit(self.pdu_id, Helper.create_tx_pdu_info(handle, list(ord(c) for c in self.tx_data)))
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(self.pdu_id, E_OK)
-        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_pdu_info(handle, self.rx_fc))
-        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_pdu_info(handle, can_frame))
+        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, self.rx_fc))
+        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, can_frame))
         for _ in range(ceil((len(self.tx_data) - 6) / 7)):
             handle.lib.CanTp_MainFunction()
             handle.lib.CanTp_TxConfirmation(self.pdu_id, E_OK)
@@ -106,12 +106,12 @@ class TestSWS00057:
                                                           main_function_period=1)
         handle.lib.CanTp_Init(configurator.config)
         ff_frame = Helper.create_rx_ff_can_frame(list(ord(c) for c in self.rx_data))
-        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_pdu_info(handle, ff_frame))
-        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_pdu_info(handle, can_frame))
+        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, ff_frame))
+        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, can_frame))
         for cf_index in range(ceil((len(self.rx_data) - 6) / 7)):
             cf_frame = Helper.create_rx_cf_can_frame(list(ord(c) for c in self.rx_data[6 + (cf_index * 7):]))
             handle.lib.CanTp_MainFunction()
-            handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_pdu_info(handle, cf_frame))
+            handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, cf_frame))
         handle.lib.CanTp_MainFunction()
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, E_OK)
 
@@ -126,11 +126,11 @@ class TestSWS00057:
                                                           n_cs=0,
                                                           main_function_period=1)
         handle.lib.CanTp_Init(configurator.config)
-        handle.can_tp_transmit(self.pdu_id, Helper.create_pdu_info(handle, list(ord(c) for c in self.tx_data)))
+        handle.can_tp_transmit(self.pdu_id, Helper.create_tx_pdu_info(handle, list(ord(c) for c in self.tx_data)))
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(self.pdu_id, E_OK)
-        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_pdu_info(handle, self.rx_fc))
-        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_pdu_info(handle, can_frame))
+        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, self.rx_fc))
+        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, can_frame))
         for _ in range(ceil((len(self.tx_data) - 6) / 7)):
             handle.lib.CanTp_MainFunction()
             handle.lib.CanTp_TxConfirmation(self.pdu_id, E_OK)
@@ -150,13 +150,13 @@ class TestSWS00057:
                                                           channel_mode='full duplex',
                                                           main_function_period=1)
         handle.lib.CanTp_Init(configurator.config)
-        handle.can_tp_transmit(self.pdu_id, Helper.create_pdu_info(handle, list(ord(c) for c in self.tx_data)))
+        handle.can_tp_transmit(self.pdu_id, Helper.create_tx_pdu_info(handle, list(ord(c) for c in self.tx_data)))
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(self.pdu_id, E_OK)
-        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_pdu_info(handle, self.rx_fc))
+        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, self.rx_fc))
         # in full-duplex mode, the first SF/FF might be expected.
-        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_pdu_info(handle, can_frame))
-        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_pdu_info(handle, can_frame))
+        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, can_frame))
+        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, can_frame))
         for _ in range(ceil((len(self.tx_data) - 6) / 7)):
             handle.lib.CanTp_MainFunction()
             handle.lib.CanTp_TxConfirmation(self.pdu_id, E_OK)
@@ -213,7 +213,7 @@ class TestSWS00079:
         configurator = Helper.create_single_rx_sdu_config(handle, n_br=0)
         handle.lib.CanTp_Init(configurator.config)
         can_frame = Helper.create_rx_sf_can_frame()
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, can_frame))
+        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, can_frame))
         handle.pdu_r_can_tp_start_of_reception.assert_called_once()
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
@@ -222,7 +222,7 @@ class TestSWS00079:
         configurator = Helper.create_single_rx_sdu_config(handle, n_br=0)
         handle.lib.CanTp_Init(configurator.config)
         can_frame = Helper.create_rx_ff_can_frame()
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, can_frame))
+        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, can_frame))
         handle.lib.CanTp_MainFunction()
         handle.pdu_r_can_tp_start_of_reception.assert_called_once()
 
@@ -241,7 +241,7 @@ class TestSWS00081:
         handle.lib.CanTp_Init(configurator.config)
         sf = Helper.create_rx_sf_can_frame()
         handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_NOT_OK
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, sf))
+        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, sf))
         handle.pdu_r_can_tp_rx_indication.assert_not_called()
         handle.lib.CanTp_MainFunction()
         handle.can_if_transmit.assert_not_called()
@@ -253,7 +253,7 @@ class TestSWS00081:
         handle.lib.CanTp_Init(configurator.config)
         ff = Helper.create_rx_sf_can_frame()
         handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_NOT_OK
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, ff))
+        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, ff))
         handle.pdu_r_can_tp_rx_indication.assert_not_called()
         handle.lib.CanTp_MainFunction()
         handle.can_if_transmit.assert_not_called()
@@ -265,7 +265,7 @@ def test_sws_00176(handle):
     """
     configurator = Helper.create_single_tx_sdu_config(handle)
     handle.lib.CanTp_Init(configurator.config)
-    handle.can_tp_transmit(0, Helper.create_pdu_info(handle, [Helper.dummy_byte] * 10))
+    handle.can_tp_transmit(0, Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * 10))
     handle.can_if_transmit.assert_not_called()
     handle.lib.CanTp_MainFunction()
     handle.can_if_transmit.assert_called_once()
@@ -282,7 +282,7 @@ def test_sws_00222(handle, n_br):
     configurator = Helper.create_single_rx_sdu_config(handle, n_br=n_br)
     ff = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * 10)
     handle.lib.CanTp_Init(configurator.config)
-    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, ff))
+    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, ff))
     cnt = 0
     for cnt in range(int(n_br / configurator.config.mainFunctionPeriod)):
         handle.lib.CanTp_MainFunction()
@@ -325,7 +325,7 @@ class TestSWS00229:
     def test_as_timeout(self, handle, data_size, n_as, n_bs, n_cs):
         pdu_id = 0
         configurator = Helper.create_single_tx_sdu_config(handle, n_as=n_as, n_bs=n_bs, n_cs=n_cs)
-        pdu_info = Helper.create_pdu_info(handle, [Helper.dummy_byte] * data_size)
+        pdu_info = Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * data_size)
 
         handle.lib.CanTp_Init(configurator.config)
         handle.can_tp_transmit(pdu_id, pdu_info)
@@ -343,7 +343,7 @@ class TestSWS00229:
     def test_bs_timeout(self, handle, data_size, n_as, n_bs, n_cs):
         pdu_id = 0
         configurator = Helper.create_single_tx_sdu_config(handle, n_as=n_as, n_bs=n_bs, n_cs=n_cs)
-        pdu_info = Helper.create_pdu_info(handle, [Helper.dummy_byte] * data_size)
+        pdu_info = Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * data_size)
 
         handle.lib.CanTp_Init(configurator.config)
         handle.can_tp_transmit(pdu_id, pdu_info)
@@ -362,7 +362,7 @@ class TestSWS00229:
     def test_cs_timeout(self, handle, data_size, n_as, n_bs, n_cs):
         pdu_id = 0
         configurator = Helper.create_single_tx_sdu_config(handle, n_as=n_as, n_bs=n_bs, n_cs=n_cs)
-        pdu_info = Helper.create_pdu_info(handle, [Helper.dummy_byte] * data_size)
+        pdu_info = Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * data_size)
         fc_frame = Helper.create_rx_fc_can_frame(padding=0xFF, bs=1, st_min=0)
         handle.lib.CanTp_Init(configurator.config)
 
@@ -370,7 +370,7 @@ class TestSWS00229:
         handle.can_tp_transmit(pdu_id, pdu_info)
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, fc_frame))
+        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, fc_frame))
         # TODO: add test for busy and overflow return values.
         handle.pdu_r_can_tp_copy_tx_data.return_value = handle.lib.BUFREQ_E_BUSY
         for _ in range(int(n_cs / configurator.config.mainFunctionPeriod)):
@@ -387,7 +387,7 @@ class TestSWS00229:
         configurator = Helper.create_single_rx_sdu_config(handle, n_ar=n_ar, n_br=0, n_cr=n_cr)
         ff = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * data_size)
         handle.lib.CanTp_Init(configurator.config)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, ff))
+        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, ff))
         for _ in range(int(n_ar / configurator.config.mainFunctionPeriod)):
             handle.lib.CanTp_MainFunction()
         handle.det_report_error.assert_not_called()
@@ -403,7 +403,7 @@ class TestSWS00229:
         configurator = Helper.create_single_rx_sdu_config(handle, n_ar=n_ar, n_br=n_br, n_cr=n_cr)
         ff = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * data_size)
         handle.lib.CanTp_Init(configurator.config)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, ff))
+        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, ff))
         for _ in range(int(n_br / configurator.config.mainFunctionPeriod)):
             handle.lib.CanTp_MainFunction()
         handle.can_if_transmit.assert_not_called()
@@ -418,7 +418,7 @@ class TestSWS00229:
         configurator = Helper.create_single_rx_sdu_config(handle, n_ar=n_ar, n_br=0, n_cr=n_cr)
         ff = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * data_size)
         handle.lib.CanTp_Init(configurator.config)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, ff))
+        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, ff))
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
         for _ in range(int(n_cr / configurator.config.mainFunctionPeriod)):
@@ -459,7 +459,7 @@ def test_sws_00255(handle):
     pdu_id = 0
     configurator = Helper.create_single_tx_sdu_config(handle, pdu_id=pdu_id)
     handle.lib.CanTp_Init(configurator.config)
-    handle.can_tp_transmit(pdu_id, Helper.create_pdu_info(handle, [Helper.dummy_byte]))
+    handle.can_tp_transmit(pdu_id, Helper.create_tx_pdu_info(handle, [Helper.dummy_byte]))
     handle.lib.CanTp_CancelTransmit(pdu_id)
     handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, E_NOT_OK)
 
@@ -471,7 +471,7 @@ def test_sws_00256(handle):
     pdu_id = 0
     configurator = Helper.create_single_tx_sdu_config(handle, pdu_id=pdu_id)
     handle.lib.CanTp_Init(configurator.config)
-    handle.can_tp_transmit(pdu_id, Helper.create_pdu_info(handle, [Helper.dummy_byte]))
+    handle.can_tp_transmit(pdu_id, Helper.create_tx_pdu_info(handle, [Helper.dummy_byte]))
     assert handle.lib.CanTp_CancelTransmit(pdu_id) == E_OK
 
 
@@ -505,7 +505,7 @@ def test_sws_00261(handle):
     pdu_id = 0
     configurator = Helper.create_single_rx_sdu_config(handle, pdu_id=pdu_id)
     handle.lib.CanTp_Init(configurator.config)
-    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, Helper.create_rx_ff_can_frame()))
+    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, Helper.create_rx_ff_can_frame()))
     assert handle.lib.CanTp_CancelReceive(pdu_id) == E_OK
 
 
@@ -520,7 +520,7 @@ class TestSWS00262:
         pdu_id = 0
         configurator = Helper.create_single_rx_sdu_config(handle, pdu_id=pdu_id)
         handle.lib.CanTp_Init(configurator.config)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, Helper.create_rx_sf_can_frame()))
+        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, Helper.create_rx_sf_can_frame()))
         assert handle.lib.CanTp_CancelReceive(pdu_id) == E_NOT_OK
 
     def test_last_consecutive_frame(self, handle):
@@ -528,9 +528,9 @@ class TestSWS00262:
         configurator = Helper.create_single_tx_sdu_config(handle)
         fc_frame = Helper.create_rx_fc_can_frame(padding=0xFF, bs=1)
         handle.lib.CanTp_Init(configurator.config)
-        handle.can_tp_transmit(pdu_id, Helper.create_pdu_info(handle, [Helper.dummy_byte] * 8))
+        handle.can_tp_transmit(pdu_id, Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * 8))
         handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, fc_frame))
+        handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, fc_frame))
         handle.lib.CanTp_MainFunction()
         assert handle.lib.CanTp_CancelReceive(pdu_id) == E_NOT_OK
 
@@ -543,7 +543,7 @@ def test_sws_00263(handle):
     pdu_id = 0
     configurator = Helper.create_single_rx_sdu_config(handle, pdu_id=pdu_id)
     handle.lib.CanTp_Init(configurator.config)
-    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, Helper.create_rx_ff_can_frame()))
+    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, Helper.create_rx_ff_can_frame()))
     handle.lib.CanTp_CancelReceive(pdu_id)
     handle.pdu_r_can_tp_rx_indication.called_once_with(ANY, E_NOT_OK)
 
@@ -556,7 +556,7 @@ def test_sws_00304(handle):
     pdu_id = 0
     configurator = Helper.create_single_rx_sdu_config(handle, pdu_id=pdu_id)
     handle.lib.CanTp_Init(configurator.config)
-    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, Helper.create_rx_ff_can_frame()))
+    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, Helper.create_rx_ff_can_frame()))
     assert handle.lib.CanTp_ChangeParameter(pdu_id, handle.lib.TP_STMIN, 0) == E_NOT_OK
     handle.det_report_error.assert_not_called()
 
@@ -601,7 +601,7 @@ def test_sws_00318(handle):
     configurator = Helper.create_single_rx_sdu_config(handle, n_br=0, pdu_id=0)
     handle.lib.CanTp_Init(configurator.config)
     handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_OVFL
-    handle.lib.CanTp_RxIndication(0, Helper.create_pdu_info(handle, Helper.create_rx_ff_can_frame()))
+    handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, Helper.create_rx_ff_can_frame()))
     handle.lib.CanTp_MainFunction()
     assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] & 0x0F == 2
     handle.det_report_error.assert_called_once_with(ANY, CANTP_I_N_BUFFER_OVFLW, ANY, CANTP_E_RX_COM)
@@ -694,7 +694,7 @@ def test_sws_00335(handle, payload_size, addressing_format, source_address, targ
                                                       n_sa=source_address,
                                                       n_ta=target_address)
     handle.lib.CanTp_Init(configurator.config)
-    handle.can_tp_transmit(0, Helper.create_pdu_info(handle, [Helper.dummy_byte] * payload_size))
+    handle.can_tp_transmit(0, Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * payload_size))
     handle.lib.CanTp_MainFunction()
     assert handle.can_if_transmit.call_count == 1
     if addressing_format in ('standard', 'extended', 'mixed 11 bits'):
@@ -705,7 +705,7 @@ def test_sws_00335(handle, payload_size, addressing_format, source_address, targ
         assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[1] == target_address
     if payload_size == 8:
         handle.lib.CanTp_TxConfirmation(0, E_OK)
-        handle.lib.CanTp_RxIndication(0, Helper.create_pdu_info(handle, Helper.create_rx_fc_can_frame()))
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, Helper.create_rx_fc_can_frame()))
         handle.lib.CanTp_MainFunction()
         assert handle.can_if_transmit.call_count == 2
         if addressing_format in ('standard', 'extended', 'mixed 11 bits'):
@@ -727,8 +727,8 @@ class TestSWS00339:
         handle = CanTp(rx_buffer_size=data_size - 1)
         configurator = Helper.create_single_rx_sdu_config(handle)
         handle.lib.CanTp_Init(configurator.config)
-        ff_frame = Helper.create_rx_sf_can_frame(payload=[Helper.dummy_byte] * data_size)
-        handle.lib.CanTp_RxIndication(0, Helper.create_pdu_info(handle, ff_frame))
+        ff = Helper.create_rx_sf_can_frame(payload=[Helper.dummy_byte] * data_size)
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, ff))
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, E_NOT_OK)
         handle.lib.CanTp_MainFunction()
         handle.can_if_transmit.assert_not_called()
@@ -738,8 +738,8 @@ class TestSWS00339:
     def test_multi_frame(self, handle, data_size):
         configurator = Helper.create_single_rx_sdu_config(handle)
         handle.lib.CanTp_Init(configurator.config)
-        ff_frame = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * data_size)
-        handle.lib.CanTp_RxIndication(0, Helper.create_pdu_info(handle, ff_frame))
+        ff = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * data_size)
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, ff))
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, E_NOT_OK)
         handle.lib.CanTp_MainFunction()
         handle.can_if_transmit.assert_not_called()
@@ -755,7 +755,7 @@ def test_sws_00353(handle, data_size):
     handle.lib.CanTp_Init(configurator.config)
     handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_OVFL
     ff = Helper.create_rx_sf_can_frame(payload=[Helper.dummy_byte] * data_size)
-    handle.lib.CanTp_RxIndication(0, Helper.create_pdu_info(handle, ff))
+    handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, ff))
     handle.lib.CanTp_MainFunction()
     handle.can_if_transmit.assert_not_called()
 
@@ -810,12 +810,12 @@ def test_separation_time_minimum_value(handle, st_min, call_count):
     configurator = Helper.create_single_tx_sdu_config(handle, pdu_id=pdu_id, main_function_period=1)
     fc_frame = Helper.create_rx_fc_can_frame(padding=0xFF, bs=0, st_min=st_min)
     handle.lib.CanTp_Init(configurator.config)
-    handle.can_tp_transmit(pdu_id, Helper.create_pdu_info(handle, [Helper.dummy_byte] * 100))
+    handle.can_tp_transmit(pdu_id, Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * 100))
     handle.lib.CanTp_MainFunction()
     assert handle.can_if_transmit.call_count == 1  # sent FF
     handle.can_if_transmit.assert_called_once()
     handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
-    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_pdu_info(handle, fc_frame))
+    handle.lib.CanTp_RxIndication(pdu_id, Helper.create_rx_pdu_info(handle, fc_frame))
     handle.lib.CanTp_MainFunction()
     assert handle.can_if_transmit.call_count == 2  # sent first CF
     handle.lib.CanTp_TxConfirmation(pdu_id, E_OK)
