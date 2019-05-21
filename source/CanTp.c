@@ -129,7 +129,7 @@ typedef enum
 
 typedef enum {
     CANTP_FRAME_STATE_INVALID = 0x00u,
-    CANTP_RX_FRAME_STATE_WAIT_FC_CTS_TX_REQUEST,
+    CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST,
     CANTP_RX_FRAME_STATE_WAIT_FC_OVFLW_TX_REQUEST,
     CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION,
     CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION,
@@ -1424,7 +1424,7 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
                 }
                 else
                 {
-                    result = CANTP_RX_FRAME_STATE_WAIT_FC_CTS_TX_REQUEST;
+                    result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
                 }
 
                 break;
@@ -1493,7 +1493,7 @@ static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduIn
                                  * the CanTp module shall start a time-out N_Br before calling
                                  * PduR_CanTpStartOfReception or PduR_CanTpCopyRxData. */
                                 CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
-                                result = CANTP_RX_FRAME_STATE_WAIT_FC_CTS_TX_REQUEST;
+                                result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
                             }
                             else
                             {
@@ -2039,7 +2039,7 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
     {
         switch (p_n_sdu->rx.state)
         {
-            case CANTP_RX_FRAME_STATE_WAIT_FC_CTS_TX_REQUEST:
+            case CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST:
             {
                 /* SWS_CanTp_00166: At the reception of a FF or last CF of a block, the CanTp module
                  * shall start a time-out N_Br before calling PduR_CanTpStartOfReception or
