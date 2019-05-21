@@ -170,6 +170,7 @@ typedef struct
     uint8 wft_max;
     uint8 meta_data[0x04u];
     PduInfoType can_if_pdu_info;
+    PduInfoType pdu_r_pdu_info;
     struct
     {
         CanTp_TaskStateType taskState;
@@ -1320,7 +1321,6 @@ static BufReq_ReturnType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
 static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo)
 {
     uint16 dl;
-    PduInfoType pdu_info;
     CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
 
@@ -1330,11 +1330,11 @@ static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduIn
     {
         p_n_sdu->rx.buf.size = pPduInfo->SduLength;
 
-        pdu_info.MetaDataPtr = NULL_PTR;
-        pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[CANTP_SF_PCI_SIZE];
-        pdu_info.SduLength = CANTP_SF_PAYLOAD_SIZE;
+        p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr = NULL_PTR;
+        p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[CANTP_SF_PCI_SIZE];
+        p_n_sdu->rx.pdu_r_pdu_info.SduLength = CANTP_SF_PAYLOAD_SIZE;
         switch (PduR_CanTpStartOfReception(p_n_sdu->rx.cfg->nSduId,
-                                           &pdu_info,
+                                           &p_n_sdu->rx.pdu_r_pdu_info,
                                            dl,
                                            &p_n_sdu->rx.buf.rmng))
         {
@@ -1371,7 +1371,6 @@ static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduIn
 static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo)
 {
     uint16 dl;
-    PduInfoType tmp_pdu;
     CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
 
@@ -1385,9 +1384,9 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
         p_n_sdu->rx.wft_max = p_n_sdu->rx.cfg->wftMax;
         p_n_sdu->rx.bs = p_n_sdu->rx.shared.m_param.bs;
 
-        tmp_pdu.SduDataPtr = &pPduInfo->SduDataPtr[CANTP_FF_PCI_SIZE];
-        tmp_pdu.SduLength = CANTP_FF_PAYLOAD_SIZE;
-        tmp_pdu.MetaDataPtr = pPduInfo->MetaDataPtr;
+        p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[CANTP_FF_PCI_SIZE];
+        p_n_sdu->rx.pdu_r_pdu_info.SduLength = CANTP_FF_PAYLOAD_SIZE;
+        p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr = pPduInfo->MetaDataPtr;
 
         /* SWS_CanTp_00166: At the reception of a FF or last CF of a block, the CanTp module shall
          * start a time-out N_Br before calling PduR_CanTpStartOfReception or PduR_CanTpCopyRxData.
@@ -1395,7 +1394,7 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
         CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
 
         switch (PduR_CanTpStartOfReception(p_n_sdu->rx.cfg->nSduId,
-                                           &tmp_pdu,
+                                           &p_n_sdu->rx.pdu_r_pdu_info,
                                            dl,
                                            &p_n_sdu->rx.buf.rmng))
         {

@@ -645,11 +645,23 @@ class TestSWS00329:
     PduR_CanTpStartOfReception().
     """
 
-    def test_single_frame(self, handle):
-        pytest.xfail()
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    def test_single_frame(self, handle, data_size):
+        configurator = Helper.create_single_rx_sdu_config(handle)
+        handle.lib.CanTp_Init(configurator.config)
+        sf = Helper.create_rx_sf_can_frame(payload=[Helper.dummy_byte] * data_size)
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, sf))
+        for idx in range(data_size):
+            assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].SduDataPtr[idx] == Helper.dummy_byte
 
-    def test_first_frame(self, handle):
-        pytest.xfail()
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    def test_first_frame(self, handle, data_size):
+        configurator = Helper.create_single_rx_sdu_config(handle)
+        handle.lib.CanTp_Init(configurator.config)
+        ff = Helper.create_rx_sf_can_frame(payload=[Helper.dummy_byte] * data_size)
+        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, ff))
+        for idx in range(data_size):
+            assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].SduDataPtr[idx] == Helper.dummy_byte
 
 
 @pytest.mark.parametrize('payload_size', [
