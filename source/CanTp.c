@@ -153,8 +153,7 @@ typedef enum
 typedef struct
 {
     uint8 can[CANTP_CAN_FRAME_SIZE];
-    uint32 size;
-    uint32 done;
+    PduLengthType size;
     PduLengthType rmng;
 } CanTp_NSduBufferType;
 
@@ -754,7 +753,6 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
             (pPduInfo->SduLength <= 0x0FFFu))
         {
             p_n_sdu->tx.buf.size = pPduInfo->SduLength;
-            p_n_sdu->tx.buf.done = 0x00u;
 
             if (pPduInfo->MetaDataPtr != NULL_PTR)
             {
@@ -858,7 +856,7 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
              * Consecutive Frame of the N-SDU (i.e. the service is called after N-Cr timeout is
              * started for the last Consecutive Frame). In this case the CanTp shall return
              * E_NOT_OK. */
-            if ((p_n_sdu->rx.buf.size - p_n_sdu->rx.buf.done) > 0x07u)
+            if (p_n_sdu->rx.buf.size > 0x07u)
             {
                 CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_WAIT;)
 
@@ -1565,7 +1563,7 @@ static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduIn
                                              &tmp_pdu,
                                              &pNSdu->rx.buf.rmng);
 
-                        if ((p_n_sdu->rx.buf.size - p_n_sdu->rx.buf.done) != 0x00u)
+                        if (p_n_sdu->rx.buf.size != 0x00u)
                         {
                             if (p_n_sdu->rx.bs == 0x00u)
                             {
@@ -1664,7 +1662,7 @@ static CanTp_FrameStateType CanTp_LDataConTCF(CanTp_NSduType *pNSdu)
      * ConsecutiveFrame (CF) and ends at the request for the transmission of the next CF. */
     CanTp_StartFlowControlTimeout(p_n_sdu);
 
-    if (p_n_sdu->tx.buf.size > p_n_sdu->tx.buf.done)
+    if (p_n_sdu->tx.buf.size > 0x00u)
     {
         if (p_n_sdu->tx.bs != CANTP_BS_INFINITE)
         {
@@ -2059,7 +2057,7 @@ static PduLengthType CanTp_GetRxBlockSize(CanTp_NSduType *pNSdu)
 {
     PduLengthType result;
     const PduLengthType full_bs = pNSdu->rx.shared.m_param.bs * CANTP_CF_PAYLOAD_SIZE;
-    const PduLengthType last_bs = pNSdu->rx.buf.size - pNSdu->rx.buf.done;
+    const PduLengthType last_bs = pNSdu->rx.buf.size;
 
     if ((last_bs < full_bs) || (full_bs == 0x00u))
     {
@@ -2398,9 +2396,9 @@ static BufReq_ReturnType CanTp_FillTxPayload(CanTp_NSduType *pNSdu, PduLengthTyp
     CanTp_NSduType *p_n_sdu = pNSdu;
     tmp_pdu.SduDataPtr = &p_n_sdu->tx.buf.can[ofs];
 
-    if ((p_n_sdu->tx.buf.size - p_n_sdu->tx.buf.done) <= CANTP_CAN_FRAME_SIZE - ofs)
+    if (p_n_sdu->tx.buf.size <= CANTP_CAN_FRAME_SIZE - ofs)
     {
-        tmp_pdu.SduLength = p_n_sdu->tx.buf.size - p_n_sdu->tx.buf.done;
+        tmp_pdu.SduLength = p_n_sdu->tx.buf.size;
     }
     else
     {
@@ -2422,7 +2420,7 @@ static BufReq_ReturnType CanTp_FillTxPayload(CanTp_NSduType *pNSdu, PduLengthTyp
             CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_CS);
 
             ofs += tmp_pdu.SduLength;
-            p_n_sdu->tx.buf.done += tmp_pdu.SduLength;
+            p_n_sdu->tx.buf.size -= tmp_pdu.SduLength;
 
             *pOfs = ofs;
 
