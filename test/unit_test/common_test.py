@@ -83,38 +83,6 @@ class TestSWS00057:
     rx_data = 'expected received payload......'
     tx_data = 'expected transmitted payload...'
 
-    def perform_segmented_transmit_sequence(self, handle, channel_mode, can_frame):
-        configurator = Helper.create_single_tx_sdu_config(handle,
-                                                          channel_mode=channel_mode,
-                                                          n_cs=0,
-                                                          main_function_period=1)
-        handle.lib.CanTp_Init(configurator.config)
-        handle.can_tp_transmit(self.pdu_id, Helper.create_tx_pdu_info(handle, list(ord(c) for c in self.tx_data)))
-        handle.lib.CanTp_MainFunction()
-        handle.lib.CanTp_TxConfirmation(self.pdu_id, E_OK)
-        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, self.rx_fc))
-        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, can_frame))
-        for _ in range(ceil((len(self.tx_data) - 6) / 7)):
-            handle.lib.CanTp_MainFunction()
-            handle.lib.CanTp_TxConfirmation(self.pdu_id, E_OK)
-        handle.lib.CanTp_MainFunction()
-        handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, E_OK)
-
-    def perform_segmented_receive_sequence(self, handle, channel_mode, can_frame):
-        configurator = Helper.create_single_rx_sdu_config(handle,
-                                                          channel_mode=channel_mode,
-                                                          main_function_period=1)
-        handle.lib.CanTp_Init(configurator.config)
-        ff_frame = Helper.create_rx_ff_can_frame(list(ord(c) for c in self.rx_data))
-        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, ff_frame))
-        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, can_frame))
-        for cf_index in range(ceil((len(self.rx_data) - 6) / 7)):
-            cf_frame = Helper.create_rx_cf_can_frame(list(ord(c) for c in self.rx_data[6 + (cf_index * 7):]))
-            handle.lib.CanTp_MainFunction()
-            handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, cf_frame))
-        handle.lib.CanTp_MainFunction()
-        handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, E_OK)
-
     @pytest.mark.parametrize('can_frame', [
         pytest.param(Helper.create_rx_sf_can_frame(), id='single frame'),
         pytest.param(Helper.create_rx_ff_can_frame(), id='first frame')])
@@ -197,7 +165,21 @@ class TestSWS00057:
                                                                                 handle,
                                                                                 channel_mode,
                                                                                 can_frame):
-        self.perform_segmented_transmit_sequence(handle, channel_mode, can_frame)
+        configurator = Helper.create_single_tx_sdu_config(handle,
+                                                          channel_mode=channel_mode,
+                                                          n_cs=0,
+                                                          main_function_period=1)
+        handle.lib.CanTp_Init(configurator.config)
+        handle.can_tp_transmit(self.pdu_id, Helper.create_tx_pdu_info(handle, list(ord(c) for c in self.tx_data)))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(self.pdu_id, E_OK)
+        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, self.rx_fc))
+        handle.lib.CanTp_RxIndication(self.pdu_id, Helper.create_rx_pdu_info(handle, can_frame))
+        for _ in range(ceil((len(self.tx_data) - 6) / 7)):
+            handle.lib.CanTp_MainFunction()
+            handle.lib.CanTp_TxConfirmation(self.pdu_id, E_OK)
+        handle.lib.CanTp_MainFunction()
+        handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, E_OK)
         handle.pdu_r_can_tp_copy_rx_data.assert_not_called()
 
 
