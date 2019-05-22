@@ -70,18 +70,6 @@ extern "C"
 
 #define CANTP_CAN_FRAME_SIZE (0x08u)
 
-#define CANTP_SF_PCI_SIZE (0x01u)
-
-#define CANTP_FF_PCI_SIZE (0x02u)
-
-#define CANTP_CF_PCI_SIZE (0x01u)
-
-#define CANTP_SF_PAYLOAD_SIZE (CANTP_CAN_FRAME_SIZE - CANTP_SF_PCI_SIZE)
-
-#define CANTP_FF_PAYLOAD_SIZE (CANTP_CAN_FRAME_SIZE - CANTP_FF_PCI_SIZE)
-
-#define CANTP_CF_PAYLOAD_SIZE (CANTP_CAN_FRAME_SIZE - CANTP_CF_PCI_SIZE)
-
 #define CANTP_BS_INFINITE (0x0100u)
 
 #define CANTP_MS_TO_INTERNAL(timeout) (timeout * 1000u)
@@ -301,6 +289,14 @@ CANTP_EXIT_CRITICAL_SECTION
 #include "CanTp_MemMap.h"
 
 static Std_ReturnType CanTp_GetNSduFromPduId(PduIdType pduId, CanTp_NSduType **pNSdu);
+
+#define CanTp_STOP_SEC_CODE_FAST
+#include "CanTp_MemMap.h"
+
+#define CanTp_START_SEC_CODE_FAST
+#include "CanTp_MemMap.h"
+
+static PduLengthType CanTp_GetFrameHeaderSize(const CanTp_AddressingFormatType af, const uint8 frameType);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -1382,6 +1378,9 @@ static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduIn
     uint16 dl;
     CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
+    const PduLengthType header_size = CanTp_GetFrameHeaderSize(p_n_sdu->rx.cfg->af,
+                                                               CANTP_N_PCI_TYPE_SF);
+    const PduLengthType payload_size = CANTP_CAN_FRAME_SIZE - header_size;
 
     CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;)
 
@@ -1390,8 +1389,8 @@ static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduIn
         p_n_sdu->rx.buf.size = pPduInfo->SduLength;
 
         p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr = NULL_PTR;
-        p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[CANTP_SF_PCI_SIZE];
-        p_n_sdu->rx.pdu_r_pdu_info.SduLength = CANTP_SF_PAYLOAD_SIZE;
+        p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[header_size];
+        p_n_sdu->rx.pdu_r_pdu_info.SduLength = payload_size;
         switch (PduR_CanTpStartOfReception(p_n_sdu->rx.cfg->nSduId,
                                            &p_n_sdu->rx.pdu_r_pdu_info,
                                            dl,
@@ -1404,7 +1403,7 @@ static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduIn
                  * buffer size than needed for the already received data, the CanTp module shall
                  * abort the reception of the N-SDU and call PduR_CanTpRxIndication() with the
                  * result E_NOT_OK. */
-                if (p_n_sdu->rx.buf.rmng < CANTP_SF_PAYLOAD_SIZE)
+                if (p_n_sdu->rx.buf.rmng < payload_size)
                 {
                     PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
@@ -1432,6 +1431,9 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
     uint16 dl;
     CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
+    const PduLengthType header_size = CanTp_GetFrameHeaderSize(p_n_sdu->rx.cfg->af,
+                                                               CANTP_N_PCI_TYPE_FF);
+    const PduLengthType payload_size = CANTP_CAN_FRAME_SIZE - header_size;
 
     if (CanTp_DecodeDLValue(&dl, &pPduInfo->SduDataPtr[0x00u]) == E_OK)
     {
@@ -1443,8 +1445,8 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
         p_n_sdu->rx.wft_max = p_n_sdu->rx.cfg->wftMax;
         p_n_sdu->rx.bs = p_n_sdu->rx.shared.m_param.bs;
 
-        p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[CANTP_FF_PCI_SIZE];
-        p_n_sdu->rx.pdu_r_pdu_info.SduLength = CANTP_FF_PAYLOAD_SIZE;
+        p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[header_size];
+        p_n_sdu->rx.pdu_r_pdu_info.SduLength = payload_size;
         p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr = pPduInfo->MetaDataPtr;
 
         /* TODO: as I understand, the N_Br is the time allowed for the upper layer to provide the
@@ -1472,7 +1474,7 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
             }
             case BUFREQ_OK:
             {
-                if (p_n_sdu->rx.buf.rmng < CANTP_FF_PAYLOAD_SIZE)
+                if (p_n_sdu->rx.buf.rmng < payload_size)
                 {
                     /* SWS_CanTp_00339: After the reception of a First Frame or Single Frame, if the
                      * function PduR_CanTpStartOfReception() returns BUFREQ_OK with a smaller
@@ -1534,6 +1536,9 @@ static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduIn
     PduInfoType tmp_pdu;
     CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
+    const PduLengthType header_size = CanTp_GetFrameHeaderSize(p_n_sdu->rx.cfg->af,
+                                                               CANTP_N_PCI_TYPE_FF);
+    const PduLengthType payload_size = CANTP_CAN_FRAME_SIZE - header_size;
 
     CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_CR);
 
@@ -1557,8 +1562,8 @@ static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduIn
                         p_n_sdu->rx.bs --;
 
                         tmp_pdu.MetaDataPtr = pPduInfo->MetaDataPtr;
-                        tmp_pdu.SduDataPtr = &pPduInfo->SduDataPtr[CANTP_CF_PCI_SIZE];
-                        tmp_pdu.SduLength = CANTP_CF_PAYLOAD_SIZE;
+                        tmp_pdu.SduDataPtr = &pPduInfo->SduDataPtr[header_size];
+                        tmp_pdu.SduLength = payload_size;
                         PduR_CanTpCopyRxData(pNSdu->rx.cfg->nSduId,
                                              &tmp_pdu,
                                              &pNSdu->rx.buf.rmng);
@@ -1918,6 +1923,68 @@ static Std_ReturnType CanTp_GetNSduFromPduId(PduIdType pduId, CanTp_NSduType **p
     return tmp_return;
 }
 
+static PduLengthType CanTp_GetFrameHeaderSize(const CanTp_AddressingFormatType af,
+                                              const uint8 frameType)
+{
+    PduLengthType result = 0x00u;
+
+    switch (af)
+    {
+        case CANTP_NORMALFIXED:
+        case CANTP_STANDARD:
+        {
+            result = 0x00u;
+
+            break;
+        }
+        case CANTP_EXTENDED:
+        case CANTP_MIXED:
+        case CANTP_MIXED29BIT:
+        {
+            result = 0x01u;
+
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+
+    switch (frameType)
+    {
+        case CANTP_N_PCI_TYPE_SF:
+        case CANTP_N_PCI_TYPE_CF:
+        {
+            /* single frame: PCI type and SF_DL in byte[0].
+             * consecutive frame: PCI type and SN in byte[0]. */
+            result += 0x01u;
+
+            break;
+        }
+        case CANTP_N_PCI_TYPE_FF:
+        {
+            /* PCI type and MSB of FF_DL in byte[0], and LSB of FF_DL in byte[1]. */
+            result += 0x02u;
+
+            break;
+        }
+        case CANTP_N_PCI_TYPE_FC:
+        {
+            /* PCI type and FS in byte[0], BS in byte[1] and STmin in byte[2]. */
+            result += 0x03u;
+
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+
+    return result;
+}
+
 static Std_ReturnType CanTp_DecodePCIValue(CanTp_NPciType *pPci, const uint8 *pData)
 {
     Std_ReturnType tmp_return = E_NOT_OK;
@@ -2056,7 +2123,10 @@ static uint8 CanTp_EncodeSTMinValue(const uint16 value)
 static PduLengthType CanTp_GetRxBlockSize(CanTp_NSduType *pNSdu)
 {
     PduLengthType result;
-    const PduLengthType full_bs = pNSdu->rx.shared.m_param.bs * CANTP_CF_PAYLOAD_SIZE;
+    const PduLengthType header_size = CanTp_GetFrameHeaderSize(pNSdu->rx.cfg->af,
+                                                               CANTP_N_PCI_TYPE_CF);
+    const PduLengthType payload_size = CANTP_CAN_FRAME_SIZE - header_size;
+    const PduLengthType full_bs = pNSdu->rx.shared.m_param.bs * payload_size;
     const PduLengthType last_bs = pNSdu->rx.buf.size;
 
     if ((last_bs < full_bs) || (full_bs == 0x00u))
