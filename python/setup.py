@@ -1,9 +1,10 @@
+import os
 from pycantp.ffi_builder import ffi_builder
 from setuptools import find_packages, setup
 
 name = 'pycantp'
 
-ffi_builder.compile(tmpdir='.')
+ffi_builder.compile(tmpdir=os.path.join(os.path.dirname(os.path.realpath(__file__)), name, 'input'))
 
 setup(author='Guillaume Sottas',
       author_email='guillaumesottas@gmail.com',

@@ -1,6 +1,6 @@
 [
   {
-    "padding byte": 12,
+    "padding byte": 255,
     "main function period": 1,
     "channels": [
       {
@@ -9,68 +9,27 @@
         "receivers": [
           {
             "comment": "first receiver",
-            "block size": 1,
-            "minimum separation time": 12,
-            "wait for transmission maximum": 2,
-            "network service data unit identifier": 1,
-            "N_Br timeout": 5,
-            "target address": 1,
+            "block size": 2,
+            "minimum separation time": 95,
+            "wait for transmission maximum": 100,
+            "network service data unit identifier": 0,
+            "N_Br timeout": 100,
+            "target address": 12,
             "addressing format": "CANTP_EXTENDED",
-            "network service data unit reference": 2,
-            "communication type": "CANTP_FUNCTIONAL"
+            "network service data unit reference": 0,
+            "communication type": "CANTP_PHYSICAL"
           }
         ],
         "transmitters": [
           {
-            "comment": "0",
+            "comment": "first transmitter",
             "network service data unit identifier": 1,
-            "N_Cs timeout": 3,
-            "addressing format": "CANTP_NORMALFIXED",
-            "network service data unit reference": 2132,
-            "communication type": "CANTP_PHYSICAL"
-          },
-          {
-            "comment": "0",
-            "network service data unit identifier": 1,
-            "N_Cs timeout": 3,
+            "N_Cs timeout": 100,
             "addressing format": "CANTP_STANDARD",
-            "network service data unit reference": 2132,
-            "communication type": "CANTP_PHYSICAL"
-          },
-          {
-            "comment": "2",
-            "network service data unit identifier": 1,
-            "N_Cs timeout": 3,
-            "target address": 12,
-            "addressing format": "CANTP_EXTENDED",
-            "network service data unit reference": 2132,
-            "communication type": "CANTP_PHYSICAL"
-          },
-          {
-            "comment": "1",
-            "network service data unit identifier": 1,
-            "N_Cs timeout": 3,
-            "address extension": 1,
-            "addressing format": "CANTP_MIXED",
-            "network service data unit reference": 2132,
-            "communication type": "CANTP_PHYSICAL"
-          },
-          {
-            "comment": "2",
-            "network service data unit identifier": 1,
-            "N_Cs timeout": 3,
-            "address extension": 2,
-            "addressing format": "CANTP_MIXED29BIT",
             "network service data unit reference": 2132,
             "communication type": "CANTP_PHYSICAL"
           }
         ]
-      },
-      {
-        "comment":"empty channel",
-        "channel mode": "CANTP_MODE_HALF_DUPLEX",
-        "receivers": [],
-        "transmitters": []
       }
     ]
   }

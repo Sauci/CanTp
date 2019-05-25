@@ -56,6 +56,17 @@ extern "C"
 #include "Det.h"
 #include "PduR.h"
 
+/* TODO: do not include C file directly... */
+#ifdef CANTP_BUILD_CFFI_INTERFACE
+
+/**
+ * @brief if CANTP_BUILD_CFFI_INTERFACE is defined, expose the CanTp callback function to CFFI
+ * module.
+ */
+#include "CanTp_Cfg.c"
+
+#endif /* #ifdef CANTP_BUILD_CFFI_INTERFACE */
+
 /** @} */
 
 
@@ -859,7 +870,7 @@ Std_ReturnType CanTp_CancelTransmit(PduIdType txPduId)
 
     CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
                            0x00u,
-                           api_id,
+                           CANTP_CANCEL_TRANSMIT_API_ID,
                            CANTP_E_UNINIT,
                            return tmp_return)
 
@@ -906,7 +917,7 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
 
     CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
                            0x00u,
-                           api_id,
+                           CANTP_CANCEL_RECEIVE_API_ID,
                            CANTP_E_UNINIT,
                            return tmp_return)
 
@@ -967,7 +978,7 @@ Std_ReturnType CanTp_ChangeParameter(PduIdType pduId, TPParameterType parameter,
 
     CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
                            0x00u,
-                           api_id,
+                           CANTP_CHANGE_PARAMETER_API_ID,
                            CANTP_E_UNINIT,
                            return tmp_return)
 
@@ -1013,13 +1024,13 @@ Std_ReturnType CanTp_ReadParameter(PduIdType pduId, TPParameterType parameter, u
 
     CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
                            0x00u,
-                           api_id,
+                           CANTP_READ_PARAMETER_API_ID,
                            CANTP_E_UNINIT,
                            return tmp_return)
 
     CANTP_DET_ASSERT_ERROR(pValue == NULL_PTR,
                            0x00u,
-                           api_id,
+                           CANTP_READ_PARAMETER_API_ID,
                            CANTP_E_PARAM_POINTER,
                            return tmp_return)
 

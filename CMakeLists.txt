@@ -11,6 +11,7 @@ find_package(PythonInterp 3 REQUIRED)
 add_library(CanTp STATIC source/CanTp.c)
 
 target_compile_definitions(CanTp
+    PRIVATE CANTP_DEV_ERROR_DETECT=STD_ON
     PRIVATE CANTP_SW_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
     PRIVATE CANTP_SW_VERSION_MINOR=${PROJECT_VERSION_MINOR}
     PRIVATE CANTP_SW_VERSION_PATCH=${PROJECT_VERSION_PATCH}
@@ -46,7 +47,7 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp_Cfg.c
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python
     COMMENT "generating source code")
 
-add_library(CanTp_Cfg STATIC source/CanTp_Cfg.c)
+add_library(CanTp_Cfg STATIC source/CanTp_Cfg.c interface/CanTp_Cfg.h)
 
 target_include_directories(CanTp_Cfg PUBLIC interface)
 
@@ -72,6 +73,7 @@ if (${enable_test})
 
     add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/source.c
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp.c
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp_Cfg.c
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/interface/CanTp_Cfg.h
         COMMAND pcpp ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp.c
         "-D$<JOIN:$<TARGET_PROPERTY:CanTp,COMPILE_DEFINITIONS>,;-D>"
@@ -80,17 +82,6 @@ if (${enable_test})
         --line-directive -o ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/source.c
         COMMAND_EXPAND_LISTS
         COMMENT "preprocessing cffi source"
-        VERBATIM)
-
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/config.c
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp_Cfg.c
-        COMMAND pcpp ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp_Cfg.c
-        "-D$<JOIN:$<TARGET_PROPERTY:CanTp,COMPILE_DEFINITIONS>,;-D>"
-        -DCANTP_BUILD_CFFI_INTERFACE
-        "-I$<JOIN:$<TARGET_PROPERTY:CanTp,INCLUDE_DIRECTORIES>,;-I>"
-        --line-directive -o ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/config.c
-        COMMAND_EXPAND_LISTS
-        COMMENT "preprocessing cffi config"
         VERBATIM)
 
     add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/header.h
@@ -105,7 +96,6 @@ if (${enable_test})
         VERBATIM)
 
     add_custom_target(sdist
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/config.c
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/source.c
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/header.h
         COMMAND ${PYTHON_EXECUTABLE} setup.py sdist -d ${CMAKE_BINARY_DIR}
