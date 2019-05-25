@@ -12,7 +12,6 @@ with open(os.path.join(input_dir, 'source.c'), 'r') as fp:
 with open(os.path.join(input_dir, 'header.h'), 'r') as fp:
     header = CGenerator().visit(CParser().parse(fp.read()))
 
-
 # call the C generator to format the source/header file. this step is not really required, but is
 # useful to generate clean code coverage reports.
 for s, name in ((source, 'source.c'), (header, 'header.h')):
@@ -49,9 +48,8 @@ class FunctionCall(NodeVisitor):
 
 class CFFICDefGenerator(CGenerator):
     def __init__(self, source_string, mock_func, declarations):
-        self.mock_func = mock_func
-        #print('bellow function will be automatically mocked:\n- ' + '\n- '.join(sorted(mock_func)))
         super(CFFICDefGenerator, self).__init__()
+        self.mock_func = mock_func
         self.updated = self.visit(CParser().parse(source_string))
         remaining = list()
         for declaration in [d for d in declarations if d.name in self.mock_func and 'static' not in d.storage]:
@@ -77,13 +75,11 @@ header_finder = FunctionFinder(header)
 header = CFFICDefGenerator(header, source_finder.calls - source_finder.definitions,
                            source_finder.declarations | header_finder.declarations).updated
 
-#with open(os.path.join(input_dir, 'header.h'), 'w') as fp:
-#    fp.write(header)
-
 ffi_builder = FFI()
 
 ffi_builder.cdef(header)
 
 ffi_builder.set_source('pycantp._cantp', source,
+                       sources=[os.path.join('.', 'pycantp', 'input', 'config.c')],
                        extra_compile_args=['-g', '-O0', '-fprofile-arcs', '-ftest-coverage'],
                        extra_link_args=['-g', '-O0', '-fprofile-arcs', '-ftest-coverage'])

@@ -855,7 +855,6 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
 Std_ReturnType CanTp_CancelTransmit(PduIdType txPduId)
 {
     CanTp_NSduType *p_n_sdu;
-    const uint8 api_id = CANTP_CANCEL_TRANSMIT_API_ID;
     Std_ReturnType tmp_return = E_NOT_OK;
 
     CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
@@ -888,12 +887,12 @@ Std_ReturnType CanTp_CancelTransmit(PduIdType txPduId)
              * is not on transmission process the CanTp module shall report a runtime error code
              * CANTP_E_OPER_NOT_SUPPORTED to the Default Error Tracer and the service shall return
              * E_NOT_OK. */
-            CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, api_id, CANTP_E_OPER_NOT_SUPPORTED)
+            CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, CANTP_CANCEL_TRANSMIT_API_ID, CANTP_E_OPER_NOT_SUPPORTED)
         }
     }
     else
     {
-        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, api_id, CANTP_E_PARAM_ID)
+        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_CANCEL_TRANSMIT_API_ID, CANTP_E_PARAM_ID)
     }
 
     return tmp_return;
@@ -903,7 +902,6 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
 {
     CanTp_NSduType *p_n_sdu;
     CanTp_TaskStateType task_state;
-    const uint8 api_id = CANTP_CANCEL_RECEIVE_API_ID;
     Std_ReturnType tmp_return = E_NOT_OK;
 
     CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
@@ -946,7 +944,7 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
              * is not on transmission process the CanTp module shall report a runtime error code
              * CANTP_E_OPER_NOT_SUPPORTED to the Default Error Tracer and the service shall return
              * E_NOT_OK. */
-            CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, api_id, CANTP_E_OPER_NOT_SUPPORTED)
+            CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, CANTP_CANCEL_RECEIVE_API_ID, CANTP_E_OPER_NOT_SUPPORTED)
         }
     }
     else
@@ -955,7 +953,7 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
          * CanTp_CancelReceive shall check the validity of RxPduId parameter. if the parameter value
          * is invalid, the CanTp_CancelReceive function shall raise the development error
          * CANTP_E_PARAM_ID and return E_NOT_OK (see SWS_CanTp_00294). */
-        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, api_id, CANTP_E_PARAM_ID)
+        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_CANCEL_RECEIVE_API_ID, CANTP_E_PARAM_ID)
     }
 
     return tmp_return;
@@ -965,7 +963,6 @@ Std_ReturnType CanTp_ChangeParameter(PduIdType pduId, TPParameterType parameter,
 {
     CanTp_NSduType *p_n_sdu;
     CanTp_TaskStateType task_state;
-    const uint8 api_id = CANTP_CHANGE_PARAMETER_API_ID;
     Std_ReturnType tmp_return = E_NOT_OK;
 
     CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
@@ -996,13 +993,13 @@ Std_ReturnType CanTp_ChangeParameter(PduIdType pduId, TPParameterType parameter,
             }
             else
             {
-                CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, api_id, CANTP_E_PARAM_ID)
+                CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_CHANGE_PARAMETER_API_ID, CANTP_E_PARAM_ID)
             }
         }
     }
     else
     {
-        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, api_id, CANTP_E_PARAM_ID)
+        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_CHANGE_PARAMETER_API_ID, CANTP_E_PARAM_ID)
     }
 
     return tmp_return;
@@ -1012,7 +1009,6 @@ Std_ReturnType CanTp_ReadParameter(PduIdType pduId, TPParameterType parameter, u
 {
     CanTp_NSduType *p_n_sdu;
     uint16 value;
-    const uint8 api_id = CANTP_READ_PARAMETER_API_ID;
     Std_ReturnType tmp_return = E_NOT_OK;
 
     CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
@@ -1045,13 +1041,13 @@ Std_ReturnType CanTp_ReadParameter(PduIdType pduId, TPParameterType parameter, u
             }
             else
             {
-                CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, api_id, CANTP_E_PARAM_ID)
+                CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_READ_PARAMETER_API_ID, CANTP_E_PARAM_ID)
             }
         }
     }
     else
     {
-        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, api_id, CANTP_E_PARAM_ID)
+        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_READ_PARAMETER_API_ID, CANTP_E_PARAM_ID)
     }
 
     return tmp_return;

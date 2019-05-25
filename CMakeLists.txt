@@ -5,12 +5,10 @@ project(CanTp VERSION 0.1.0 LANGUAGES C)
 
 option(enable_test "enable/add test-related target(s) of CanTp module." ON)
 option(enable_code_coverage "build unit test target(s) with code coverage options." ON)
-option(enable_python_wrapper "generates code to wrap library into python module." ON)
 
-set(CMAKE_MACOSX_RPATH ON)
-set(CMAKE_INSTALL_RPATH ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+find_package(PythonInterp 3 REQUIRED)
 
-add_library(CanTp STATIC source/CanTp.c source/CanTp_PBcfg.c)
+add_library(CanTp STATIC source/CanTp.c)
 
 target_compile_definitions(CanTp
     PRIVATE CANTP_SW_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
@@ -28,9 +26,34 @@ target_compile_definitions(CanTp
 
 target_include_directories(CanTp PUBLIC interface)
 
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/interface/CanTp_Cfg.h
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/template/config.c.mustache
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/template/config.h.mustache
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/template/config.schema.json
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json
+    COMMAND ${PYTHON_EXECUTABLE} cli.py ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json
+    -header ${CMAKE_CURRENT_SOURCE_DIR}/interface/CanTp_Cfg.h
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python
+    COMMENT "generating interface code")
+
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp_Cfg.c
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/template/config.c.mustache
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/template/config.h.mustache
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/template/config.schema.json
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json
+    COMMAND ${PYTHON_EXECUTABLE} cli.py ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json
+    -source ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp_Cfg.c
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python
+    COMMENT "generating source code")
+
+add_library(CanTp_Cfg STATIC source/CanTp_Cfg.c)
+
+target_include_directories(CanTp_Cfg PUBLIC interface)
+
+target_link_libraries(CanTp PRIVATE CanTp_Cfg)
+
 if (${enable_test})
     enable_testing()
-    find_package(PythonInterp 3 REQUIRED)
 
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/stub)
 
@@ -43,12 +66,13 @@ if (${enable_test})
     add_library(PduR INTERFACE)
     target_include_directories(PduR INTERFACE stub)
 
-    target_compile_definitions(CanTp PUBLIC $<$<BOOL:${enable_python_wrapper}>:CANTP_CFFI_ENABLE>)
+    target_compile_definitions(CanTp PUBLIC $<$<BOOL:${enable_test}>:CANTP_CFFI_ENABLE>)
 
     target_link_libraries(CanTp INTERFACE CanIf Det PduR)
 
     add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/source.c
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp.c
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/interface/CanTp_Cfg.h
         COMMAND pcpp ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp.c
         "-D$<JOIN:$<TARGET_PROPERTY:CanTp,COMPILE_DEFINITIONS>,;-D>"
         -DCANTP_BUILD_CFFI_INTERFACE
@@ -56,6 +80,17 @@ if (${enable_test})
         --line-directive -o ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/source.c
         COMMAND_EXPAND_LISTS
         COMMENT "preprocessing cffi source"
+        VERBATIM)
+
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/config.c
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp_Cfg.c
+        COMMAND pcpp ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp_Cfg.c
+        "-D$<JOIN:$<TARGET_PROPERTY:CanTp,COMPILE_DEFINITIONS>,;-D>"
+        -DCANTP_BUILD_CFFI_INTERFACE
+        "-I$<JOIN:$<TARGET_PROPERTY:CanTp,INCLUDE_DIRECTORIES>,;-I>"
+        --line-directive -o ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/config.c
+        COMMAND_EXPAND_LISTS
+        COMMENT "preprocessing cffi config"
         VERBATIM)
 
     add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/header.h
@@ -70,6 +105,7 @@ if (${enable_test})
         VERBATIM)
 
     add_custom_target(sdist
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/config.c
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/source.c
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/input/header.h
         COMMAND ${PYTHON_EXECUTABLE} setup.py sdist -d ${CMAKE_BINARY_DIR}

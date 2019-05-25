@@ -1,3 +1,7 @@
+include pycantp/input/config.c
 include pycantp/input/source.c
 include pycantp/input/header.h
+include pycantp/template/config.c.mustache
+include pycantp/template/config.h.mustache
+include pycantp/template/config.schema.json
 recursive-include pycantp *.so

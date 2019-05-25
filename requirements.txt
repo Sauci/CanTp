@@ -1,5 +1,7 @@
 behave==1.2.6
 cffi==1.12.3
 gcovr==4.1
+jsonschema==3.0.1
 pcpp==1.20.1
+pystache==0.5.4
 pytest==4.4.1
