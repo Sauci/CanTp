@@ -27,24 +27,35 @@ target_compile_definitions(CanTp
 
 target_include_directories(CanTp PUBLIC interface)
 
+add_custom_target(can_tp_code_gen_install
+    DEPENDS code_gen/can_tp_gen/cli.py
+    DEPENDS code_gen/can_tp_gen/code_gen.py
+    DEPENDS code_gen/can_tp_gen/__init__.py
+    COMMAND ${PYTHON_EXECUTABLE} setup.py install
+    COMMAND ${CMAKE_COMMAND} -E remove_directory build
+    COMMAND ${CMAKE_COMMAND} -E remove_directory can_tp_gen.egg-info
+    COMMAND ${CMAKE_COMMAND} -E remove_directory dist
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/code_gen)
+
+# TODO: remove generated files from source directory.
 add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/interface/CanTp_Cfg.h
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/template/config.c.mustache
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/template/config.h.mustache
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/template/config.schema.json
+    DEPENDS can_tp_code_gen_install
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/code_gen/can_tp_gen/config.h.mustache
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/code_gen/can_tp_gen/config.schema.json
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json
     COMMAND ${PYTHON_EXECUTABLE} cli.py ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json
     -header ${CMAKE_CURRENT_SOURCE_DIR}/interface/CanTp_Cfg.h
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/code_gen/can_tp_gen
     COMMENT "generating interface code")
 
 add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp_Cfg.c
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/template/config.c.mustache
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/template/config.h.mustache
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/pycantp/template/config.schema.json
+    DEPENDS can_tp_code_gen_install
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/code_gen/can_tp_gen/config.c.mustache
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/code_gen/can_tp_gen/config.schema.json
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json
     COMMAND ${PYTHON_EXECUTABLE} cli.py ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json
     -source ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp_Cfg.c
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/code_gen/can_tp_gen
     COMMENT "generating source code")
 
 add_library(CanTp_Cfg STATIC source/CanTp_Cfg.c interface/CanTp_Cfg.h)

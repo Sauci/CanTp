@@ -602,7 +602,7 @@ static const CanTp_ConfigType *CanTp_ConfigPtr = NULL_PTR;
 #define CanTp_START_SEC_VAR_FAST_CLEARED_UNSPECIFIED
 #include "CanTp_MemMap.h"
 
-static CanTp_ChannelRtType CanTp_Rt[CANTP_NUM_OF_CHANNEL];
+static CanTp_ChannelRtType CanTp_Rt[CANTP_MAX_NUM_OF_CHANNEL];
 
 #define CanTp_STOP_SEC_VAR_FAST_CLEARED_UNSPECIFIED
 #include "CanTp_MemMap.h"
@@ -1970,7 +1970,7 @@ static Std_ReturnType CanTp_GetNSduFromPduId(PduIdType pduId, CanTp_NSduType **p
     CanTp_ChannelRtType *p_channel_rt;
     uint32_least channel_idx;
 
-    for (channel_idx = 0x00u; channel_idx < CANTP_NUM_OF_CHANNEL; channel_idx++)
+    for (channel_idx = 0x00u; channel_idx < CANTP_MAX_NUM_OF_CHANNEL; channel_idx++)
     {
         p_channel_rt = &CanTp_Rt[channel_idx];
 

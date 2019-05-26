@@ -29,3 +29,4 @@ from .pycantp import CanTp, \
     CANTP_I_N_BUFFER_OVFLW
 
 from .config_gen import CanTpConfigurator
+from .code_gen import CodeGen

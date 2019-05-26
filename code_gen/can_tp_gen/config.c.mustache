@@ -1,32 +1,6 @@
-#include "CanTp.h"
-{{#config}}
-{{#channels}}
+#include "CanTp_Cfg.h"
 
-#ifndef CANTP_CONFIG_HAS_CONFIG
-
-#define CANTP_CONFIG_HAS_CONFIG
-
-#endif /* #ifndef CANTP_CONFIG_HAS_CONFIG */
-{{#receivers}}
-
-#ifndef CANTP_CONFIG_HAS_RECEIVERS
-
-#define CANTP_CONFIG_HAS_RECEIVERS
-
-#endif /* #ifndef CANTP_CONFIG_HAS_RECEIVERS */
-{{/receivers}}
-{{#transmitters}}
-
-#ifndef CANTP_CONFIG_HAS_TRANSMITTERS
-
-#define CANTP_CONFIG_HAS_TRANSMITTERS
-
-#endif /* #ifndef CANTP_CONFIG_HAS_TRANSMITTERS */
-{{/transmitters}}
-{{/channels}}
-{{/config}}
-
-{{#config}}
+{{#configurations}}
 {{#channels}}
 {{#transmitters}}
 {{#source address}}
@@ -35,15 +9,9 @@
 
 #define CANTP_N_SA_{{.}}
 
-#define CanTp_START_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
-
 static const CanTp_NSaType CanTp_NSa{{.}} = {
     {{.}}u
 };
-
-#define CanTp_STOP_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
 
 #endif /* #ifndef CANTP_N_SA_{{.}} */
 {{/source address}}
@@ -53,15 +21,9 @@ static const CanTp_NSaType CanTp_NSa{{.}} = {
 
 #define CANTP_N_TA_{{.}}
 
-#define CanTp_START_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
-
 static const CanTp_NTaType CanTp_NTa{{.}} = {
     {{.}}u
 };
-
-#define CanTp_STOP_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
 
 #endif /* #ifndef CANTP_N_TA_{{.}} */
 {{/target address}}
@@ -71,15 +33,9 @@ static const CanTp_NTaType CanTp_NTa{{.}} = {
 
 #define CANTP_N_AE_{{.}}
 
-#define CanTp_START_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
-
 static const CanTp_NAeType CanTp_NAe{{.}} = {
     {{.}}u
 };
-
-#define CanTp_STOP_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
 
 #endif /* #ifndef CANTP_N_AE_{{.}} */
 {{/address extension}}
@@ -91,15 +47,9 @@ static const CanTp_NAeType CanTp_NAe{{.}} = {
 
 #define CANTP_N_SA_{{.}}
 
-#define CanTp_START_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
-
 static const CanTp_NSaType CanTp_NSa{{.}} = {
     {{.}}u
 };
-
-#define CanTp_STOP_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
 
 #endif /* #ifndef CANTP_N_SA_{{.}} */
 {{/source address}}
@@ -109,15 +59,9 @@ static const CanTp_NSaType CanTp_NSa{{.}} = {
 
 #define CANTP_N_TA_{{.}}
 
-#define CanTp_START_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
-
 static const CanTp_NTaType CanTp_NTa{{.}} = {
     {{.}}u
 };
-
-#define CanTp_STOP_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
 
 #endif /* #ifndef CANTP_N_TA_{{.}} */
 {{/target address}}
@@ -127,65 +71,45 @@ static const CanTp_NTaType CanTp_NTa{{.}} = {
 
 #define CANTP_N_AE_{{.}}
 
-#define CanTp_START_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
-
 static const CanTp_NAeType CanTp_NAe{{.}} = {
     {{.}}u
 };
-
-#define CanTp_STOP_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
 
 #endif /* #ifndef CANTP_N_AE_{{.}} */
 {{/address extension}}
 {{/receivers}}
 {{/channels}}
-{{/config}}
+{{/configurations}}
 
-
-#define CanTp_START_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
-
-/* TODO: use CANTP_NUM_OF_SDU. */
-const CanTp_RxNSduType CanTp_RxNSduConfig[] = {
-    {{#config}}
-    {{#channels}}
+{{#configurations}}
+{{#channels}}
+{{#channel_has_rx_n_sdu}}
+const CanTp_RxNSduType CanTp_RxNSduConfig{{CONFIG_ID}}[] = {
     {{#receivers}}
-    {{#comment}}/* {{.}} */{{/comment}}
     {
         {{network service data unit identifier}}u, /* network service data unit identifier. */
         {{#source address}}&CanTp_NSa{{.}}{{/source address}}{{^source address}}NULL_PTR{{/source address}}, /* source address (pNSa). */
         {{#target address}}&CanTp_NTa{{.}}{{/target address}}{{^target address}}NULL_PTR{{/target address}}, /* target address (pNTa). */
         {{#address extension}}&CanTp_NAe{{.}}{{/address extension}}{{^address extension}}NULL_PTR{{/address extension}}, /* address extension (pNAe). */
-        {{block size}}u, /* block size. */
+        {{#block size}}{{.}}u{{/block size}}{{^block size}}CANTP_DEFAULT_BLOCK_SIZE{{/block size}}, /* block size. */
         {{#N_Ar timeout}}{{.}}u, /* A timeout (CanTpNar). */{{/N_Ar timeout}}{{^N_Ar timeout}}1000u, /* defaulted A timeout (CanTpNar). */{{/N_Ar timeout}}
-        {{N_Br timeout}}u, /* B timeout. */
+        /* TODO: calculate N_Br according to performance requirement if not defined by user. */
+        {{#N_Br timeout}}{{.}}u{{/N_Br timeout}}{{^N_Br timeout}}CANTP_DEFAULT_N_BR_TIMEOUT{{/N_Br timeout}} , /* B timeout. */
         {{#N_Cr timeout}}{{.}}u, /* C timeout (CanTpNcr). */{{/N_Cr timeout}}{{^N_Cr timeout}}1000u, /* defaulted C timeout (CanTpNcr). */{{/N_Cr timeout}}
-        {{wait for transmission maximum}}u, /* wait for transmission maximum. */
-        {{minimum separation time}}u, /* minimum separation time. */
+        {{#wait for transmission maximum}}{{.}}u{{/wait for transmission maximum}}{{^wait for transmission maximum}}CANTP_DEFAULT_WFT_MAX{{/wait for transmission maximum}}, /* wait for transmission maximum. */
+        {{#minimum separation time}}{{.}}u{{/minimum separation time}}{{^minimum separation time}}CANTP_DEFAULT_ST_MIN{{/minimum separation time}}, /* minimum separation time. */
         {{addressing format}}, /* addressing format (CanTpTxAddressingFormat). */
         {{#enable padding}}TRUE{{/enable padding}}{{^enable padding}}FALSE{{/enable padding}}, /* padding enabled. */
-        {{communication type}}, /* communication type. */
+        {{#communication type}}{{.}}{{/communication type}}{{^communication type}}CANTP_DEFAULT_COMMUNICATION_TYPE{{/communication type}}, /* communication type. */
         {{network service data unit reference}}u /* network service data unit reference. */
     },
     {{/receivers}}
-    {{/channels}}
-    {{/config}}
 };
+{{/channel_has_rx_n_sdu}}
 
-#define CanTp_STOP_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
-
-
-#define CanTp_START_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
-
-static const CanTp_TxNSduType CanTp_TxNSduConfig[] = {
-    {{#config}}
-    {{#channels}}
+{{#channel_has_tx_n_sdu}}
+static const CanTp_TxNSduType CanTp_TxNSduConfig{{CONFIG_ID}}[] = {
     {{#transmitters}}
-    {{#comment}}/* {{.}} */{{/comment}}
     {
         {{network service data unit identifier}}u, /* network service data unit identifier (CanTpTxNSduId). */
         {{#source address}}&CanTp_NSa{{.}}{{/source address}}{{^source address}}NULL_PTR{{/source address}}, /* source address (pNSa). */
@@ -201,70 +125,32 @@ static const CanTp_TxNSduType CanTp_TxNSduConfig[] = {
         {{network service data unit reference}}u /* network service data unit reference (CanTpTxNSduRef). */
     },
     {{/transmitters}}
-    {{/channels}}
-    {{/config}}
 };
+{{/channel_has_tx_n_sdu}}
+{{/channels}}
 
-#define CanTp_STOP_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
-
-
-#define CanTp_START_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
-
-static const CanTp_ChannelType CanTp_ChannelConfig[] = {
-    {{#config}}
+static const CanTp_ChannelType CanTp_ChannelConfig{{CONFIG_ID}}[] = {
     {{#channels}}
-    {{#comment}}/* {{.}} */{{/comment}}
     {
         {
-#ifdef CANTP_CONFIG_HAS_RECEIVERS
-
-            &CanTp_RxNSduConfig[0x00u],
-            sizeof(CanTp_RxNSduConfig) / sizeof(CanTp_RxNSduConfig[0x00u]),
-
-#else
-
-            NULL_PTR,
-            0x00u,
-
-#endif /* CANTP_CONFIG_HAS_RECEIVERS */
-
-#ifdef CANTP_CONFIG_HAS_TRANSMITTERS
-
-            &CanTp_TxNSduConfig[0x00u],
-            sizeof(CanTp_TxNSduConfig) / sizeof(CanTp_TxNSduConfig[0x00u]),
-
-#else
-
-            NULL_PTR,
-            0x00u,
-
-#endif /* CANTP_CONFIG_HAS_TRANSMITTERS */
+            {{#channel_has_rx_n_sdu}}&CanTp_RxNSduConfig{{CONFIG_ID}}[0x00u]{{/channel_has_rx_n_sdu}}{{^channel_has_rx_n_sdu}}NULL_PTR{{/channel_has_rx_n_sdu}},
+            {{#channel_has_rx_n_sdu}}sizeof(CanTp_RxNSduConfig{{CONFIG_ID}}) / sizeof(CanTp_RxNSduConfig{{CONFIG_ID}}[0x00u]){{/channel_has_rx_n_sdu}}{{^channel_has_rx_n_sdu}}0x00u{{/channel_has_rx_n_sdu}},
+            {{#channel_has_tx_n_sdu}}&CanTp_TxNSduConfig{{CONFIG_ID}}[0x00u]{{/channel_has_tx_n_sdu}}{{^channel_has_tx_n_sdu}}NULL_PTR{{/channel_has_tx_n_sdu}},
+            {{#channel_has_tx_n_sdu}}sizeof(CanTp_TxNSduConfig{{CONFIG_ID}}) / sizeof(CanTp_TxNSduConfig{{CONFIG_ID}}[0x00u]){{/channel_has_tx_n_sdu}}{{^channel_has_tx_n_sdu}}0x00u{{/channel_has_tx_n_sdu}},
         },
         {{channel mode}}
     },
     {{/channels}}
-    {{/config}}
 };
-
-#define CanTp_STOP_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
-
-
-#define CanTp_START_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
+{{/configurations}}
 
 const CanTp_ConfigType CanTp_Config[{{num_of_config}}u] = {
-    {{#config}}
+    {{#configurations}}
     {
-        {{main function period}},
-        sizeof(CanTp_ChannelConfig) / sizeof(CanTp_ChannelConfig[0x00u]),
-        &CanTp_ChannelConfig[0x00u],
-        {{padding byte}}
+        {{#main function period}}{{.}}u /* main function period. */{{/main function period}}{{^main function period}}0x01u /* defaulted main function period. */{{/main function period}},
+        sizeof(CanTp_ChannelConfig{{CONFIG_ID}}) / sizeof(CanTp_ChannelConfig{{CONFIG_ID}}[0x00u]),
+        &CanTp_ChannelConfig{{CONFIG_ID}}[0x00u],
+        {{#padding byte}}{{.}}u /* padding byte value (CanTpPaddingByte). */{{/padding byte}}{{^padding byte}}0xFFu /* defaulted padding byte value (CanTpPaddingByte). */{{/padding byte}}
     },
-    {{/config}}
+    {{/configurations}}
 };
-
-#define CanTp_STOP_SEC_CONST_UNSPECIFIED
-#include "CanTp_MemMap.h"
