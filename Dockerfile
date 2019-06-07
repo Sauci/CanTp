@@ -2,6 +2,9 @@ FROM alpine:3.9
 
 LABEL maintainer="Guillaume Sottas"
 
+# external arguments.
+ARG branch=master
+
 # setup environment variables.
 ENV PROJECT_DIR=/usr/project
 ENV BUILD_DIR=$PROJECT_DIR/build
@@ -15,7 +18,7 @@ RUN apk update && apk add \
     python3-dev
 
 # checkout the project.
-RUN git clone https://github.com/Sauci/CanTp $PROJECT_DIR
+RUN git clone --branch ${branch} https://github.com/Sauci/CanTp $PROJECT_DIR
 
 # install python requirements.
 WORKDIR $PROJECT_DIR
