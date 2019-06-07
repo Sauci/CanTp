@@ -6,4 +6,4 @@ before_install:
   - docker build --build-arg branch=$TRAVIS_BRANCH -t sauci/cantp .
 
 script:
-  - docker run sauci/cantp /bin/sh -c "cd build;make sdist_install;ctest -V"
+  - docker run sauci/cantp /bin/sh -c "cd build;ctest -V"
