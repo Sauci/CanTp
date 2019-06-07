@@ -1,0 +1,10 @@
+"""
+This file is auto-generated, do not edit.
+The purpose of this file is to forward the compiler/linker parameters from cmake to the CFFI builder.
+"""
+
+output = "${CMAKE_BINARY_DIR}"
+source = "${can_tp_source}"
+header = "${can_tp_header}"
+compile_definitions = "${can_tp_compile_definitions}".split(';')
+include_directories = "${can_tp_include_directories}".split(';')

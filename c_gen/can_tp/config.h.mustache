@@ -1,4 +1,6 @@
-#include "CanTp.h"
+#include "CanTp_Types.h"
+
+#define CANTP_CONVERT_SEC_TO_U_SEC(timeout) ((uint32)((float)timeout * (float)1000000))
 
 #ifndef CANTP_MAX_NUM_OF_CHANNEL
 #define CANTP_MAX_NUM_OF_CHANNEL ({{max_num_of_channel}}u)
@@ -50,61 +52,61 @@
 
 #ifndef CANTP_DEFAULT_N_AS_TIMEOUT
 {{#default settings.N_As timeout}}
-#define CANTP_DEFAULT_N_AS_TIMEOUT ({{.}}u) /* default N_As timeout. */
+#define CANTP_DEFAULT_N_AS_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC({{.}}) /* default N_As timeout. */
 {{/default settings.N_As timeout}}
 {{^default settings.N_As timeout}}
 #warning default N_As timeout is not defined, defaulting to 1000.
-#define CANTP_DEFAULT_N_AS_TIMEOUT (1000u) /* default N_As timeout. */
+#define CANTP_DEFAULT_N_AS_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC(1) /* default N_As timeout. */
 {{/default settings.N_As timeout}}
 #endif /* #ifndef CANTP_DEFAULT_N_AS_TIMEOUT */
 
 #ifndef CANTP_DEFAULT_N_BS_TIMEOUT
 {{#default settings.N_Bs timeout}}
-#define CANTP_DEFAULT_N_BS_TIMEOUT ({{.}}u) /* default N_Bs timeout. */
+#define CANTP_DEFAULT_N_BS_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC({{.}}) /* default N_Bs timeout. */
 {{/default settings.N_Bs timeout}}
 {{^default settings.N_Bs timeout}}
 #warning default N_Bs timeout is not defined, defaulting to 1000.
-#define CANTP_DEFAULT_N_BS_TIMEOUT (1000u) /* default N_Bs timeout. */
+#define CANTP_DEFAULT_N_BS_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC(1) /* default N_Bs timeout. */
 {{/default settings.N_Bs timeout}}
 #endif /* #ifndef CANTP_DEFAULT_N_BS_TIMEOUT */
 
 #ifndef CANTP_DEFAULT_N_CS_TIMEOUT
 {{#default settings.N_Cs timeout}}
-#define CANTP_DEFAULT_N_CS_TIMEOUT ({{.}}u) /* default N_Cs timeout. */
+#define CANTP_DEFAULT_N_CS_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC({{.}}) /* default N_Cs timeout. */
 {{/default settings.N_Cs timeout}}
 {{^default settings.N_Cs timeout}}
 #warning default N_Cs timeout is not defined, defaulting to 1000.
-#define CANTP_DEFAULT_N_CS_TIMEOUT (1000u) /* default N_Cs timeout. */
+#define CANTP_DEFAULT_N_CS_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC(0.9) /* default N_Cs timeout. */
 {{/default settings.N_Cs timeout}}
 #endif /* #ifndef CANTP_DEFAULT_N_CS_TIMEOUT */
 
 #ifndef CANTP_DEFAULT_N_AR_TIMEOUT
 {{#default settings.N_Ar timeout}}
-#define CANTP_DEFAULT_N_AR_TIMEOUT ({{.}}u) /* default N_Ar timeout. */
+#define CANTP_DEFAULT_N_AR_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC({{.}}) /* default N_Ar timeout. */
 {{/default settings.N_Ar timeout}}
 {{^default settings.N_Ar timeout}}
 #warning default N_Ar timeout is not defined, defaulting to 1000.
-#define CANTP_DEFAULT_N_AR_TIMEOUT (1000u) /* default N_Ar timeout. */
+#define CANTP_DEFAULT_N_AR_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC(1) /* default N_Ar timeout. */
 {{/default settings.N_Ar timeout}}
 #endif /* #ifndef CANTP_DEFAULT_N_AR_TIMEOUT */
 
 #ifndef CANTP_DEFAULT_N_BR_TIMEOUT
 {{#default settings.N_Br timeout}}
-#define CANTP_DEFAULT_N_BR_TIMEOUT ({{.}}u) /* default N_Br timeout. */
+#define CANTP_DEFAULT_N_BR_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC({{.}}) /* default N_Br timeout. */
 {{/default settings.N_Br timeout}}
 {{^default settings.N_Br timeout}}
-#warning default N_Br timeout is not defined, defaulting to 1000.
-#define CANTP_DEFAULT_N_BR_TIMEOUT (1000u) /* default N_Br timeout. */
+#warning default N_Br timeout is not defined, defaulting to 0.9.
+#define CANTP_DEFAULT_N_BR_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC(0.9) /* default N_Br timeout. */
 {{/default settings.N_Br timeout}}
 #endif /* #ifndef CANTP_DEFAULT_N_BR_TIMEOUT */
 
 #ifndef CANTP_DEFAULT_N_CR_TIMEOUT
 {{#default settings.N_Cr timeout}}
-#define CANTP_DEFAULT_N_CR_TIMEOUT ({{.}}u) /* default N_Cr timeout. */
+#define CANTP_DEFAULT_N_CR_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC({{.}}) /* default N_Cr timeout. */
 {{/default settings.N_Cr timeout}}
 {{^default settings.N_Cr timeout}}
 #warning default N_Cr timeout is not defined, defaulting to 1000.
-#define CANTP_DEFAULT_N_CR_TIMEOUT (1000u) /* default N_Cr timeout. */
+#define CANTP_DEFAULT_N_CR_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC(1) /* default N_Cr timeout. */
 {{/default settings.N_Cr timeout}}
 #endif /* #ifndef CANTP_DEFAULT_N_CR_TIMEOUT */
 

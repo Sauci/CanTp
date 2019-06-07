@@ -4,12 +4,12 @@
     "communication type": "CANTP_FUNCTIONAL",
     "wait for transmission maximum": 1,
     "minimum separation time": 2,
-    "N_As timeout": 100,
-    "N_Bs timeout": 100,
-    "N_Cs timeout": 100,
-    "N_Ar timeout": 100,
-    "N_Br timeout": 100,
-    "N_Cr timeout": 100
+    "N_As timeout": 1.0,
+    "N_Bs timeout": 1.0,
+    "N_Cs timeout": 0.9,
+    "N_Ar timeout": 1.0,
+    "N_Br timeout": 0.9,
+    "N_Cr timeout": 1.0
   },
   "configurations": [
     {
@@ -29,7 +29,6 @@
           "transmitters": [
             {
               "network service data unit identifier": 1,
-              "N_Cs timeout": 100,
               "addressing format": "CANTP_STANDARD",
               "network service data unit reference": 2132,
               "communication type": "CANTP_PHYSICAL"
