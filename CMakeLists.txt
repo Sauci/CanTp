@@ -71,17 +71,6 @@ if (${enable_test})
 
     target_link_libraries(CanTp INTERFACE Stub)
 
-    add_custom_target(can_tp_ffi
-        COMMAND ${PYTHON_EXECUTABLE}  cli.py "can_tp_ffi"
-        ${CMAKE_CURRENT_SOURCE_DIR}/${can_tp_source}
-        ${CMAKE_CURRENT_SOURCE_DIR}/${can_tp_header}
-        -o ${CMAKE_BINARY_DIR}
-        "-D$<JOIN:$<TARGET_PROPERTY:CanTp,COMPILE_DEFINITIONS>,;-D>"
-        "-I$<JOIN:$<TARGET_PROPERTY:CanTp,INCLUDE_DIRECTORIES>,;-I>"
-        COMMAND_EXPAND_LISTS
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test/ffi
-        COMMENT "building can_tp FFI")
-
     add_test(NAME CanTp_UnitTest
         COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/c_gen
             ${PYTHON_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test/unit_test
