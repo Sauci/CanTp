@@ -84,8 +84,9 @@ if (${enable_test})
 
     add_test(NAME CanTp_UnitTest
         COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/c_gen
-            ${PYTHON_EXECUTABLE} -m pytest test/unit_test --junitxml=./report/ut.xml
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+            ${PYTHON_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test/unit_test
+        --junitxml=./report/ut.xml
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
     add_test(NAME CanTp_FuncTest
         COMMAND ${PYTHON_EXECUTABLE} -m behave test/func_test --junit-directory=./report --junit

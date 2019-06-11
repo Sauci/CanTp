@@ -955,7 +955,8 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
              * Consecutive Frame of the N-SDU (i.e. the service is called after N-Cr timeout is
              * started for the last Consecutive Frame). In this case the CanTp shall return
              * E_NOT_OK. */
-            if (p_n_sdu->rx.buf.size > 0x07u)
+            if (p_n_sdu->rx.buf.size > (CANTP_CAN_FRAME_SIZE -
+                CanTp_GetFrameHeaderSize(p_n_sdu->rx.cfg->af, CANTP_N_PCI_TYPE_CF)))
             {
                 CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_WAIT;)
 
@@ -969,14 +970,10 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
         }
         else
         {
-            /* SWS_CanTp_00254: if development error detection is enabled the function
-             * CanTp_CancelTransmit shall check the validity of TxPduId parameter. If the parameter
-             * value is invalid, the CanTp_CancelTransmit function shall raise the development error
-             * CANTP_E_PARAM_ID and return E_NOT_OK (see SWS_CanTp_00294).
-             * if the parameter value indicates a cancel transmission request for an N-SDU that it
-             * is not on transmission process the CanTp module shall report a runtime error code
-             * CANTP_E_OPER_NOT_SUPPORTED to the Default Error Tracer and the service shall return
-             * E_NOT_OK. */
+            /* SWS_CanTp_00260: If the parameter value indicates a cancel reception request for an
+             * N-SDU that it is not on reception process the CanTp module shall report the runtime
+             * error code CANTP_E_OPER_NOT_SUPPORTED to the Default Error Tracer and the service
+             * shall return E_NOT_OK. */
             CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, CANTP_CANCEL_RECEIVE_API_ID, CANTP_E_OPER_NOT_SUPPORTED)
         }
     }
@@ -1478,7 +1475,6 @@ static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduIn
 {
     uint16 dl;
     PduLengthType header_size;
-    PduLengthType payload_size;
     PduLengthType n_ae_field_size;
     CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
@@ -1498,11 +1494,12 @@ static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduIn
          * shall reject the reception. The runtime error code CANTP_E_PADDING shall be reported to
          * the Default Error Tracer. */
         header_size = CANTP_SF_PCI_FIELD_SIZE + n_ae_field_size;
-        payload_size = pPduInfo->SduLength - header_size;
         CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;)
 
+        p_n_sdu->rx.buf.size = dl;
+
         p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[header_size];
-        p_n_sdu->rx.pdu_r_pdu_info.SduLength = header_size;
+        p_n_sdu->rx.pdu_r_pdu_info.SduLength = dl;
         p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr = NULL_PTR;
 
         switch (PduR_CanTpStartOfReception(p_n_sdu->rx.cfg->nSduId,
@@ -1517,7 +1514,7 @@ static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduIn
                  * buffer size than needed for the already received data, the CanTp module shall
                  * abort the reception of the N-SDU and call PduR_CanTpRxIndication() with the
                  * result E_NOT_OK. */
-                if (p_n_sdu->rx.buf.rmng < payload_size)
+                if (p_n_sdu->rx.buf.rmng < dl)
                 {
                     PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
@@ -1883,10 +1880,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
             if ((p_n_sdu->rx.cfg->padding == CANTP_ON) &&
                 (pPduInfo->SduLength < CANTP_CAN_FRAME_SIZE))
             {
-                if (pci == CANTP_N_PCI_TYPE_CF)
-                {
-                    PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
-                }
+                PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
                 CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_PADDING)
 

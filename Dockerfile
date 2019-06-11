@@ -7,7 +7,7 @@ ARG branch=master
 
 # setup environment variables.
 ENV PROJECT_DIR=/usr/project
-ENV BUILD_DIR=$PROJECT_DIR/build
+ENV BUILD_DIR=$PROJECT_DIR/docker_build
 
 # install required binaries.
 RUN apk update && apk add \

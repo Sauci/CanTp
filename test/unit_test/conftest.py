@@ -152,44 +152,50 @@ class DefaultFullDuplex(dict):
 
 
 class CanTpTest(MockGen):
+    idx = 0
+
     def __init__(self,
                  config,
-                 name='can_tp_ffi',
+                 name='_cffi_can_tp',
                  initialize=True,
                  rx_buffer_size=0x0FFF):
         self.available_rx_buffer = rx_buffer_size
         self.can_if_tx_data = list()
         self.can_tp_rx_data = list()
+        cleanup_tmpdir(tmpdir=ffi_cfg.output)
+        # name = os.environ.get('PYTEST_CURRENT_TEST').split(':')[-1]
         code_gen = CodeGen(config)
-        with open(os.path.join(ffi_cfg.output, 'CanTp_Cfg.c'), 'w') as fp:
-            fp.write(code_gen.source)
-        with open(os.path.join(ffi_cfg.output, 'CanTp_Cfg.h'), 'w') as fp:
-            fp.write(code_gen.header)
+        for file_path, content in ((os.path.join(ffi_cfg.output, 'CanTp_Cfg.c'), code_gen.source),
+                                   (os.path.join(ffi_cfg.output, 'CanTp_Cfg.h'), code_gen.header)):
+            with open(file_path, 'w') as fp:
+                fp.write(content)
         with open(ffi_cfg.source, 'r') as fp:
             source = fp.read()
         with open(ffi_cfg.header, 'r') as fp:
             header = fp.read()
-        cleanup_tmpdir()
-        super(CanTpTest, self).__init__(name,
+        super(CanTpTest, self).__init__('{}_{}'.format(name, CanTpTest.idx),
                                         source,
                                         header,
                                         ffi_cfg.output,
                                         sources=[os.path.join(ffi_cfg.output, 'CanTp_Cfg.c')],
                                         define_macros=ffi_cfg.compile_definitions,
                                         include_dirs=ffi_cfg.include_directories + [ffi_cfg.output])
-
         if initialize:
             self.lib.CanTp_Init(self.ffi.cast('const CanTp_ConfigType *', self.lib.CanTp_Config))
             if self.lib.CanTp_State != self.lib.CANTP_ON:
                 raise ValueError('CanTp module not initialized correctly...')
-        self.can_if_transmit.return_value = 0
-        self.det_report_error.return_value = 0
-        self.det_report_runtime_error.return_value = 0
-        self.det_report_transient_fault.return_value = 0
+        self.can_if_transmit.return_value = self.define('E_OK')
+        self.det_report_error.return_value = self.define('E_OK')
+        self.det_report_runtime_error.return_value = self.define('E_OK')
+        self.det_report_transient_fault.return_value = self.define('E_OK')
+        self.pdu_r_can_tp_rx_indication.return_value = None
+        self.pdu_r_can_tp_tx_confirmation.return_value = None
         self.pdu_r_can_tp_start_of_reception.return_value = self.lib.BUFREQ_OK
         self.pdu_r_can_tp_copy_rx_data.return_value = self.lib.BUFREQ_OK
         self.pdu_r_can_tp_copy_tx_data.return_value = self.lib.BUFREQ_OK
         self.pdu_r_can_tp_start_of_reception.side_effect = self._pdu_r_can_tp_start_of_reception
+        self.pdu_r_can_tp_copy_rx_data.side_effect = self._pdu_r_can_tp_copy_rx_data
+        CanTpTest.idx += 1
 
     def _pdu_r_can_tp_start_of_reception(self, _i_pdu_id, _pdu_info, _tp_sdu_length, buffer_size):
         buffer_size[0] = self.available_rx_buffer
@@ -301,8 +307,6 @@ class CanTpTest(MockGen):
                                  n_ta=0x7A,
                                  bs=1,
                                  padding=None):
-        if len(payload) < self.get_payload_size(af, 'FF'):
-            raise ValueError('single frame message...')
         cf = list()
         tmp_pl = list(payload)
         n_ai = {
@@ -314,7 +318,7 @@ class CanTpTest(MockGen):
         }[af]
 
         ff_pci = [(1 << 4) | ((len(payload) & 0xF00) >> 8), len(payload) & 0x0FF]
-        pl = [tmp_pl.pop(0) for _ in range(8 - len(n_ai) - len(ff_pci))]
+        pl = [tmp_pl.pop(0) for _ in range(min((8 - len(n_ai) - len(ff_pci), len(payload))))]
         ff = n_ai + ff_pci + pl
         if bs:
             fbc = ceil(len(tmp_pl) / self.get_payload_size(af, 'CF') * bs)

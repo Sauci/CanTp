@@ -104,7 +104,7 @@ class MockGen(FFI):
                         sources=sources,
                         include_dirs=include_dirs,
                         define_macros=list(tuple(d.split('=')) for d in define_macros))
-        lib_path = self.compile(tmpdir=output)
+        lib_path = self.compile()
         sys.path.append(os.path.dirname(lib_path))
         self.ffi_module = import_module(name)
         self.can_if_transmit = MagicMock()

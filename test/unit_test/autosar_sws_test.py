@@ -148,7 +148,7 @@ class TestSWS00057:
         handle = CanTpTest(DefaultFullDuplex(af=af))
         tx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)  # exactly one CF.
         sf = handle.get_receiver_single_frame(af=af)
-        fc = handle.get_receiver_flow_control(af=af, bs=0, st_min=0, padding=0xFF)
+        fc = handle.get_receiver_flow_control(af=af, bs=0, st_min=0)
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
@@ -160,7 +160,9 @@ class TestSWS00057:
         handle.lib.CanTp_MainFunction()
         assert handle.pdu_r_can_tp_start_of_reception.call_count == 2
         handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_OK'))
-        handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        assert handle.pdu_r_can_tp_rx_indication.call_args_list[0][0][1] == handle.define('E_OK')
+        assert handle.pdu_r_can_tp_rx_indication.call_args_list[1][0][1] == handle.define('E_NOT_OK')
+        assert handle.pdu_r_can_tp_rx_indication.call_args_list[2][0][1] == handle.define('E_OK')
         handle.det_report_runtime_error.assert_called_once_with(ANY, handle.define('CANTP_I_RX_SF'), ANY, handle.define('CANTP_E_UNEXP_PDU'))
 
     @pytest.mark.parametrize('af', addressing_formats)
@@ -323,7 +325,7 @@ class TestSWS00081:
         handle.can_if_transmit.assert_not_called()
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
-    def test_first_frame(self, handle, data_size):
+    def test_first_frame(self, data_size):
         handle = CanTpTest(DefaultReceiver())
         ff, _ = handle.get_receiver_multi_frame()
         handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_NOT_OK
@@ -557,13 +559,17 @@ class TestSWS00260:
         handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_OPER_NOT_SUPPORTED'))
 
 
-def test_sws_00261():
+@pytest.mark.parametrize('af', addressing_formats)
+def test_sws_00261(af):
     """
     The CanTp shall abort the reception of the current N-SDU if the service returns E_OK.
     """
 
-    handle = CanTpTest(DefaultReceiver())
-    handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_single_frame()))
+    handle = CanTpTest(DefaultReceiver(af=af))
+    ff, cfs = handle.get_receiver_multi_frame((0xFF,) * 80, bs=0, af=af)
+    handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+    handle.lib.CanTp_MainFunction()
+    handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
     assert handle.lib.CanTp_CancelReceive(0) == handle.define('E_OK')
 
 
@@ -574,14 +580,17 @@ class TestSWS00262:
     is started for the last Consecutive Frame). In this case the CanTp shall return E_NOT_OK.
     """
 
-    def test_single_frame(self):
-        handle = CanTpTest(DefaultReceiver())
-        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_single_frame()))
+    @pytest.mark.parametrize('af', addressing_formats)
+    def test_single_frame(self, af):
+        handle = CanTpTest(DefaultReceiver(af=af))
+        sf = handle.get_receiver_single_frame(af=af)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(sf))
         assert handle.lib.CanTp_CancelReceive(0) == handle.define('E_NOT_OK')
 
-    def test_last_consecutive_frame(self):
-        handle = CanTpTest(DefaultReceiver())
-        ff, cfs = handle.get_receiver_multi_frame((0xFF,) * 8, bs=0)
+    @pytest.mark.parametrize('af', addressing_formats)
+    def test_last_consecutive_frame(self, af):
+        handle = CanTpTest(DefaultReceiver(af=af))
+        ff, cfs = handle.get_receiver_multi_frame((0xFF,) * 8, bs=0, af=af)
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
@@ -634,7 +643,7 @@ class TestSWS00305:
         assert handle.lib.CanTp_ChangeParameter(1, getattr(handle.lib, parameter), 0) == handle.define('E_NOT_OK')
         handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PARAM_ID'))
 
-    def test_invalid_parameter(self, handle):
+    def test_invalid_parameter(self):
         handle = CanTpTest(DefaultReceiver())
         assert handle.lib.CanTp_ChangeParameter(0, handle.lib.TP_STMIN + handle.lib.TP_BS + 1, 0) == handle.define('E_NOT_OK')
         handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PARAM_ID'))
@@ -663,7 +672,7 @@ def test_sws_00318():
     handle.can_if_transmit.assert_called_once()
 
 
-def test_sws_00321(handle):
+def test_sws_00321():
     """
     If DET is enabled the function CanTp_Transmit shall rise CANTP_E_PARAM_POINTER error if the argument PduInfoPtr is a
     NULL pointer and return without any action.
@@ -673,7 +682,7 @@ def test_sws_00321(handle):
     handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PARAM_POINTER'))
 
 
-def test_sws_00322(handle):
+def test_sws_00322():
     """
     If DET is enabled the function CanTp_RxIndication shall rise CANTP_E_PARAM_POINTER error if the argument PduInfoPtr
     is a NULL pointer and return without any action.
@@ -730,53 +739,6 @@ class TestSWS00329:
             assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].SduDataPtr[idx] == dummy_byte
 
 
-@pytest.mark.skip(reason='not implemented yet')
-@pytest.mark.parametrize('payload_size', [
-    pytest.param(1, id='single frame'),
-    pytest.param(8, id='multi frame')])
-@pytest.mark.parametrize('source_address', n_sa)
-@pytest.mark.parametrize('target_address', n_ta)
-@pytest.mark.parametrize('addressing_format', [
-    pytest.param('standard'),
-    pytest.param('extended'),
-    pytest.param('mixed 11 bits'),
-    pytest.param('fixed'),
-    pytest.param('mixed 29 bits')])
-def test_sws_00335(handle, payload_size, addressing_format, source_address, target_address):
-    """
-    When calling CanIf_Transmit() for an SF, FF, or CF of a generic connection (N-PDU with MetaData), the CanTp module
-    shall provide the stored addressing information via MetaData of the N-PDU. The addressing information in the
-    MetaData depends on the addressing format:
-    - Normal, Extended, Mixed 11 bit: none
-    - Normal fixed, Mixed 29 bit: N_SA, N_TA.
-    """
-    configurator = Helper.create_single_tx_sdu_config(handle,
-                                                      af=addressing_format,
-                                                      n_sa=source_address,
-                                                      n_ta=target_address)
-    handle.lib.CanTp_Init(configurator.config)
-    handle.can_tp_transmit(0, Helper.create_tx_pdu_info(handle, [Helper.dummy_byte] * payload_size))
-    handle.lib.CanTp_MainFunction()
-    assert handle.can_if_transmit.call_count == 1
-    if addressing_format in ('standard', 'extended', 'mixed 11 bits'):
-        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr == handle.ffi.NULL
-    else:
-        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr != handle.ffi.NULL
-        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[0] == source_address
-        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[1] == target_address
-    if payload_size == 8:
-        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
-        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, Helper.create_rx_fc_can_frame()))
-        handle.lib.CanTp_MainFunction()
-        assert handle.can_if_transmit.call_count == 2
-        if addressing_format in ('standard', 'extended', 'mixed 11 bits'):
-            assert handle.can_if_transmit.call_args[0][1].MetaDataPtr == handle.ffi.NULL
-        else:
-            assert handle.can_if_transmit.call_args[0][1].MetaDataPtr != handle.ffi.NULL
-            assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[0] == source_address
-            assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[1] == target_address
-
-
 class TestSWS00339:
     """
     After the reception of a First Frame or Single Frame, if the function PduR_CanTpStartOfReception() returns BUFREQ_OK
@@ -829,8 +791,7 @@ def test_sws_00345(af):
     assert handle.pdu_r_can_tp_rx_indication.called_once_with(ANY, handle.define('E_OK'))
 
 
-@pytest.mark.parametrize('af', addressing_formats)
-def test_sws_00346(af):
+class TestSWS00346:
     """
     If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD frames) are used for a Rx N-SDU and
     CanTpRxPaddingActivation is equal to CANTP_ON, and CanTp receives by means of CanTp_RxIndication() call a last CF Rx
@@ -838,30 +799,45 @@ def test_sws_00346(af):
     shall abort the ongoing reception by calling PduR_CanTpRxIndication() with the result E_NOT_OK. The runtime error
     code CANTP_E_PADDING shall be reported to the Default Error Tracer.
     """
-    handle = CanTpTest(DefaultReceiver(af=af, padding=0xAA))
-    ff, cfs = handle.get_receiver_multi_frame(payload=(dummy_byte,) * (handle.get_payload_size(af, 'FF') +
-                                                                       handle.get_payload_size(af, 'CF') - 1), af=af)
-    cf_pdu = handle.get_pdu_info(cfs[0])
-    assert cf_pdu.SduLength != 8
-    handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
-    handle.lib.CanTp_MainFunction()
-    handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
-    handle.lib.CanTp_RxIndication(0, cf_pdu)
-    handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PADDING'))
-    handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
-    handle.lib.CanTp_MainFunction()
-    ff, cfs = handle.get_receiver_multi_frame(payload=(dummy_byte,) * (handle.get_payload_size(af, 'FF') +
-                                                                       handle.get_payload_size(af, 'CF')), af=af)
-    cf_pdu = handle.get_pdu_info(cfs[0])
-    assert cf_pdu.SduLength == 8
-    handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
-    handle.lib.CanTp_MainFunction()
-    handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
-    handle.lib.CanTp_RxIndication(0, cf_pdu)
-    assert handle.det_report_runtime_error.call_count == 1
-    handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_OK'))
+
+    @pytest.mark.parametrize('af', addressing_formats)
+    def test_invalid_single_frame(self, af):
+        handle = CanTpTest(DefaultReceiver(af=af, padding=0xAA))
+        sf = handle.get_receiver_single_frame(payload=(dummy_byte,) * (handle.get_payload_size(af, 'SF') - 1), af=af)
+        sf_pdu = handle.get_pdu_info(sf)
+        assert sf_pdu.SduLength != 8
+        handle.lib.CanTp_RxIndication(0, sf_pdu)
+        handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PADDING'))
+        handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+
+    @pytest.mark.parametrize('af', addressing_formats)
+    def test_invalid_first_frame(self, af):
+        handle = CanTpTest(DefaultReceiver(af=af, padding=0xAA))
+        ff, _ = handle.get_receiver_multi_frame(payload=(dummy_byte,) * (handle.get_payload_size(af, 'FF') - 1), af=af)
+        ff_pdu = handle.get_pdu_info(ff)
+        assert ff_pdu.SduLength != 8
+        handle.lib.CanTp_RxIndication(0, ff_pdu)
+        handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PADDING'))
+        handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+
+    @pytest.mark.parametrize('af', addressing_formats)
+    def test_invalid_last_consecutive_frame(self, af):
+        handle = CanTpTest(DefaultReceiver(af=af, padding=0xAA))
+        ff, cfs = handle.get_receiver_multi_frame(payload=(dummy_byte,) * (handle.get_payload_size(af, 'FF') +
+                                                                           handle.get_payload_size(af, 'CF') - 1), af=af)
+        ff_pdu = handle.get_pdu_info(ff)
+        cf_pdu = handle.get_pdu_info(cfs[0])
+        assert cf_pdu.SduLength != 8
+        handle.lib.CanTp_RxIndication(0, ff_pdu)
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_RxIndication(0, cf_pdu)
+        handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PADDING'))
+        handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        handle.lib.CanTp_MainFunction()
 
 
+@pytest.mark.skip(reason='I don\'t understand this statement...')
 class TestSWS00350:
     """
     The received data link layer data length (RX_DL) shall be derived from the first received payload length of the CAN
