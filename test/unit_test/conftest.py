@@ -1,3 +1,5 @@
+import hashlib
+import json
 import os
 from can_tp import CodeGen
 from math import ceil
@@ -7,7 +9,14 @@ from test.ffi import MockGen
 import test.cffi_config as ffi_cfg
 
 
-class DefaultReceiver(dict):
+class Config(dict):
+
+    @property
+    def get_id(self):
+        return hashlib.sha224(json.dumps(self, sort_keys=True, indent=0).encode('utf-8')).hexdigest()
+
+
+class DefaultReceiver(Config):
     def __init__(self,
                  af='CANTP_STANDARD',
                  n_ar=1.0,
@@ -58,7 +67,7 @@ class DefaultReceiver(dict):
         return self['configurations'][0]['channels'][0]['receivers']
 
 
-class DefaultSender(dict):
+class DefaultSender(Config):
     def __init__(self,
                  af='CANTP_STANDARD',
                  n_as=1.0,
@@ -103,7 +112,7 @@ class DefaultSender(dict):
         return self['configurations'][0]['channels'][0]['transmitters']
 
 
-class DefaultFullDuplex(dict):
+class DefaultFullDuplex(Config):
     def __init__(self,
                  af='CANTP_STANDARD',
                  n_as=1.0,
@@ -152,8 +161,6 @@ class DefaultFullDuplex(dict):
 
 
 class CanTpTest(MockGen):
-    idx = 0
-
     def __init__(self,
                  config,
                  name='_cffi_can_tp',
@@ -173,7 +180,7 @@ class CanTpTest(MockGen):
             source = fp.read()
         with open(ffi_cfg.header, 'r') as fp:
             header = fp.read()
-        super(CanTpTest, self).__init__('{}_{}'.format(name, CanTpTest.idx),
+        super(CanTpTest, self).__init__('{}_{}'.format(name, config.get_id),
                                         source,
                                         header,
                                         ffi_cfg.output,
@@ -195,7 +202,6 @@ class CanTpTest(MockGen):
         self.pdu_r_can_tp_copy_tx_data.return_value = self.lib.BUFREQ_OK
         self.pdu_r_can_tp_start_of_reception.side_effect = self._pdu_r_can_tp_start_of_reception
         self.pdu_r_can_tp_copy_rx_data.side_effect = self._pdu_r_can_tp_copy_rx_data
-        CanTpTest.idx += 1
 
     def _pdu_r_can_tp_start_of_reception(self, _i_pdu_id, _pdu_info, _tp_sdu_length, buffer_size):
         buffer_size[0] = self.available_rx_buffer

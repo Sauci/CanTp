@@ -86,7 +86,8 @@ class MockGen(FFI):
                  output,
                  sources=tuple(),
                  include_dirs=tuple(),
-                 define_macros=tuple()):
+                 define_macros=tuple(),
+                 tmpdir=os.getcwd()):
         super(MockGen, self).__init__()
         self.pp = Preprocessor()
         for include_directory in include_dirs:
@@ -104,8 +105,12 @@ class MockGen(FFI):
                         sources=sources,
                         include_dirs=include_dirs,
                         define_macros=list(tuple(d.split('=')) for d in define_macros))
-        lib_path = self.compile()
-        sys.path.append(os.path.dirname(lib_path))
+        try:
+            sys.path.append(tmpdir)
+            self.ffi_module = import_module(name)
+        except Exception as e:
+            lib_path = self.compile(tmpdir=tmpdir)
+            sys.path.append(os.path.dirname(lib_path))
         self.ffi_module = import_module(name)
         self.can_if_transmit = MagicMock()
         self.det_report_error = MagicMock()
