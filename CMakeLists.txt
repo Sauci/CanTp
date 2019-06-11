@@ -80,17 +80,9 @@ if (${enable_test})
     target_link_libraries(CanTp INTERFACE Stub)
 
     add_test(NAME CanTp_UnitTest
-        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/c_gen
-            ${PYTHON_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test/unit_test
+        COMMAND ${PYTHON_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test
         --junitxml=./report/ut.xml
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-
-    add_test(NAME CanTp_FuncTest
-        COMMAND ${PYTHON_EXECUTABLE} -m behave test/func_test --junit-directory=./report --junit
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-
-    set_tests_properties(CanTp_UnitTest PROPERTIES DEPENDS sdist_install)
-    set_tests_properties(CanTp_FuncTest PROPERTIES DEPENDS sdist_install)
 
     get_target_property(can_tp_compile_definitions CanTp COMPILE_DEFINITIONS)
     get_target_property(can_tp_include_directories CanTp INCLUDE_DIRECTORIES)

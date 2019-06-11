@@ -1,6 +1,6 @@
 from unittest.mock import ANY
 from .parameter import *
-from test.ffi import CanTpTest
+from .ffi import CanTpTest
 
 dummy_byte = 0xFF
 
