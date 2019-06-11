@@ -1,2 +1,2 @@
-from test.ffi import MockGen
-from .cffi_config import *
+from test.ffi import CanTpTest
+from test.ffi.cffi_config import *

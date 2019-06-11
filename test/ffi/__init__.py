@@ -1,1 +1,2 @@
-from .ffi_mock import MockGen
+from .ffi_mock import CanTpTest
+from .cffi_config import *

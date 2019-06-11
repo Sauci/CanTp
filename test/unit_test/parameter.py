@@ -1,9 +1,6 @@
+import hashlib
+import json
 import pytest
-
-try:
-    from unittest.mock import ANY
-except ImportError:
-    from mock import ANY
 
 single_frame_sizes = [pytest.param(fs, id='SF_DL = {}'.format(fs)) for fs in (1, 2, 6)]
 multi_frames_sizes = [pytest.param(fs, id='FF_DL = {}'.format(fs)) for fs in (8, 4095)]
@@ -37,3 +34,154 @@ n_ta = [pytest.param(a, id='N_Ta = 0x{:02X}'.format(a)) for a in addresses]
 
 block_sizes = [pytest.param(bs, id='BS = {}'.format(bs)) for bs in (0, 1, 10, 15)]
 wait_for_tx_max = [pytest.param(i, id='WFT max = {}'.format(i)) for i in (1, 2, 3, 4, 5, 6, 7)]
+
+
+class Config(dict):
+
+    @property
+    def get_id(self):
+        return hashlib.sha224(json.dumps(self, sort_keys=True, indent=0).encode('utf-8')).hexdigest()
+
+
+class DefaultReceiver(Config):
+    def __init__(self,
+                 af='CANTP_STANDARD',
+                 n_ar=1.0,
+                 n_br=0.9,
+                 n_cr=1.0,
+                 bs=2,
+                 st_min=2,
+                 wft_max=1,
+                 main_period=1.0 / 1000000.0,
+                 com_type='CANTP_FUNCTIONAL',
+                 ch_mode='CANTP_MODE_HALF_DUPLEX',
+                 padding=None):
+        super(DefaultReceiver, self).__init__({
+            "configurations": [
+                {
+                    "padding byte": 255 if padding is None else padding,
+                    "main function period": main_period,
+                    "channels": [
+                        {
+                            "channel mode": ch_mode,
+                            "receivers": [
+                                {
+                                    "enable padding": padding is not None,
+                                    "communication type": com_type,
+                                    "network service data unit identifier": 0,
+                                    "addressing format": af,
+                                    "N_Ar timeout": n_ar,
+                                    "N_Br timeout": n_br,
+                                    "N_Cr timeout": n_cr,
+                                    "block size": bs,
+                                    "minimum separation time": st_min,
+                                    "wait for transmission maximum": wft_max,
+                                    "network service data unit reference": 0
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        })
+
+    @property
+    def main_period(self):
+        return self['configurations'][0]['main function period']
+
+    @property
+    def receivers(self):
+        return self['configurations'][0]['channels'][0]['receivers']
+
+
+class DefaultSender(Config):
+    def __init__(self,
+                 af='CANTP_STANDARD',
+                 n_as=1.0,
+                 n_bs=1.0,
+                 n_cs=0.9,
+                 main_period=1.0 / 1000000.0,
+                 com_type='CANTP_FUNCTIONAL',
+                 ch_mode='CANTP_MODE_HALF_DUPLEX',
+                 padding=None):
+        super(DefaultSender, self).__init__({
+            "configurations": [
+                {
+                    "padding byte": 255 if padding is None else padding,
+                    "main function period": main_period,
+                    "channels": [
+                        {
+                            "channel mode": ch_mode,
+                            "transmitters": [
+                                {
+                                    "enable padding": padding is not None,
+                                    "communication type": com_type,
+                                    "network service data unit identifier": 0,
+                                    "addressing format": af,
+                                    "N_As timeout": n_as,
+                                    "N_Bs timeout": n_bs,
+                                    "N_Cs timeout": n_cs,
+                                    "network service data unit reference": 0
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        })
+
+    @property
+    def main_period(self):
+        return self['configurations'][0]['main function period']
+
+    @property
+    def senders(self):
+        return self['configurations'][0]['channels'][0]['transmitters']
+
+
+class DefaultFullDuplex(Config):
+    def __init__(self,
+                 af='CANTP_STANDARD',
+                 n_as=1.0,
+                 n_bs=1.0,
+                 n_cs=0.9,
+                 n_ar=1.0,
+                 n_br=0.9,
+                 n_cr=1.0,
+                 bs=2,
+                 st_min=2,
+                 wft_max=1,
+                 main_period=1.0 / 1000000.0,
+                 com_type='CANTP_FUNCTIONAL',
+                 padding=None):
+        receiver = DefaultReceiver(af=af,
+                                   n_ar=n_ar,
+                                   n_br=n_br,
+                                   n_cr=n_cr,
+                                   bs=bs,
+                                   st_min=st_min,
+                                   wft_max=wft_max,
+                                   main_period=main_period,
+                                   com_type=com_type,
+                                   ch_mode='CANTP_MODE_FULL_DUPLEX').receivers[0]
+        sender = DefaultSender(af=af,
+                               n_as=n_as,
+                               n_bs=n_bs,
+                               n_cs=n_cs,
+                               main_period=main_period,
+                               com_type=com_type,
+                               ch_mode='CANTP_MODE_FULL_DUPLEX',
+                               padding=padding).senders[0]
+        super(DefaultFullDuplex, self).__init__({"configurations": [
+            {
+                "padding byte": 255 if padding is None else padding,
+                "main function period": main_period,
+                "channels": [
+                    {
+                        "channel mode": 'CANTP_MODE_FULL_DUPLEX',
+                        "receivers": [receiver],
+                        "transmitters": [sender]
+                    }
+                ]
+            }
+        ]})

@@ -1,6 +1,6 @@
-from math import ceil
-from .conftest import CanTpTest, DefaultReceiver, DefaultSender, DefaultFullDuplex
+from unittest.mock import ANY
 from .parameter import *
+from test.ffi import CanTpTest
 
 dummy_byte = 0xFF
 

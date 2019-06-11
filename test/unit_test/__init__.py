@@ -1,1 +1,1 @@
-from test.ffi import MockGen
+from test.ffi import CanTpTest

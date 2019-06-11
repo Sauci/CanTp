@@ -87,5 +87,5 @@ if (${enable_test})
     get_target_property(can_tp_compile_definitions CanTp COMPILE_DEFINITIONS)
     get_target_property(can_tp_include_directories CanTp INCLUDE_DIRECTORIES)
 
-    configure_file(config/cffi_config.py.in ${CMAKE_CURRENT_SOURCE_DIR}/test/cffi_config.py)
+    configure_file(config/cffi_config.py.in ${CMAKE_CURRENT_SOURCE_DIR}/test/ffi/cffi_config.py)
 endif ()
