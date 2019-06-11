@@ -15,7 +15,11 @@ from pycparser.c_generator import CGenerator as Generator
 from pycparser.c_parser import CParser
 from pcpp.preprocessor import Preprocessor as Pp
 
-import test.ffi.cffi_config as ffi_cfg
+from .cffi_config import output as cfg_out, \
+    source as cfg_src, \
+    header as cfg_hdr, \
+    compile_definitions as cfg_cd, \
+    include_directories as cfg_id
 
 
 def convert(name):
@@ -88,7 +92,6 @@ class MockGen(FFI):
                  name,
                  source,
                  header,
-                 output,
                  sources=tuple(),
                  include_dirs=tuple(),
                  define_macros=tuple(),
@@ -151,23 +154,22 @@ class CanTpTest(MockGen):
         self.available_rx_buffer = rx_buffer_size
         self.can_if_tx_data = list()
         self.can_tp_rx_data = list()
-        cleanup_tmpdir(tmpdir=ffi_cfg.output)
+        cleanup_tmpdir(tmpdir=cfg_out)
         code_gen = CodeGen(config)
-        for file_path, content in ((os.path.join(ffi_cfg.output, 'CanTp_Cfg.c'), code_gen.source),
-                                   (os.path.join(ffi_cfg.output, 'CanTp_Cfg.h'), code_gen.header)):
+        for file_path, content in ((os.path.join(cfg_out, 'CanTp_Cfg.c'), code_gen.source),
+                                   (os.path.join(cfg_out, 'CanTp_Cfg.h'), code_gen.header)):
             with open(file_path, 'w') as fp:
                 fp.write(content)
-        with open(ffi_cfg.source, 'r') as fp:
+        with open(cfg_src, 'r') as fp:
             source = fp.read()
-        with open(ffi_cfg.header, 'r') as fp:
+        with open(cfg_hdr, 'r') as fp:
             header = fp.read()
         super(CanTpTest, self).__init__('{}_{}'.format(name, config.get_id),
                                         source,
                                         header,
-                                        ffi_cfg.output,
-                                        sources=[os.path.join(ffi_cfg.output, 'CanTp_Cfg.c')],
-                                        define_macros=ffi_cfg.compile_definitions,
-                                        include_dirs=ffi_cfg.include_directories + [ffi_cfg.output])
+                                        sources=(os.path.join(cfg_out, 'CanTp_Cfg.c'),),
+                                        define_macros=cfg_cd,
+                                        include_dirs=cfg_id + [cfg_out])
         if initialize:
             self.lib.CanTp_Init(self.ffi.cast('const CanTp_ConfigType *', self.lib.CanTp_Config))
             if self.lib.CanTp_State != self.lib.CANTP_ON:

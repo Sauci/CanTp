@@ -66,6 +66,14 @@ if (${enable_test})
 
     enable_testing()
 
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} setup.py install
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/c_gen)
+
+    execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory build
+        COMMAND ${CMAKE_COMMAND} -E remove_directory can_tp.egg-info
+        COMMAND ${CMAKE_COMMAND} -E remove_directory dist
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/c_gen)
+
     add_library(Stub INTERFACE)
     target_include_directories(CanTp PRIVATE stub)
 
