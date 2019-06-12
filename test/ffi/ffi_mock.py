@@ -119,7 +119,7 @@ class MockGen(FFI):
         except Exception as e:
             lib_path = self.compile(tmpdir=tmpdir)
             sys.path.append(os.path.dirname(lib_path))
-        self.ffi_module = import_module(name)
+            self.ffi_module = import_module(name)
         self.can_if_transmit = MagicMock()
         self.det_report_error = MagicMock()
         self.det_report_runtime_error = MagicMock()
