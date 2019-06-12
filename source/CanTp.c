@@ -228,7 +228,7 @@ typedef struct
 
 typedef struct {
     CanTp_FrameStateType (*const req[2][4])(CanTp_NSduType *pNSdu);
-    CanTp_FrameStateType (*const ind[2][4])(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo);
+    CanTp_FrameStateType (*const ind[2][4])(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize);
     CanTp_FrameStateType (*const con[2][4])(CanTp_NSduType *pNSdu);
 } CanTp_ISO15765Type;
 
@@ -484,7 +484,8 @@ static CanTp_FrameStateType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu);
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo);
+static CanTp_FrameStateType
+CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -492,7 +493,8 @@ static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduIn
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo);
+static CanTp_FrameStateType
+CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -500,7 +502,8 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo);
+static CanTp_FrameStateType
+CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -508,7 +511,8 @@ static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduIn
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static CanTp_FrameStateType CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo);
+static CanTp_FrameStateType
+CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -516,7 +520,9 @@ static CanTp_FrameStateType CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduIn
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static CanTp_FrameStateType CanTp_LDataIndInvalid(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo);
+static CanTp_FrameStateType
+CanTp_LDataIndInvalid(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo,
+                      const PduLengthType nAeSize);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -1471,21 +1477,20 @@ static CanTp_FrameStateType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
     return tmp_return;
 }
 
-static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo)
+static CanTp_FrameStateType
+CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize)
 {
     uint16 dl;
     PduLengthType header_size;
-    PduLengthType n_ae_field_size;
     CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
 
     CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;)
 
-    if ((CanTp_GetNAeFieldSize(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK) &&
-        (CanTp_DecodeDLValue(CANTP_N_PCI_TYPE_SF,
+    if (CanTp_DecodeDLValue(CANTP_N_PCI_TYPE_SF,
                              p_n_sdu->rx.cfg->padding,
                              &dl,
-                             &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
+                             &pPduInfo->SduDataPtr[nAeSize]) == E_OK)
     {
         /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
          * frames) are used for a Rx N-SDU and CanTpRxPaddingActivation is equal to CANTP_ON, then
@@ -1493,7 +1498,7 @@ static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduIn
          * N-SDU, with a length smaller than eight bytes (i.e. PduInfoPtr.SduLength < 8), CanTp
          * shall reject the reception. The runtime error code CANTP_E_PADDING shall be reported to
          * the Default Error Tracer. */
-        header_size = CANTP_SF_PCI_FIELD_SIZE + n_ae_field_size;
+        header_size = CANTP_SF_PCI_FIELD_SIZE + nAeSize;
         CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;)
 
         p_n_sdu->rx.buf.size = dl;
@@ -1542,22 +1547,21 @@ static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduIn
     return result;
 }
 
-static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo)
+static CanTp_FrameStateType
+CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize)
 {
     uint16 dl;
     PduLengthType header_size;
     PduLengthType payload_size;
-    PduLengthType n_ae_field_size;
     CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
 
-    if ((CanTp_GetNAeFieldSize(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK) &&
-        (CanTp_DecodeDLValue(CANTP_N_PCI_TYPE_FF,
+    if (CanTp_DecodeDLValue(CANTP_N_PCI_TYPE_FF,
                              p_n_sdu->rx.cfg->padding,
                              &dl,
-                             &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
+                             &pPduInfo->SduDataPtr[nAeSize]) == E_OK)
     {
-        header_size = CANTP_FF_PCI_FIELD_SIZE + n_ae_field_size;
+        header_size = CANTP_FF_PCI_FIELD_SIZE + nAeSize;
         payload_size = CANTP_CAN_FRAME_SIZE - header_size;
         CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;)
 
@@ -1597,13 +1601,13 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
             }
             case BUFREQ_OK:
             {
+                /* SWS_CanTp_00339: After the reception of a First Frame or Single Frame, if the
+                 * function PduR_CanTpStartOfReception() returns BUFREQ_OK with a smaller available
+                 * buffer size than needed for the already received data, the CanTp module shall
+                 * abort the reception of the N-SDU and call PduR_CanTpRxIndication() with the
+                 * result E_NOT_OK. */
                 if (p_n_sdu->rx.buf.rmng < payload_size)
                 {
-                    /* SWS_CanTp_00339: After the reception of a First Frame or Single Frame, if the
-                     * function PduR_CanTpStartOfReception() returns BUFREQ_OK with a smaller
-                     * available buffer size than needed for the already received data, the CanTp
-                     * module shall abort the reception of the N-SDU and call
-                     * PduR_CanTpRxIndication() with the result E_NOT_OK. */
                     PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
                     result = CANTP_FRAME_STATE_ABORT;
@@ -1652,27 +1656,26 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
     return result;
 }
 
-static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo)
+static CanTp_FrameStateType
+CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize)
 {
     uint8 sn;
     PduLengthType header_size;
-    PduLengthType n_ae_field_size;
     CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
 
     CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_CR);
 
     if ((p_n_sdu->rx.shared.taskState == CANTP_PROCESSING) &&
-        (p_n_sdu->rx.state == CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION) &&
-        (CanTp_GetNAeFieldSize(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK))
+        (p_n_sdu->rx.state == CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION))
     {
         /* If awaited, process the CF N_PDU in the on-going reception and perform the required
          * checks (e.g. SN in right order), otherwise ignore it. */
         if (CanTp_DecodeSNValue((p_n_sdu->rx.sn + 0x01u) & 0x0Fu,
                                 &sn,
-                                &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK)
+                                &pPduInfo->SduDataPtr[nAeSize]) == E_OK)
         {
-            header_size = CANTP_CF_PCI_FIELD_SIZE + n_ae_field_size;
+            header_size = CANTP_CF_PCI_FIELD_SIZE + nAeSize;
 
             p_n_sdu->rx.sn++;
             p_n_sdu->rx.bs--;
@@ -1712,8 +1715,11 @@ static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduIn
     return result;
 }
 
-static CanTp_FrameStateType CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo)
+static CanTp_FrameStateType
+CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize)
 {
+    (void)nAeSize;
+
     CanTp_NSduType *p_n_sdu = pNSdu;
 
     CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BS);
@@ -1746,10 +1752,14 @@ static CanTp_FrameStateType CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduIn
     return CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST;
 }
 
-static CanTp_FrameStateType CanTp_LDataIndInvalid(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo)
+static CanTp_FrameStateType
+CanTp_LDataIndInvalid(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo,
+                      const PduLengthType nAeSize)
 {
+
     (void)pNSdu;
     (void)pPduInfo;
+    (void)nAeSize;
 
     return CANTP_FRAME_STATE_INVALID;
 }
@@ -1856,8 +1866,6 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
             CanTp_GetNAeFieldSize(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK &&
             (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
         {
-            next_state = CANTP_FRAME_STATE_INVALID;
-
             if ((p_n_sdu->rx.shared.taskState == CANTP_PROCESSING) &&
                 ((pci == CANTP_N_PCI_TYPE_SF) ||
                  (pci == CANTP_N_PCI_TYPE_FF)))
@@ -1888,7 +1896,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
             }
             else
             {
-                next_state = ISO15765.ind[ISO15765_DIR_RX][pci](p_n_sdu, pPduInfo);
+                next_state = ISO15765.ind[ISO15765_DIR_RX][pci](p_n_sdu, pPduInfo, n_ae_field_size);
             }
 
             if (next_state != CANTP_FRAME_STATE_INVALID)
@@ -1908,7 +1916,8 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
                 case CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION:
                 {
                     next_state = ISO15765.ind[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_FC](p_n_sdu,
-                                                                                    pPduInfo);
+                                                                                    pPduInfo,
+                                                                                    n_ae_field_size);
                 }
                 default:
                 {
