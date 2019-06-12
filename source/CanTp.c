@@ -98,12 +98,6 @@ extern "C"
 
 #define CANTP_DIRECTION_TX (0x02u)
 
-#define CANTP_DIRECTION_RX_TX (CANTP_DIRECTION_RX | CANTP_DIRECTION_TX)
-
-#define ISO15765_DIR_RX (0x00u)
-
-#define ISO15765_DIR_TX (0x01u)
-
 /** @} */
 
 
@@ -225,12 +219,6 @@ typedef struct
 {
     CanTp_NSduType sdu[CANTP_MAX_NUM_OF_N_SDU];
 } CanTp_ChannelRtType;
-
-typedef struct {
-    CanTp_FrameStateType (*const req[2][4])(CanTp_NSduType *pNSdu);
-    CanTp_FrameStateType (*const ind[2][4])(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize);
-    CanTp_FrameStateType (*const con[2][4])(CanTp_NSduType *pNSdu);
-} CanTp_ISO15765Type;
 
 /** @} */
 
@@ -520,16 +508,6 @@ CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static CanTp_FrameStateType
-CanTp_LDataIndInvalid(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo,
-                      const PduLengthType nAeSize);
-
-#define CanTp_STOP_SEC_CODE_FAST
-#include "CanTp_MemMap.h"
-
-#define CanTp_START_SEC_CODE_FAST
-#include "CanTp_MemMap.h"
-
 static CanTp_FrameStateType CanTp_LDataConRFC(CanTp_NSduType *pNSdu);
 
 #define CanTp_STOP_SEC_CODE_FAST
@@ -571,50 +549,13 @@ static CanTp_FrameStateType CanTp_LDataConTCF(CanTp_NSduType *pNSdu);
  * @{
  */
 
-static const CanTp_ISO15765Type ISO15765 = {
-    {
-        {
-            NULL_PTR,
-            NULL_PTR,
-            NULL_PTR,
-            CanTp_LDataReqRFC
-        },
-        {
-            CanTp_LDataReqTSF,
-            CanTp_LDataReqTFF,
-            CanTp_LDataReqTCF,
-            NULL_PTR
-        }
-    },
-    {
-        {
-            CanTp_LDataIndRSF,
-            CanTp_LDataIndRFF,
-            CanTp_LDataIndRCF,
-            CanTp_LDataIndInvalid
-        },
-        {
-            CanTp_LDataIndInvalid,
-            CanTp_LDataIndInvalid,
-            CanTp_LDataIndInvalid,
-            CanTp_LDataIndTFC
-        }
-    },
-    {
-        {
-            NULL_PTR,
-            NULL_PTR,
-            NULL_PTR,
-            CanTp_LDataConRFC
-        },
-        {
-            CanTp_LDataConTSF,
-            CanTp_LDataConTFF,
-            CanTp_LDataConTCF,
-            NULL_PTR
-        }
-    }
-};
+#define CanTp_START_SEC_VAR_FAST_INIT_UNSPECIFIED
+#include "CanTp_MemMap.h"
+
+static const CanTp_ConfigType *CanTp_ConfigPtr = NULL_PTR;
+
+#define CanTp_STOP_SEC_VAR_FAST_INIT_UNSPECIFIED
+#include "CanTp_MemMap.h"
 
 /** @} */
 
@@ -627,14 +568,6 @@ static const CanTp_ISO15765Type ISO15765 = {
  * @addtogroup CANTP_C_LVDEF
  * @{
  */
-
-#define CanTp_START_SEC_VAR_FAST_INIT_UNSPECIFIED
-#include "CanTp_MemMap.h"
-
-static const CanTp_ConfigType *CanTp_ConfigPtr = NULL_PTR;
-
-#define CanTp_STOP_SEC_VAR_FAST_INIT_UNSPECIFIED
-#include "CanTp_MemMap.h"
 
 #define CanTp_START_SEC_VAR_FAST_CLEARED_UNSPECIFIED
 #include "CanTp_MemMap.h"
@@ -1752,18 +1685,6 @@ CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
     return CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST;
 }
 
-static CanTp_FrameStateType
-CanTp_LDataIndInvalid(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo,
-                      const PduLengthType nAeSize)
-{
-
-    (void)pNSdu;
-    (void)pPduInfo;
-    (void)nAeSize;
-
-    return CANTP_FRAME_STATE_INVALID;
-}
-
 static CanTp_FrameStateType CanTp_LDataConTSF(CanTp_NSduType *pNSdu)
 {
     CanTp_NSduType *p_n_sdu = pNSdu;
@@ -1867,8 +1788,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
             (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
         {
             if ((p_n_sdu->rx.shared.taskState == CANTP_PROCESSING) &&
-                ((pci == CANTP_N_PCI_TYPE_SF) ||
-                 (pci == CANTP_N_PCI_TYPE_FF)))
+                ((pci == CANTP_N_PCI_TYPE_SF) || (pci == CANTP_N_PCI_TYPE_FF)))
             {
                 /* SWS_CanTp_00057: Terminate the current reception, report an indication, with
                  * parameter Result set to E_NOT_OK, to the upper layer, and process the SF/FF N-PDU
@@ -1896,7 +1816,31 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
             }
             else
             {
-                next_state = ISO15765.ind[ISO15765_DIR_RX][pci](p_n_sdu, pPduInfo, n_ae_field_size);
+                switch (pci)
+                {
+                    case CANTP_N_PCI_TYPE_SF:
+                    {
+                        next_state = CanTp_LDataIndRSF(p_n_sdu, pPduInfo, n_ae_field_size);
+
+                        break;
+                    }
+                    case CANTP_N_PCI_TYPE_FF:
+                    {
+                        next_state = CanTp_LDataIndRFF(p_n_sdu, pPduInfo, n_ae_field_size);
+
+                        break;
+                    }
+                    case CANTP_N_PCI_TYPE_CF:
+                    {
+                        next_state = CanTp_LDataIndRCF(p_n_sdu, pPduInfo, n_ae_field_size);
+
+                        break;
+                    }
+                    default:
+                    {
+                        next_state = CANTP_FRAME_STATE_INVALID;
+                    }
+                }
             }
 
             if (next_state != CANTP_FRAME_STATE_INVALID)
@@ -1909,25 +1853,9 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
             CanTp_GetNAeFieldSize(p_n_sdu->tx.cfg->af, &n_ae_field_size) == E_OK &&
             (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
         {
-            next_state = CANTP_FRAME_STATE_INVALID;
-
-            switch (p_n_sdu->tx.state)
+            if (p_n_sdu->tx.state == CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION)
             {
-                case CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION:
-                {
-                    next_state = ISO15765.ind[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_FC](p_n_sdu,
-                                                                                    pPduInfo,
-                                                                                    n_ae_field_size);
-                }
-                default:
-                {
-                    break;
-                }
-            }
-
-            if (next_state != CANTP_FRAME_STATE_INVALID)
-            {
-                p_n_sdu->tx.state = next_state;
+                p_n_sdu->tx.state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo, n_ae_field_size);
             }
         }
     }
@@ -1950,7 +1878,7 @@ void CanTp_TxConfirmation(PduIdType txPduId, Std_ReturnType result)
                 {
                     case CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION:
                     {
-                        next_state = ISO15765.con[ISO15765_DIR_RX][CANTP_N_PCI_TYPE_FC](p_n_sdu);
+                        next_state = CanTp_LDataConRFC(p_n_sdu);
 
                         break;
                     }
@@ -1973,19 +1901,19 @@ void CanTp_TxConfirmation(PduIdType txPduId, Std_ReturnType result)
                 {
                     case CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION:
                     {
-                        next_state = ISO15765.con[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_SF](p_n_sdu);
+                        next_state = CanTp_LDataConTSF(p_n_sdu);
 
                         break;
                     }
                     case CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION:
                     {
-                        next_state = ISO15765.con[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_FF](p_n_sdu);
+                        next_state = CanTp_LDataConTFF(p_n_sdu);
 
                         break;
                     }
                     case CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION:
                     {
-                        next_state = ISO15765.con[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_CF](p_n_sdu);
+                        next_state = CanTp_LDataConTCF(p_n_sdu);
 
                         break;
                     }
@@ -2390,7 +2318,7 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
         {
             case CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST:
             {
-                p_n_sdu->rx.state = ISO15765.req[ISO15765_DIR_RX][CANTP_N_PCI_TYPE_FC](p_n_sdu);
+                p_n_sdu->rx.state = CanTp_LDataReqRFC(p_n_sdu);
 
                 switch (p_n_sdu->rx.state)
                 {
@@ -2470,7 +2398,7 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
         {
             case CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST:
             {
-                p_n_sdu->tx.state = ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_SF](p_n_sdu);
+                p_n_sdu->tx.state = CanTp_LDataReqTSF(p_n_sdu);
 
                 if (p_n_sdu->tx.state == CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION)
                 {
@@ -2481,7 +2409,7 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
             }
             case CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST:
             {
-                p_n_sdu->tx.state = ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_FF](p_n_sdu);
+                p_n_sdu->tx.state = CanTp_LDataReqTFF(p_n_sdu);
 
                 if (p_n_sdu->tx.state == CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION)
                 {
@@ -2495,7 +2423,7 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
                 if ((CanTp_FlowControlExpired(p_n_sdu) == TRUE) ||
                     (CanTp_FlowControlActive(p_n_sdu) == FALSE))
                 {
-                    p_n_sdu->tx.state = ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_CF](p_n_sdu);
+                    p_n_sdu->tx.state = CanTp_LDataReqTCF(p_n_sdu);
 
                     if (p_n_sdu->tx.state == CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION)
                     {
