@@ -187,7 +187,6 @@ typedef struct
 {
     const CanTp_TxNSduType *cfg;
     CanTp_NSduBufferType buf;
-    CanTp_FrameStateType state;
     CanTp_FlowStatusType fs;
     uint32 target_st_min;
     uint32 st_min;
@@ -197,6 +196,7 @@ typedef struct
     CanTp_TaskStateType taskState;
     struct
     {
+        CanTp_FrameStateType state;
         uint32 flag;
     } shared;
 } CanTp_TxConnectionType;
@@ -775,11 +775,11 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
                   (p_n_sdu->tx.cfg->af == CANTP_MIXED) ||
                   (p_n_sdu->tx.cfg->af == CANTP_MIXED29BIT)) && pPduInfo->SduLength <= 0x06u))
             {
-                p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST;
+                p_n_sdu->tx.shared.state = CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST;
             }
             else
             {
-                p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST;
+                p_n_sdu->tx.shared.state = CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST;
             }
 
             p_n_sdu->tx.taskState = CANTP_PROCESSING;
@@ -1783,10 +1783,10 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
         CanTp_GetNAeFieldSize(p_n_sdu->tx.cfg->af, &n_ae_field_size) == E_OK &&
         (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
     {
-            if (p_n_sdu->tx.state == CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION)
-            {
-                p_n_sdu->tx.state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo);
-            }
+        if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION)
+        {
+            p_n_sdu->tx.shared.state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo);
+        }
     }
 }
 
@@ -1818,37 +1818,26 @@ void CanTp_TxConfirmation(PduIdType txPduId, Std_ReturnType result)
 
             if ((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u)
             {
-                next_state = CANTP_FRAME_STATE_INVALID;
-
-                switch (p_n_sdu->tx.state)
+                if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION)
                 {
-                    case CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION:
-                    {
-                        next_state = CanTp_LDataConTSF(p_n_sdu);
-
-                        break;
-                    }
-                    case CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION:
-                    {
-                        next_state = CanTp_LDataConTFF(p_n_sdu);
-
-                        break;
-                    }
-                    case CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION:
-                    {
-                        next_state = CanTp_LDataConTCF(p_n_sdu);
-
-                        break;
-                    }
-                    default:
-                    {
-                        break;
-                    }
+                    next_state = CanTp_LDataConTSF(p_n_sdu);
+                }
+                else if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION)
+                {
+                    next_state = CanTp_LDataConTFF(p_n_sdu);
+                }
+                else if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION)
+                {
+                    next_state = CanTp_LDataConTCF(p_n_sdu);
+                }
+                else
+                {
+                    next_state = CANTP_FRAME_STATE_INVALID;
                 }
 
                 if (next_state != CANTP_FRAME_STATE_INVALID)
                 {
-                    p_n_sdu->tx.state = next_state;
+                    p_n_sdu->tx.shared.state = next_state;
                 }
             }
         }
@@ -2245,13 +2234,13 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
     }
     else
     {
-        switch (p_n_sdu->tx.state)
+        switch (p_n_sdu->tx.shared.state)
         {
             case CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST:
             {
-                p_n_sdu->tx.state = CanTp_LDataReqTSF(p_n_sdu);
+                p_n_sdu->tx.shared.state = CanTp_LDataReqTSF(p_n_sdu);
 
-                if (p_n_sdu->tx.state == CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION)
+                if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION)
                 {
                     CanTp_TransmitTxCANData(p_n_sdu);
                 }
@@ -2260,9 +2249,9 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
             }
             case CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST:
             {
-                p_n_sdu->tx.state = CanTp_LDataReqTFF(p_n_sdu);
+                p_n_sdu->tx.shared.state = CanTp_LDataReqTFF(p_n_sdu);
 
-                if (p_n_sdu->tx.state == CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION)
+                if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION)
                 {
                     CanTp_TransmitTxCANData(p_n_sdu);
                 }
@@ -2274,9 +2263,9 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
                 if ((CanTp_FlowControlExpired(p_n_sdu) == TRUE) ||
                     (CanTp_FlowControlActive(p_n_sdu) == FALSE))
                 {
-                    p_n_sdu->tx.state = CanTp_LDataReqTCF(p_n_sdu);
+                    p_n_sdu->tx.shared.state = CanTp_LDataReqTCF(p_n_sdu);
 
-                    if (p_n_sdu->tx.state == CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION)
+                    if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION)
                     {
                         CanTp_TransmitTxCANData(p_n_sdu);
                     }
