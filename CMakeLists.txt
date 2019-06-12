@@ -7,12 +7,10 @@ option(enable_test "enable/add test-related target(s) of CanTp module." ON)
 option(enable_code_coverage "build unit test target(s) with code coverage options." ON)
 
 set(can_tp_config ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json)
-set(can_tp_source ${CMAKE_CURRENT_SOURCE_DIR}/source/CanTp.c)
-set(can_tp_header ${CMAKE_CURRENT_SOURCE_DIR}/interface/CanTp.h)
 
 find_package(PythonInterp 3 REQUIRED)
 
-add_library(CanTp STATIC ${can_tp_source})
+add_library(CanTp STATIC source/CanTp.c ${CMAKE_BINARY_DIR}/CanTp_Cfg.h)
 
 target_compile_definitions(CanTp
     PRIVATE CANTP_MAX_NUM_OF_CHANNEL=16
@@ -59,10 +57,6 @@ target_include_directories(CanTp_Cfg
 if (${enable_test})
     target_compile_definitions(CanTp
         PUBLIC CANTP_BUILD_CFFI_INTERFACE=STD_ON)
-
-    add_custom_target(can_tp_install
-        COMMAND ${PYTHON_EXECUTABLE} setup.py install
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/c_gen)
 
     enable_testing()
 
