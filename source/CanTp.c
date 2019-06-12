@@ -351,14 +351,6 @@ static Std_ReturnType CanTp_DecodePCIValue(CanTp_NPciType *pPci, const uint8 *pD
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static Std_ReturnType CanTp_DecodeSNValue(const uint8 expected, uint8 *pSn, const uint8 *pData);
-
-#define CanTp_STOP_SEC_CODE_FAST
-#include "CanTp_MemMap.h"
-
-#define CanTp_START_SEC_CODE_FAST
-#include "CanTp_MemMap.h"
-
 static uint16 CanTp_DecodeDLValue(const uint8 frameType,
                                   const CanTp_RxPaddingActivationType padding,
                                   const uint8 *pData);
@@ -1580,7 +1572,6 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 static CanTp_FrameStateType
 CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize)
 {
-    uint8 sn;
     PduLengthType header_size;
     CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
@@ -1592,9 +1583,7 @@ CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
     {
         /* If awaited, process the CF N_PDU in the on-going reception and perform the required
          * checks (e.g. SN in right order), otherwise ignore it. */
-        if (CanTp_DecodeSNValue((p_n_sdu->rx.sn + 0x01u) & 0x0Fu,
-                                &sn,
-                                &pPduInfo->SduDataPtr[nAeSize]) == E_OK)
+        if ((pPduInfo->SduDataPtr[nAeSize] & 0x0Fu) == ((p_n_sdu->rx.sn + 0x01u) & 0x0Fu))
         {
             header_size = CANTP_CF_PCI_FIELD_SIZE + nAeSize;
 
@@ -2030,27 +2019,6 @@ static Std_ReturnType CanTp_DecodePCIValue(CanTp_NPciType *pPci, const uint8 *pD
             *pPci = pci;
             tmp_return = E_OK;
         }
-    }
-
-    return tmp_return;
-}
-
-static Std_ReturnType CanTp_DecodeSNValue(const uint8 expected, uint8 *pSn, const uint8 *pData)
-{
-    Std_ReturnType tmp_return;
-    uint8 sn;
-
-    sn = pData[0x00u] & 0x0Fu;
-
-    *pSn = sn;
-
-    if (sn == expected)
-    {
-        tmp_return = E_OK;
-    }
-    else
-    {
-        tmp_return = E_NOT_OK;
     }
 
     return tmp_return;
