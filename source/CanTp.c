@@ -1404,7 +1404,19 @@ CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
     CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
 
-    CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;)
+    if (p_n_sdu->rx.shared.taskState == CANTP_PROCESSING)
+    {
+        /* SWS_CanTp_00057: Terminate the current reception, report an indication, with parameter
+         * Result set to E_NOT_OK, to the upper layer, and process the SF/FF N-PDU as the start of a
+         * new reception */
+        PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
+
+        CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, CANTP_I_RX_SF, 0x00u, CANTP_E_UNEXP_PDU)
+    }
+    else
+    {
+        CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;)
+    }
 
     /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD frames)
      * are used for a Rx N-SDU and CanTpRxPaddingActivation is equal to CANTP_ON, then CanTp
@@ -1417,8 +1429,6 @@ CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
     dl = CanTp_DecodeDLValue(CANTP_N_PCI_TYPE_SF,
                              p_n_sdu->rx.cfg->padding,
                              &pPduInfo->SduDataPtr[nAeSize]);
-
-    CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;)
 
     p_n_sdu->rx.buf.size = dl;
 
@@ -1473,9 +1483,22 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
     CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
 
+    if (p_n_sdu->rx.shared.taskState == CANTP_PROCESSING)
+    {
+        /* SWS_CanTp_00057: Terminate the current reception, report an indication, with parameter
+         * Result set to E_NOT_OK, to the upper layer, and process the SF/FF N-PDU as the start of a
+         * new reception */
+        PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
+
+        CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, CANTP_I_RX_FF, 0x00u, CANTP_E_UNEXP_PDU)
+    }
+    else
+    {
+        CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;)
+    }
+
     header_size = CANTP_FF_PCI_FIELD_SIZE + nAeSize;
     payload_size = CANTP_CAN_FRAME_SIZE - header_size;
-    CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;)
 
     p_n_sdu->rx.buf.size = CanTp_DecodeDLValue(CANTP_N_PCI_TYPE_FF,
                                                p_n_sdu->rx.cfg->padding,
@@ -1764,24 +1787,6 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
             CanTp_GetNAeFieldSize(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK &&
             (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
         {
-            if ((p_n_sdu->rx.shared.taskState == CANTP_PROCESSING) &&
-                ((pci == CANTP_N_PCI_TYPE_SF) || (pci == CANTP_N_PCI_TYPE_FF)))
-            {
-                /* SWS_CanTp_00057: Terminate the current reception, report an indication, with
-                 * parameter Result set to E_NOT_OK, to the upper layer, and process the SF/FF N-PDU
-                 * as the start of a new reception */
-                PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
-
-                if (pci == CANTP_N_PCI_TYPE_SF)
-                {
-                    CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, CANTP_I_RX_SF, 0x00u, CANTP_E_UNEXP_PDU)
-                }
-                else
-                {
-                    CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, CANTP_I_RX_FF, 0x00u, CANTP_E_UNEXP_PDU)
-                }
-            }
-
             if ((p_n_sdu->rx.cfg->padding == CANTP_ON) &&
                 (pPduInfo->SduLength < CANTP_CAN_FRAME_SIZE))
             {
