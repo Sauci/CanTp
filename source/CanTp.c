@@ -309,14 +309,6 @@ static Std_ReturnType CanTp_GetNAeFieldSize(const CanTp_AddressingFormatType af,
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static PduLengthType CanTp_GetFrameHeaderSize(const CanTp_AddressingFormatType af, const uint8 frameType);
-
-#define CanTp_STOP_SEC_CODE_FAST
-#include "CanTp_MemMap.h"
-
-#define CanTp_START_SEC_CODE_FAST
-#include "CanTp_MemMap.h"
-
 /**
  * @brief this function decodes a raw minimum separation time (STmin) to a value in microsecond(s),
  * according to ISO 15765-2.
@@ -874,6 +866,7 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
 {
     CanTp_NSduType *p_n_sdu;
     CanTp_TaskStateType task_state;
+    PduLengthType n_ae_field_size;
     Std_ReturnType tmp_return = E_NOT_OK;
 
     CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
@@ -885,6 +878,7 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
     if ((CanTp_GetNSduFromPduId(rxPduId, &p_n_sdu) == E_OK) &&
         ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u))
     {
+        (void)CanTp_GetNAeFieldSize(p_n_sdu->rx.cfg->af, &n_ae_field_size);
         CANTP_CRITICAL_SECTION(task_state = p_n_sdu->rx.shared.taskState;)
 
         if (task_state == CANTP_PROCESSING)
@@ -894,8 +888,7 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
              * Consecutive Frame of the N-SDU (i.e. the service is called after N-Cr timeout is
              * started for the last Consecutive Frame). In this case the CanTp shall return
              * E_NOT_OK. */
-            if (p_n_sdu->rx.buf.size > (CANTP_CAN_FRAME_SIZE -
-                CanTp_GetFrameHeaderSize(p_n_sdu->rx.cfg->af, CANTP_N_PCI_TYPE_CF)))
+            if (p_n_sdu->rx.buf.size > (CANTP_CAN_FRAME_SIZE - CANTP_CF_PCI_FIELD_SIZE + n_ae_field_size))
             {
                 CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_WAIT;)
 
@@ -2025,48 +2018,6 @@ static Std_ReturnType CanTp_GetNAeFieldSize(const CanTp_AddressingFormatType af,
     return result;
 }
 
-static PduLengthType CanTp_GetFrameHeaderSize(const CanTp_AddressingFormatType af,
-                                              const uint8 frameType)
-{
-    PduLengthType result = 0x00u;
-
-    if (CanTp_GetNAeFieldSize(af, &result) == E_OK)
-    {
-        switch (frameType)
-        {
-            case CANTP_N_PCI_TYPE_SF:
-            case CANTP_N_PCI_TYPE_CF:
-            {
-                /* single frame: PCI type and SF_DL in byte[0].
-                 * consecutive frame: PCI type and SN in byte[0]. */
-                result += 0x01u;
-
-                break;
-            }
-            case CANTP_N_PCI_TYPE_FF:
-            {
-                /* PCI type and MSB of FF_DL in byte[0], and LSB of FF_DL in byte[1]. */
-                result += 0x02u;
-
-                break;
-            }
-            case CANTP_N_PCI_TYPE_FC:
-            {
-                /* PCI type and FS in byte[0], BS in byte[1] and STmin in byte[2]. */
-                result += 0x03u;
-
-                break;
-            }
-            default:
-            {
-                break;
-            }
-        }
-    }
-
-    return result;
-}
-
 static Std_ReturnType CanTp_DecodePCIValue(CanTp_NPciType *pPci, const uint8 *pData)
 {
     Std_ReturnType tmp_return = E_NOT_OK;
@@ -2207,8 +2158,9 @@ static uint8 CanTp_EncodeSTMinValue(const uint16 value)
 static PduLengthType CanTp_GetRxBlockSize(CanTp_NSduType *pNSdu)
 {
     PduLengthType result;
-    const PduLengthType header_size = CanTp_GetFrameHeaderSize(pNSdu->rx.cfg->af,
-                                                               CANTP_N_PCI_TYPE_CF);
+    PduLengthType n_ae_field_size;
+    (void)CanTp_GetNAeFieldSize(pNSdu->rx.cfg->af, &n_ae_field_size);
+    const PduLengthType header_size = CANTP_CF_PCI_FIELD_SIZE + n_ae_field_size;
     const PduLengthType payload_size = CANTP_CAN_FRAME_SIZE - header_size;
     const PduLengthType full_bs = pNSdu->rx.shared.m_param.bs * payload_size;
     const PduLengthType last_bs = pNSdu->rx.buf.size;
