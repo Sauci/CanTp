@@ -159,7 +159,6 @@ typedef struct
 {
     const CanTp_RxNSduType *cfg;
     CanTp_NSduBufferType buf;
-    CanTp_FrameStateType state;
     CanTp_FlowStatusType fs;
     uint32 st_min;
     uint8 bs;
@@ -171,6 +170,7 @@ typedef struct
     struct
     {
         CanTp_TaskStateType taskState;
+        CanTp_FrameStateType state;
 
         /**
          * @brief structure containing all parameters accessible via @ref CanTp_ReadParameter/@ref
@@ -485,7 +485,7 @@ CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 #include "CanTp_MemMap.h"
 
 static CanTp_FrameStateType
-CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize);
+CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -1601,8 +1601,7 @@ CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 
     CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_CR);
 
-    if ((p_n_sdu->rx.shared.taskState == CANTP_PROCESSING) &&
-        (p_n_sdu->rx.state == CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION))
+    if (p_n_sdu->rx.shared.taskState == CANTP_PROCESSING)
     {
         /* If awaited, process the CF N_PDU in the on-going reception and perform the required
          * checks (e.g. SN in right order), otherwise ignore it. */
@@ -1648,11 +1647,8 @@ CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
     return result;
 }
 
-static CanTp_FrameStateType
-CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize)
+static CanTp_FrameStateType CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo)
 {
-    (void)nAeSize;
-
     CanTp_NSduType *p_n_sdu = pNSdu;
 
     CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BS);
@@ -1787,8 +1783,13 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
             CanTp_GetNAeFieldSize(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK &&
             (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
         {
-            if ((p_n_sdu->rx.cfg->padding == CANTP_ON) &&
-                (pPduInfo->SduLength < CANTP_CAN_FRAME_SIZE))
+            /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
+             * frames) are used for a Rx N-SDU and CanTpRxPaddingActivation is equal to CANTP_ON,
+             * then CanTp receives by means of CanTp_RxIndication() call an SF Rx N-PDU belonging to
+             * that N-SDU, with a length smaller than eight bytes (i.e. PduInfoPtr.SduLength < 8),
+             * CanTp shall reject the reception. The runtime error code CANTP_E_PADDING shall be
+             * reported to the Default Error Tracer. */
+            if ((p_n_sdu->rx.cfg->padding == CANTP_ON) && (pPduInfo->SduLength < CANTP_CAN_FRAME_SIZE))
             {
                 PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
@@ -1796,38 +1797,27 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
 
                 next_state = CANTP_FRAME_STATE_OK;
             }
+            else if (pci == CANTP_N_PCI_TYPE_SF)
+            {
+                next_state = CanTp_LDataIndRSF(p_n_sdu, pPduInfo, n_ae_field_size);
+            }
+            else if (pci == CANTP_N_PCI_TYPE_FF)
+            {
+                next_state = CanTp_LDataIndRFF(p_n_sdu, pPduInfo, n_ae_field_size);
+            }
+            else if  ((pci == CANTP_N_PCI_TYPE_CF) &&
+                      (p_n_sdu->rx.shared.state == CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION))
+            {
+                next_state = CanTp_LDataIndRCF(p_n_sdu, pPduInfo, n_ae_field_size);
+            }
             else
             {
-                switch (pci)
-                {
-                    case CANTP_N_PCI_TYPE_SF:
-                    {
-                        next_state = CanTp_LDataIndRSF(p_n_sdu, pPduInfo, n_ae_field_size);
-
-                        break;
-                    }
-                    case CANTP_N_PCI_TYPE_FF:
-                    {
-                        next_state = CanTp_LDataIndRFF(p_n_sdu, pPduInfo, n_ae_field_size);
-
-                        break;
-                    }
-                    case CANTP_N_PCI_TYPE_CF:
-                    {
-                        next_state = CanTp_LDataIndRCF(p_n_sdu, pPduInfo, n_ae_field_size);
-
-                        break;
-                    }
-                    default:
-                    {
-                        next_state = CANTP_FRAME_STATE_INVALID;
-                    }
-                }
+                next_state = CANTP_FRAME_STATE_INVALID;
             }
 
             if (next_state != CANTP_FRAME_STATE_INVALID)
             {
-                p_n_sdu->rx.state = next_state;
+                p_n_sdu->rx.shared.state = next_state;
             }
         }
 
@@ -1837,7 +1827,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
         {
             if (p_n_sdu->tx.state == CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION)
             {
-                p_n_sdu->tx.state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo, n_ae_field_size);
+                p_n_sdu->tx.state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo);
             }
         }
     }
@@ -1856,7 +1846,7 @@ void CanTp_TxConfirmation(PduIdType txPduId, Std_ReturnType result)
             {
                 next_state = CANTP_FRAME_STATE_INVALID;
 
-                switch (p_n_sdu->rx.state)
+                switch (p_n_sdu->rx.shared.state)
                 {
                     case CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION:
                     {
@@ -1872,7 +1862,7 @@ void CanTp_TxConfirmation(PduIdType txPduId, Std_ReturnType result)
 
                 if (next_state != CANTP_FRAME_STATE_INVALID)
                 {
-                    p_n_sdu->rx.state = next_state;
+                    p_n_sdu->rx.shared.state = next_state;
                 }
             }
             if ((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u)
@@ -2224,13 +2214,13 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
     }
     else
     {
-        switch (p_n_sdu->rx.state)
+        switch (p_n_sdu->rx.shared.state)
         {
             case CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST:
             {
-                p_n_sdu->rx.state = CanTp_LDataReqRFC(p_n_sdu);
+                p_n_sdu->rx.shared.state = CanTp_LDataReqRFC(p_n_sdu);
 
-                switch (p_n_sdu->rx.state)
+                switch (p_n_sdu->rx.shared.state)
                 {
                     case CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION:
                     {
