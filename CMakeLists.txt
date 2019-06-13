@@ -1,18 +1,59 @@
-cmake_minimum_required(VERSION 3.13.0)
+cmake_minimum_required(VERSION 3.8.0)
 
 project(CanTp VERSION 0.1.0 LANGUAGES C)
 
-# general user options.
+# if set, enable_test enables the module is built for testing purposes, which means:
+# - the compiler definition CANTP_BUILD_CFFI_INTERFACE is set
+# - the stubbed headers are used instead of user-provided headers
+#
+# if not set, the user is responsible of providing the required headers (CanIf.h, ComStack_Types.h,
+# Det.h, PduR.h and Std_Types.h, see AUTOSAR's CanTp software specification).
 option(enable_test "enable/add test-related target(s) of CanTp module." ON)
-option(enable_code_coverage "build unit test target(s) with code coverage options." ON)
 
-set(can_tp_config ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json)
+# can_tp_cfg_in defines the default configuration file used to generate the auto-generated code of
+# the module (CanTp_Cfg.c and CanTp_Cfg.h).
+# by default, it uses the file located at ./config/CanTp.json.
+set(can_tp_cfg_in ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json)
 
+# can_tp_cfg_out defines the output folder of all auto-generated files.
+# by default, it is located in the 'generated' folder, in the default CMake's binary directory.
+set(can_tp_cfg_out ${CMAKE_BINARY_DIR}/generated)
+
+
+execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${can_tp_cfg_out})
+
+# find a distribution of Python 3. Python is used for:
+# - generation of the static configuration sources (CanTp_Cfg.c and CanTp_Cfg.h)
+# - running the tests
 find_package(PythonInterp 3 REQUIRED)
 
-add_library(CanTp STATIC source/CanTp.c ${CMAKE_BINARY_DIR}/CanTp_Cfg.h)
+add_custom_target(can_tp_gen_install ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/c_gen/setup.py
+    install
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "installing CanTp code generator for python installation ${PYTHON_EXECUTABLE}")
 
-target_compile_definitions(CanTp
+add_custom_command(OUTPUT ${can_tp_cfg_out}/CanTp_Cfg.h
+    DEPENDS ${can_tp_cfg_in}
+    COMMAND ${PYTHON_EXECUTABLE} main.py ${can_tp_cfg_in} -header ${can_tp_cfg_out}/CanTp_Cfg.h
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/c_gen/can_tp
+    COMMENT "generating configuration header")
+
+add_custom_command(OUTPUT ${can_tp_cfg_out}/CanTp_Cfg.c
+    DEPENDS ${can_tp_cfg_out}/CanTp_Cfg.h
+    DEPENDS ${can_tp_cfg_in}
+    COMMAND ${PYTHON_EXECUTABLE} main.py ${can_tp_cfg_in} -source ${can_tp_cfg_out}/CanTp_Cfg.c
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/c_gen/can_tp
+    COMMENT "generating configuration source")
+
+add_library(CanTp_Cfg STATIC ${can_tp_cfg_out}/CanTp_Cfg.c)
+
+target_include_directories(CanTp_Cfg
+    PUBLIC interface
+    PUBLIC $<$<BOOL:${enable_test}>:${CMAKE_CURRENT_SOURCE_DIR}/stub>)
+
+add_library(${PROJECT_NAME} STATIC source/CanTp.c)
+
+target_compile_definitions(${PROJECT_NAME}
     PRIVATE CANTP_MAX_NUM_OF_CHANNEL=16
     PRIVATE CANTP_MAX_NUM_OF_N_SDU=16
     PRIVATE CANTP_DEV_ERROR_DETECT=STD_ON
@@ -27,59 +68,30 @@ target_compile_definitions(CanTp
     PUBLIC CANTP_CANCEL_TRANSMIT_API=STD_ON
     PUBLIC CANTP_CANCEL_RECEIVE_API=STD_ON
     PUBLIC CANTP_CHANGE_PARAMETER_API=STD_ON
-    PUBLIC CANTP_READ_PARAMETER_API=STD_ON)
+    PUBLIC CANTP_READ_PARAMETER_API=STD_ON
+    PUBLIC CANTP_BUILD_CFFI_INTERFACE=$<IF:$<BOOL:${enable_test}>,STD_ON,STD_OFF>)
 
-target_include_directories(CanTp
+target_include_directories(${PROJECT_NAME}
     PUBLIC interface
-    PUBLIC $<$<BOOL:${enable_test}>:${CMAKE_BINARY_DIR}>
-    INTERFACE stub)
-
-add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/CanTp_Cfg.h
-    DEPENDS ${can_tp_config}
-    COMMAND ${PYTHON_EXECUTABLE} main.py ${can_tp_config}
-    -header ${CMAKE_BINARY_DIR}/CanTp_Cfg.h
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/c_gen/can_tp
-    COMMENT "generating interface code")
-
-add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/CanTp_Cfg.c
-    DEPENDS ${can_tp_config}
-    COMMAND ${PYTHON_EXECUTABLE} main.py ${can_tp_config}
-    -source ${CMAKE_BINARY_DIR}/CanTp_Cfg.c
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/c_gen/can_tp
-    COMMENT "generating source code")
-
-add_library(CanTp_Cfg STATIC ${CMAKE_BINARY_DIR}/CanTp_Cfg.c ${CMAKE_BINARY_DIR}/CanTp_Cfg.h)
-
-target_include_directories(CanTp_Cfg
-    PUBLIC interface
-    PUBLIC stub)
+    PUBLIC $<$<BOOL:${enable_test}>:${can_tp_cfg_out}>
+    PUBLIC $<$<BOOL:${enable_test}>:${CMAKE_CURRENT_SOURCE_DIR}/stub>)
 
 if (${enable_test})
-    target_compile_definitions(CanTp
-        PUBLIC CANTP_BUILD_CFFI_INTERFACE=STD_ON)
-
     enable_testing()
 
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} setup.py install
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/c_gen)
-
-    execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory build
-        COMMAND ${CMAKE_COMMAND} -E remove_directory can_tp.egg-info
-        COMMAND ${CMAKE_COMMAND} -E remove_directory dist
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/c_gen)
-
-    add_library(Stub INTERFACE)
-    target_include_directories(CanTp PRIVATE stub)
-
-    target_link_libraries(CanTp INTERFACE Stub)
+    target_link_libraries(${PROJECT_NAME}
+        PUBLIC CanTp_Cfg)
 
     add_test(NAME CanTp_UnitTest
         COMMAND ${PYTHON_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test
         --junitxml=./report/ut.xml
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
-    get_target_property(can_tp_compile_definitions CanTp COMPILE_DEFINITIONS)
-    get_target_property(can_tp_include_directories CanTp INCLUDE_DIRECTORIES)
-
-    configure_file(config/cffi_config.py.in ${CMAKE_CURRENT_SOURCE_DIR}/test/ffi/cffi_config.py)
+    set_tests_properties(CanTp_UnitTest PROPERTIES DEPENDS can_tp_gen_install)
 endif ()
+
+configure_file(config/cffi_config.py.in ${CMAKE_BINARY_DIR}/cffi_config.tmp.py)
+
+file(GENERATE
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/test/ffi/cffi_config.py
+    INPUT ${CMAKE_BINARY_DIR}/cffi_config.tmp.py)
