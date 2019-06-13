@@ -4,9 +4,9 @@ name = 'can_tp'
 
 setup(author='Guillaume Sottas',
       author_email='guillaumesottas@gmail.com',
-      description='AUTOSAR CAN transport layer code generator',
+      description='AUTOSAR CAN Transport Protocol code generator',
       entry_points={
-          'console_scripts': ['{0}_gen={0}.cli:main'.format(name)]
+          'console_scripts': ['{0}={0}.__main__:main'.format(name)]
       },
       include_package_data=True,
       install_requires=['jsonschema==3.0.1',

@@ -2,7 +2,7 @@ import argparse
 
 from json import load
 
-from code_gen import CodeGen
+from .code_gen import CodeGen
 
 
 def main():
