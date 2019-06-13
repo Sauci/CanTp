@@ -53,7 +53,7 @@ class DefaultReceiver(Config):
                  st_min=2,
                  wft_max=1,
                  main_period=1.0 / 1000000.0,
-                 com_type='CANTP_FUNCTIONAL',
+                 com_type='CANTP_PHYSICAL',
                  ch_mode='CANTP_MODE_HALF_DUPLEX',
                  padding=None):
         super(DefaultReceiver, self).__init__({
@@ -101,7 +101,7 @@ class DefaultSender(Config):
                  n_bs=1.0,
                  n_cs=0.9,
                  main_period=1.0 / 1000000.0,
-                 com_type='CANTP_FUNCTIONAL',
+                 com_type='CANTP_PHYSICAL',
                  ch_mode='CANTP_MODE_HALF_DUPLEX',
                  padding=None):
         super(DefaultSender, self).__init__({
@@ -152,7 +152,7 @@ class DefaultFullDuplex(Config):
                  st_min=2,
                  wft_max=1,
                  main_period=1.0 / 1000000.0,
-                 com_type='CANTP_FUNCTIONAL',
+                 com_type='CANTP_PHYSICAL',
                  padding=None):
         receiver = DefaultReceiver(af=af,
                                    n_ar=n_ar,

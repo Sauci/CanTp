@@ -335,6 +335,25 @@ class TestSWS00081:
         handle.can_if_transmit.assert_not_called()
 
 
+class TestSWS00093:
+    """
+    If a multiple segmented session occurs (on both receiver and sender side) with a handle whose communication type is
+    functional, the CanTp module shall reject the request and report the runtime error code CANTP_E_INVALID_TATYPE to
+    the Default Error Tracer.
+    """
+
+    def test_receiver_side(self):
+        handle = CanTpTest(DefaultReceiver(com_type='CANTP_FUNCTIONAL'))
+        ff, _ = handle.get_receiver_multi_frame()
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+        handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_INVALID_TATYPE'))
+
+    def test_sender_side(self):
+        handle = CanTpTest(DefaultSender(com_type='CANTP_FUNCTIONAL'))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * 8))
+        handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_INVALID_TATYPE'))
+
+
 def test_sws_00176():
     """
     The function CanTp_Transmit() shall be asynchronous.

@@ -785,14 +785,29 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
                   (p_n_sdu->tx.cfg->af == CANTP_MIXED29BIT)) && pPduInfo->SduLength <= 0x06u))
             {
                 p_n_sdu->tx.shared.state = CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST;
+                tmp_return = E_OK;
             }
             else
             {
-                p_n_sdu->tx.shared.state = CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST;
+                if (p_n_sdu->tx.cfg->taType == CANTP_PHYSICAL)
+                {
+                    p_n_sdu->tx.shared.state = CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST;
+                    tmp_return = E_OK;
+                }
+                else
+                {
+                    /* SWS_CanTp_00093: If a multiple segmented session occurs (on both receiver and
+                     * sender  side) with a handle whose communication type is functional, the CanTp
+                     * module shall reject the request and report the runtime error code
+                     * CANTP_E_INVALID_TATYPE to the Default Error Tracer. */
+                    CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_INVALID_TATYPE)
+                }
             }
 
-            p_n_sdu->tx.taskState = CANTP_PROCESSING;
-            tmp_return = E_OK;
+            if (tmp_return == E_OK)
+            {
+                p_n_sdu->tx.taskState = CANTP_PROCESSING;
+            }
         }
     }
     else
@@ -1766,6 +1781,16 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
                 PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
                 CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_PADDING)
+
+                next_state = CANTP_FRAME_STATE_OK;
+            }
+            /* SWS_CanTp_00093: If a multiple segmented session occurs (on both receiver and sender
+             * side) with a handle whose communication type is functional, the CanTp module shall
+             * reject the request and report the runtime error code CANTP_E_INVALID_TATYPE to the
+             * Default Error Tracer. */
+            else if ((p_n_sdu->rx.cfg->taType == CANTP_FUNCTIONAL) && (pci == CANTP_N_PCI_TYPE_FF))
+            {
+                CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_INVALID_TATYPE)
 
                 next_state = CANTP_FRAME_STATE_OK;
             }
