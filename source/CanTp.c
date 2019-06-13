@@ -307,6 +307,15 @@ static Std_ReturnType CanTp_GetNAeFieldSize(const CanTp_AddressingFormatType af,
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
+static Std_ReturnType CanTp_EncodeNAeValue(const CanTp_AddressingFormatType af,
+                                           PduLengthType *pPduLength);
+
+#define CanTp_STOP_SEC_CODE_FAST
+#include "CanTp_MemMap.h"
+
+#define CanTp_START_SEC_CODE_FAST
+#include "CanTp_MemMap.h"
+
 /**
  * @brief this function decodes a raw minimum separation time (STmin) to a value in microsecond(s),
  * according to ISO 15765-2.
@@ -785,6 +794,10 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
             p_n_sdu->tx.taskState = CANTP_PROCESSING;
             tmp_return = E_OK;
         }
+    }
+    else
+    {
+        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_TRANSMIT_API_ID, CANTP_E_INVALID_TX_ID)
     }
 
     return tmp_return;
@@ -1736,57 +1749,63 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
                            CANTP_E_PARAM_POINTER,
                            return)
 
-    if ((CanTp_GetNSduFromPduId(rxPduId, &p_n_sdu) == E_OK) &&
-        ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u) &&
-        CanTp_GetNAeFieldSize(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK &&
-        (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
+    if (CanTp_GetNSduFromPduId(rxPduId, &p_n_sdu) == E_OK)
     {
-        /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
-         * frames) are used for a Rx N-SDU and CanTpRxPaddingActivation is equal to CANTP_ON, then
-         * CanTp receives by means of CanTp_RxIndication() call an SF Rx N-PDU belonging to that
-         * N-SDU, with a length smaller than eight bytes (i.e. PduInfoPtr.SduLength < 8), CanTp
-         * shall reject the reception. The runtime error code CANTP_E_PADDING shall be reported to
-         * the Default Error Tracer. */
-        if ((p_n_sdu->rx.cfg->padding == CANTP_ON) && (pPduInfo->SduLength < CANTP_CAN_FRAME_SIZE))
+        if (((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u) &&
+            CanTp_GetNAeFieldSize(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK &&
+            (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
         {
-            PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
+            /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
+             * frames) are used for a Rx N-SDU and CanTpRxPaddingActivation is equal to CANTP_ON, then
+             * CanTp receives by means of CanTp_RxIndication() call an SF Rx N-PDU belonging to that
+             * N-SDU, with a length smaller than eight bytes (i.e. PduInfoPtr.SduLength < 8), CanTp
+             * shall reject the reception. The runtime error code CANTP_E_PADDING shall be reported to
+             * the Default Error Tracer. */
+            if ((p_n_sdu->rx.cfg->padding == CANTP_ON) && (pPduInfo->SduLength < CANTP_CAN_FRAME_SIZE))
+            {
+                PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
-            CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_PADDING)
+                CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_PADDING)
 
-            next_state = CANTP_FRAME_STATE_OK;
-        }
-        else if (pci == CANTP_N_PCI_TYPE_SF)
-        {
-            next_state = CanTp_LDataIndRSF(p_n_sdu, pPduInfo, n_ae_field_size);
-        }
-        else if (pci == CANTP_N_PCI_TYPE_FF)
-        {
-            next_state = CanTp_LDataIndRFF(p_n_sdu, pPduInfo, n_ae_field_size);
-        }
-        else if ((pci == CANTP_N_PCI_TYPE_CF) &&
-                 (p_n_sdu->rx.shared.state == CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION))
-        {
-            next_state = CanTp_LDataIndRCF(p_n_sdu, pPduInfo, n_ae_field_size);
-        }
-        else
-        {
-            next_state = CANTP_FRAME_STATE_INVALID;
+                next_state = CANTP_FRAME_STATE_OK;
+            }
+            else if (pci == CANTP_N_PCI_TYPE_SF)
+            {
+                next_state = CanTp_LDataIndRSF(p_n_sdu, pPduInfo, n_ae_field_size);
+            }
+            else if (pci == CANTP_N_PCI_TYPE_FF)
+            {
+                next_state = CanTp_LDataIndRFF(p_n_sdu, pPduInfo, n_ae_field_size);
+            }
+            else if ((pci == CANTP_N_PCI_TYPE_CF) &&
+                     (p_n_sdu->rx.shared.state == CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION))
+            {
+                next_state = CanTp_LDataIndRCF(p_n_sdu, pPduInfo, n_ae_field_size);
+            }
+            else
+            {
+                next_state = CANTP_FRAME_STATE_INVALID;
+            }
+
+            if (next_state != CANTP_FRAME_STATE_INVALID)
+            {
+                p_n_sdu->rx.shared.state = next_state;
+            }
         }
 
-        if (next_state != CANTP_FRAME_STATE_INVALID)
+        if (((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u) &&
+            CanTp_GetNAeFieldSize(p_n_sdu->tx.cfg->af, &n_ae_field_size) == E_OK &&
+            (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
         {
-            p_n_sdu->rx.shared.state = next_state;
+            if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION)
+            {
+                p_n_sdu->tx.shared.state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo);
+            }
         }
     }
-
-    if (((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u) &&
-        CanTp_GetNAeFieldSize(p_n_sdu->tx.cfg->af, &n_ae_field_size) == E_OK &&
-        (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
+    else
     {
-        if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION)
-        {
-            p_n_sdu->tx.shared.state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo);
-        }
+        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_INVALID_RX_ID)
     }
 }
 
@@ -1902,7 +1921,7 @@ static Std_ReturnType CanTp_GetNSduFromPduId(PduIdType pduId, CanTp_NSduType **p
 }
 
 static Std_ReturnType CanTp_GetNAeFieldSize(const CanTp_AddressingFormatType af,
-                                           PduLengthType *pPduLength)
+                                            PduLengthType *pPduLength)
 {
     Std_ReturnType result = E_NOT_OK;
 

@@ -611,6 +611,35 @@ def test_sws_00263():
     handle.pdu_r_can_tp_rx_indication.called_once_with(ANY, handle.define('E_NOT_OK'))
 
 
+class TestSWS00293:
+
+    @pytest.mark.parametrize('code_name, value', [pytest.param('CANTP_E_PARAM_CONFIG', 0x01),
+                                                  pytest.param('CANTP_E_PARAM_ID', 0x02),
+                                                  pytest.param('CANTP_E_PARAM_POINTER', 0x03),
+                                                  pytest.param('CANTP_E_INIT_FAILED', 0x04),
+                                                  pytest.param('CANTP_E_UNINIT', 0x20),
+                                                  pytest.param('CANTP_E_INVALID_TX_ID', 0x30),
+                                                  pytest.param('CANTP_E_INVALID_RX_ID', 0x40)])
+    def test_error_codes(self, code_name, value):
+        handle = CanTpTest(DefaultSender())
+        assert handle.define(code_name) == value
+
+    @pytest.mark.skip(reason='not implemented')
+    def test_e_init_failed(self):
+        pass
+
+    def test_e_invalid_rx_id(self):
+        handle = CanTpTest(DefaultReceiver())
+        sf = handle.get_receiver_single_frame()
+        handle.lib.CanTp_RxIndication(1, handle.get_pdu_info(sf))
+        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_INVALID_RX_ID'))
+
+    def test_e_invalid_tx_id(self):
+        handle = CanTpTest(DefaultSender())
+        handle.lib.CanTp_Transmit(1, handle.get_pdu_info((dummy_byte,) * 100))
+        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_INVALID_TX_ID'))
+
+
 @pytest.mark.parametrize('parameter', change_parameter_api)
 def test_sws_00304(parameter):
     """
