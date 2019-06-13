@@ -1,9 +1,8 @@
 import argparse
-import os
 
 from json import load
 
-from code_gen import CodeGen
+from .code_gen import CodeGen
 
 
 def main():
@@ -18,10 +17,7 @@ def main():
     with open(args.configuration, 'r') as fp:
         data = load(fp)
 
-    with open(os.path.join(os.path.dirname(__file__), 'config.schema.json'), 'r') as fp:
-        schema = load(fp)
-
-    code_generator = CodeGen(schema, data)
+    code_generator = CodeGen(data)
 
     if args.source:
         with open(args.source, 'w') as fp:

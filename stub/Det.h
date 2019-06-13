@@ -16,20 +16,20 @@ extern "C"
 
 #include "Std_Types.h"
 
-Std_ReturnType Det_ReportError(uint16 moduleId,
-                               uint8 instanceId,
-                               uint8 apiId,
-                               uint8 errorId);
-
-Std_ReturnType Det_ReportRuntimeError(uint16 moduleId,
+extern Std_ReturnType Det_ReportError(uint16 moduleId,
                                       uint8 instanceId,
                                       uint8 apiId,
                                       uint8 errorId);
 
-Std_ReturnType Det_ReportTransientFault(uint16 moduleId,
-                                        uint8 instanceId,
-                                        uint8 apiId,
-                                        uint8 faultId);
+extern Std_ReturnType Det_ReportRuntimeError(uint16 moduleId,
+                                             uint8 instanceId,
+                                             uint8 apiId,
+                                             uint8 errorId);
+
+extern Std_ReturnType Det_ReportTransientFault(uint16 moduleId,
+                                               uint8 instanceId,
+                                               uint8 apiId,
+                                               uint8 faultId);
 
 #ifdef __cplusplus
 

@@ -41,6 +41,14 @@
  * @{
  */
 
+#ifndef CANTP_MAX_NUM_OF_CHANNEL
+#error CANTP_MAX_NUM_OF_CHANNEL must be defined by the build system.
+#endif /* #ifndef CANTP_MAX_NUM_OF_CHANNEL */
+
+#ifndef CANTP_MAX_NUM_OF_N_SDU
+#error CANTP_MAX_NUM_OF_N_SDU must be defined by the build system.
+#endif /* #ifndef CANTP_MAX_NUM_OF_N_SDU */
+
 #ifdef __cplusplus
 
 extern "C"
@@ -51,21 +59,12 @@ extern "C"
 #include "CanIf.h"
 #include "CanTp.h"
 #include "CanTp_Cbk.h"
-#include "CanTp_Cfg.h"
 #include "ComStack_Types.h"
-#include "Det.h"
 #include "PduR.h"
 
-/* TODO: do not include C file directly... */
-#ifdef CANTP_BUILD_CFFI_INTERFACE
-
-/**
- * @brief if CANTP_BUILD_CFFI_INTERFACE is defined, expose the CanTp callback function to CFFI
- * module.
- */
-#include "CanTp_Cfg.c"
-
-#endif /* #ifdef CANTP_BUILD_CFFI_INTERFACE */
+#if (CANTP_DEV_ERROR_DETECT == STD_ON)
+#include "Det.h"
+#endif /* #if (CANTP_DEV_ERROR_DETECT == STD_ON) */
 
 /** @} */
 
@@ -81,6 +80,12 @@ extern "C"
 
 #define CANTP_CAN_FRAME_SIZE (0x08u)
 
+#define CANTP_SF_PCI_FIELD_SIZE (0x01u)
+
+#define CANTP_FF_PCI_FIELD_SIZE (0x02u)
+
+#define CANTP_CF_PCI_FIELD_SIZE (0x01u)
+
 #define CANTP_BS_INFINITE (0x0100u)
 
 #define CANTP_MS_TO_INTERNAL(timeout) (timeout * 1000u)
@@ -92,12 +97,6 @@ extern "C"
 #define CANTP_DIRECTION_RX (0x01u)
 
 #define CANTP_DIRECTION_TX (0x02u)
-
-#define CANTP_DIRECTION_RX_TX (CANTP_DIRECTION_RX | CANTP_DIRECTION_TX)
-
-#define ISO15765_DIR_RX (0x00u)
-
-#define ISO15765_DIR_TX (0x01u)
 
 /** @} */
 
@@ -160,7 +159,6 @@ typedef struct
 {
     const CanTp_RxNSduType *cfg;
     CanTp_NSduBufferType buf;
-    CanTp_FrameStateType state;
     CanTp_FlowStatusType fs;
     uint32 st_min;
     uint8 bs;
@@ -172,6 +170,7 @@ typedef struct
     struct
     {
         CanTp_TaskStateType taskState;
+        CanTp_FrameStateType state;
 
         /**
          * @brief structure containing all parameters accessible via @ref CanTp_ReadParameter/@ref
@@ -188,17 +187,16 @@ typedef struct
 {
     const CanTp_TxNSduType *cfg;
     CanTp_NSduBufferType buf;
-    CanTp_FrameStateType state;
     CanTp_FlowStatusType fs;
     uint32 target_st_min;
     uint32 st_min;
     uint16 bs;
     uint8 sn;
-    uint8 meta_data[0x04u];
     PduInfoType can_if_pdu_info;
     CanTp_TaskStateType taskState;
     struct
     {
+        CanTp_FrameStateType state;
         uint32 flag;
     } shared;
 } CanTp_TxConnectionType;
@@ -211,7 +209,6 @@ typedef struct
     uint8 n_sa;
     uint8 n_ta;
     uint8 n_ae;
-    boolean has_meta_data;
     uint8_least dir;
     uint32 t_flag;
 } CanTp_NSduType;
@@ -220,12 +217,6 @@ typedef struct
 {
     CanTp_NSduType sdu[CANTP_MAX_NUM_OF_N_SDU];
 } CanTp_ChannelRtType;
-
-typedef struct {
-    CanTp_FrameStateType (*const req[2][4])(CanTp_NSduType *pNSdu);
-    CanTp_FrameStateType (*const ind[2][4])(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo);
-    CanTp_FrameStateType (*const con[2][4])(CanTp_NSduType *pNSdu);
-} CanTp_ISO15765Type;
 
 /** @} */
 
@@ -307,7 +298,8 @@ static Std_ReturnType CanTp_GetNSduFromPduId(PduIdType pduId, CanTp_NSduType **p
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static PduLengthType CanTp_GetFrameHeaderSize(const CanTp_AddressingFormatType af, const uint8 frameType);
+static Std_ReturnType CanTp_GetNAeFieldSize(const CanTp_AddressingFormatType af,
+                                            PduLengthType *pPduLength);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -332,30 +324,6 @@ static uint32_least CanTp_DecodeSTMinValue(const uint8 data);
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static Std_ReturnType CanTp_DecodePCIValue(CanTp_NPciType *pPci, const uint8 *pData);
-
-#define CanTp_STOP_SEC_CODE_FAST
-#include "CanTp_MemMap.h"
-
-#define CanTp_START_SEC_CODE_FAST
-#include "CanTp_MemMap.h"
-
-static Std_ReturnType CanTp_DecodeSNValue(uint8 *pSn, const uint8 *pData);
-
-#define CanTp_STOP_SEC_CODE_FAST
-#include "CanTp_MemMap.h"
-
-#define CanTp_START_SEC_CODE_FAST
-#include "CanTp_MemMap.h"
-
-static Std_ReturnType CanTp_DecodeDLValue(uint16 *pDl, const uint8 *pData);
-
-#define CanTp_STOP_SEC_CODE_FAST
-#include "CanTp_MemMap.h"
-
-#define CanTp_START_SEC_CODE_FAST
-#include "CanTp_MemMap.h"
-
 /**
  * @brief this function encodes a minimum separation time in microsecond(s) (STmin) to a 8 bits
  * value, according to ISO 15765-2.
@@ -366,6 +334,24 @@ static Std_ReturnType CanTp_DecodeDLValue(uint16 *pDl, const uint8 *pData);
  * @return encoded minimum separation time value (8 bits STmin value)
  */
 static uint8 CanTp_EncodeSTMinValue(uint16 value);
+
+#define CanTp_STOP_SEC_CODE_FAST
+#include "CanTp_MemMap.h"
+
+#define CanTp_START_SEC_CODE_FAST
+#include "CanTp_MemMap.h"
+
+static Std_ReturnType CanTp_DecodePCIValue(CanTp_NPciType *pPci, const uint8 *pData);
+
+#define CanTp_STOP_SEC_CODE_FAST
+#include "CanTp_MemMap.h"
+
+#define CanTp_START_SEC_CODE_FAST
+#include "CanTp_MemMap.h"
+
+static uint16 CanTp_DecodeDLValue(const uint8 frameType,
+                                  const CanTp_RxPaddingActivationType padding,
+                                  const uint8 *pData);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -405,7 +391,7 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu);
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static void CanTp_FillTxMetaData(CanTp_NSduType *pNSdu, const CanTp_NPciType pci);
+static BufReq_ReturnType CanTp_CopyRxPayload(CanTp_NSduType *pNSdu);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -413,7 +399,7 @@ static void CanTp_FillTxMetaData(CanTp_NSduType *pNSdu, const CanTp_NPciType pci
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static BufReq_ReturnType CanTp_FillTxPayload(CanTp_NSduType *pNSdu, PduLengthType *pOfs);
+static BufReq_ReturnType CanTp_CopyTxPayload(CanTp_NSduType *pNSdu, PduLengthType *pOfs);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -461,7 +447,8 @@ static CanTp_FrameStateType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu);
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo);
+static CanTp_FrameStateType
+CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -469,7 +456,8 @@ static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduIn
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo);
+static CanTp_FrameStateType
+CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -477,7 +465,8 @@ static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduIn
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo);
+static CanTp_FrameStateType
+CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -485,7 +474,8 @@ static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduIn
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static CanTp_FrameStateType CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo);
+static CanTp_FrameStateType
+CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -534,50 +524,13 @@ static CanTp_FrameStateType CanTp_LDataConTCF(CanTp_NSduType *pNSdu);
  * @{
  */
 
-static const CanTp_ISO15765Type ISO15765 = {
-    {
-        {
-            NULL_PTR,
-            NULL_PTR,
-            NULL_PTR,
-            CanTp_LDataReqRFC
-        },
-        {
-            CanTp_LDataReqTSF,
-            CanTp_LDataReqTFF,
-            CanTp_LDataReqTCF,
-            NULL_PTR
-        }
-    },
-    {
-        {
-            CanTp_LDataIndRSF,
-            CanTp_LDataIndRFF,
-            CanTp_LDataIndRCF,
-            NULL_PTR
-        },
-        {
-            NULL_PTR,
-            NULL_PTR,
-            NULL_PTR,
-            CanTp_LDataIndTFC
-        }
-    },
-    {
-        {
-            NULL_PTR,
-            NULL_PTR,
-            NULL_PTR,
-            CanTp_LDataConRFC
-        },
-        {
-            CanTp_LDataConTSF,
-            CanTp_LDataConTFF,
-            CanTp_LDataConTCF,
-            NULL_PTR
-        }
-    }
-};
+#define CanTp_START_SEC_VAR_FAST_INIT_UNSPECIFIED
+#include "CanTp_MemMap.h"
+
+static const CanTp_ConfigType *CanTp_ConfigPtr = NULL_PTR;
+
+#define CanTp_STOP_SEC_VAR_FAST_INIT_UNSPECIFIED
+#include "CanTp_MemMap.h"
 
 /** @} */
 
@@ -590,14 +543,6 @@ static const CanTp_ISO15765Type ISO15765 = {
  * @addtogroup CANTP_C_LVDEF
  * @{
  */
-
-#define CanTp_START_SEC_VAR_FAST_INIT_UNSPECIFIED
-#include "CanTp_MemMap.h"
-
-static const CanTp_ConfigType *CanTp_ConfigPtr = NULL_PTR;
-
-#define CanTp_STOP_SEC_VAR_FAST_INIT_UNSPECIFIED
-#include "CanTp_MemMap.h"
 
 #define CanTp_START_SEC_VAR_FAST_CLEARED_UNSPECIFIED
 #include "CanTp_MemMap.h"
@@ -672,101 +617,92 @@ void CanTp_Init(const CanTp_ConfigType *pConfig)
 
     CanTp_ConfigPtr = pConfig;
 
-    /* make sure the static configuration's channel(s) count fits into provided
-     * CANTP_NUM_OF_CHANNEL. */
-    if (pConfig->maxChannelCnt == CANTP_NUM_OF_CHANNEL)
+    uint8 *p_cleared_data = (uint8 *)&CanTp_Rt[0x00u];
+    uint32_least idx;
+
+    for (idx = 0x00u; idx < sizeof(CanTp_Rt); idx++)
     {
-        uint8 *p_cleared_data = (uint8 *)&CanTp_Rt[0x00u];
-        uint32_least idx;
+        p_cleared_data[idx] = 0x00u;
+    }
+    /* iterate over all statically defined channels. */
+    for (channel_idx = 0x00u; channel_idx < pConfig->maxChannelCnt; channel_idx++)
+    {
+        p_rt_channel = &CanTp_Rt[channel_idx];
+        p_cfg_channel = &pConfig->pChannel[channel_idx];
 
-        for (idx = 0x00u; idx < sizeof(CanTp_Rt); idx++)
+        /* make sure the static configuration's PDU count fits into provided
+         * CANTP_MAX_NUM_OF_N_SDU. */
+        n_sdu_range = p_cfg_channel->nSdu.rxNSduCnt + p_cfg_channel->nSdu.txNSduCnt;
+
+        if (n_sdu_range <= CANTP_MAX_NUM_OF_N_SDU)
         {
-            p_cleared_data[idx] = 0x00u;
-        }
-        /* iterate over all statically defined channels. */
-        for (channel_idx = 0x00u; channel_idx < pConfig->maxChannelCnt; channel_idx++)
-        {
-            p_rt_channel = &CanTp_Rt[channel_idx];
-            p_cfg_channel = &pConfig->pChannel[channel_idx];
-
-            /* make sure the static configuration's PDU count fits into provided
-             * CANTP_MAX_NUM_OF_N_SDU. */
-            n_sdu_range = p_cfg_channel->nSdu.rxNSduCnt + p_cfg_channel->nSdu.txNSduCnt;
-
-            if (n_sdu_range <= CANTP_MAX_NUM_OF_N_SDU)
+            for (rt_sdu_idx = 0x00u; rt_sdu_idx < CANTP_MAX_NUM_OF_N_SDU; rt_sdu_idx++)
             {
-                for (rt_sdu_idx = 0x00u; rt_sdu_idx < CANTP_MAX_NUM_OF_N_SDU; rt_sdu_idx++)
+                for (cfg_sdu_idx = 0x00u;
+                     cfg_sdu_idx < p_cfg_channel->nSdu.rxNSduCnt; cfg_sdu_idx++)
                 {
-                    for (cfg_sdu_idx = 0x00u;
-                         cfg_sdu_idx < p_cfg_channel->nSdu.rxNSduCnt; cfg_sdu_idx++)
+                    if (p_cfg_channel->nSdu.rx != NULL_PTR)
                     {
-                        if (p_cfg_channel->nSdu.rx != NULL_PTR)
+                        p_cfg_rx_sdu = &p_cfg_channel->nSdu.rx[cfg_sdu_idx];
+
+                        /* make sure the nSduId is in allowed range. */
+                        if (p_cfg_rx_sdu->nSduId < n_sdu_range)
                         {
-                            p_cfg_rx_sdu = &p_cfg_channel->nSdu.rx[cfg_sdu_idx];
-
-                            /* make sure the nSduId is in allowed range. */
-                            if (p_cfg_rx_sdu->nSduId < n_sdu_range)
+                            if (p_cfg_rx_sdu->nSduId == rt_sdu_idx)
                             {
-                                if (p_cfg_rx_sdu->nSduId == rt_sdu_idx)
-                                {
-                                    p_rt_sdu = &p_rt_channel->sdu[p_cfg_rx_sdu->nSduId];
+                                p_rt_sdu = &p_rt_channel->sdu[p_cfg_rx_sdu->nSduId];
 
-                                    p_rt_sdu->dir |= CANTP_DIRECTION_RX;
-                                    p_rt_sdu->rx.cfg = p_cfg_rx_sdu;
-                                    p_rt_sdu->rx.shared.taskState = CANTP_WAIT;
-                                    p_rt_sdu->rx.shared.m_param.st_min = p_cfg_rx_sdu->sTMin;
-                                    p_rt_sdu->rx.shared.m_param.bs = p_cfg_rx_sdu->bs;
-                                }
-                            }
-                            else
-                            {
-                                result = E_NOT_OK;
-
-                                break;
+                                p_rt_sdu->dir |= CANTP_DIRECTION_RX;
+                                p_rt_sdu->rx.cfg = p_cfg_rx_sdu;
+                                p_rt_sdu->rx.shared.taskState = CANTP_WAIT;
+                                p_rt_sdu->rx.shared.m_param.st_min = p_cfg_rx_sdu->sTMin;
+                                p_rt_sdu->rx.shared.m_param.bs = p_cfg_rx_sdu->bs;
                             }
                         }
-                    }
-
-                    for (cfg_sdu_idx = 0x00u;
-                         cfg_sdu_idx < p_cfg_channel->nSdu.txNSduCnt; cfg_sdu_idx++)
-                    {
-                        if (p_cfg_channel->nSdu.tx != NULL_PTR)
+                        else
                         {
-                            p_cfg_tx_sdu = &p_cfg_channel->nSdu.tx[cfg_sdu_idx];
+                            result = E_NOT_OK;
 
-                            /* make sure the nSduId is in allowed range. */
-                            if (p_cfg_tx_sdu->nSduId < n_sdu_range)
+                            break;
+                        }
+                    }
+                }
+
+                for (cfg_sdu_idx = 0x00u;
+                     cfg_sdu_idx < p_cfg_channel->nSdu.txNSduCnt; cfg_sdu_idx++)
+                {
+                    if (p_cfg_channel->nSdu.tx != NULL_PTR)
+                    {
+                        p_cfg_tx_sdu = &p_cfg_channel->nSdu.tx[cfg_sdu_idx];
+
+                        /* make sure the nSduId is in allowed range. */
+                        if (p_cfg_tx_sdu->nSduId < n_sdu_range)
+                        {
+                            if (p_cfg_tx_sdu->nSduId == rt_sdu_idx)
                             {
-                                if (p_cfg_tx_sdu->nSduId == rt_sdu_idx)
-                                {
-                                    p_rt_sdu = &p_rt_channel->sdu[p_cfg_tx_sdu->nSduId];
+                                p_rt_sdu = &p_rt_channel->sdu[p_cfg_tx_sdu->nSduId];
 
-                                    p_rt_sdu->dir |= CANTP_DIRECTION_TX;
-                                    p_rt_sdu->tx.cfg = p_cfg_tx_sdu;
-                                    p_rt_sdu->tx.taskState = CANTP_WAIT;
-                                }
+                                p_rt_sdu->dir |= CANTP_DIRECTION_TX;
+                                p_rt_sdu->tx.cfg = p_cfg_tx_sdu;
+                                p_rt_sdu->tx.taskState = CANTP_WAIT;
                             }
-                            else
-                            {
-                                result = E_NOT_OK;
+                        }
+                        else
+                        {
+                            result = E_NOT_OK;
 
-                                break;
-                            }
+                            break;
                         }
                     }
                 }
             }
-            else
-            {
-                result = E_NOT_OK;
-
-                break;
-            }
         }
-    }
-    else
-    {
-        result = E_NOT_OK;
+        else
+        {
+            result = E_NOT_OK;
+
+            break;
+        }
     }
 
     if (result != E_OK)
@@ -833,26 +769,17 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
         {
             p_n_sdu->tx.buf.size = pPduInfo->SduLength;
 
-            if (pPduInfo->MetaDataPtr != NULL_PTR)
-            {
-                p_n_sdu->has_meta_data = TRUE;
-            }
-            else
-            {
-                p_n_sdu->has_meta_data = FALSE;
-            }
-
             if ((((p_n_sdu->tx.cfg->af == CANTP_STANDARD) ||
                   (p_n_sdu->tx.cfg->af == CANTP_NORMALFIXED)) && (pPduInfo->SduLength <= 0x07u)) ||
                 (((p_n_sdu->tx.cfg->af == CANTP_EXTENDED) ||
                   (p_n_sdu->tx.cfg->af == CANTP_MIXED) ||
                   (p_n_sdu->tx.cfg->af == CANTP_MIXED29BIT)) && pPduInfo->SduLength <= 0x06u))
             {
-                p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST;
+                p_n_sdu->tx.shared.state = CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST;
             }
             else
             {
-                p_n_sdu->tx.state = CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST;
+                p_n_sdu->tx.shared.state = CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST;
             }
 
             p_n_sdu->tx.taskState = CANTP_PROCESSING;
@@ -913,6 +840,7 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
 {
     CanTp_NSduType *p_n_sdu;
     CanTp_TaskStateType task_state;
+    PduLengthType n_ae_field_size;
     Std_ReturnType tmp_return = E_NOT_OK;
 
     CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
@@ -924,6 +852,7 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
     if ((CanTp_GetNSduFromPduId(rxPduId, &p_n_sdu) == E_OK) &&
         ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u))
     {
+        (void)CanTp_GetNAeFieldSize(p_n_sdu->rx.cfg->af, &n_ae_field_size);
         CANTP_CRITICAL_SECTION(task_state = p_n_sdu->rx.shared.taskState;)
 
         if (task_state == CANTP_PROCESSING)
@@ -933,7 +862,7 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
              * Consecutive Frame of the N-SDU (i.e. the service is called after N-Cr timeout is
              * started for the last Consecutive Frame). In this case the CanTp shall return
              * E_NOT_OK. */
-            if (p_n_sdu->rx.buf.size > 0x07u)
+            if (p_n_sdu->rx.buf.size > (CANTP_CAN_FRAME_SIZE - CANTP_CF_PCI_FIELD_SIZE + n_ae_field_size))
             {
                 CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_WAIT;)
 
@@ -947,14 +876,10 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
         }
         else
         {
-            /* SWS_CanTp_00254: if development error detection is enabled the function
-             * CanTp_CancelTransmit shall check the validity of TxPduId parameter. If the parameter
-             * value is invalid, the CanTp_CancelTransmit function shall raise the development error
-             * CANTP_E_PARAM_ID and return E_NOT_OK (see SWS_CanTp_00294).
-             * if the parameter value indicates a cancel transmission request for an N-SDU that it
-             * is not on transmission process the CanTp module shall report a runtime error code
-             * CANTP_E_OPER_NOT_SUPPORTED to the Default Error Tracer and the service shall return
-             * E_NOT_OK. */
+            /* SWS_CanTp_00260: If the parameter value indicates a cancel reception request for an
+             * N-SDU that it is not on reception process the CanTp module shall report the runtime
+             * error code CANTP_E_OPER_NOT_SUPPORTED to the Default Error Tracer and the service
+             * shall return E_NOT_OK. */
             CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, CANTP_CANCEL_RECEIVE_API_ID, CANTP_E_OPER_NOT_SUPPORTED)
         }
     }
@@ -1251,19 +1176,11 @@ static CanTp_FrameStateType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
     PduLengthType ofs = 0x00u;
 
-    if ((p_n_sdu->tx.cfg->pNSa != NULL_PTR) &&
-        (p_n_sdu->tx.cfg->pNTa != NULL_PTR))
-    {
-        CanTp_FillTxMetaData(p_n_sdu, CANTP_N_PCI_TYPE_SF);
-    }
-
-    // CanTp_FillAIField(p_n_sdu, &ofs);
-
     p_n_sdu->tx.buf.can[ofs] = ((uint8)CANTP_N_PCI_TYPE_SF << 0x04u);
     p_n_sdu->tx.buf.can[ofs] |= pNSdu->tx.buf.size;
     ofs = ofs + 0x01u;
 
-    if (CanTp_FillTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
+    if (CanTp_CopyTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
     {
         tmp_return = CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION;
 
@@ -1294,20 +1211,12 @@ static CanTp_FrameStateType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
 
     p_n_sdu->tx.sn = 0x00u;
 
-    if ((p_n_sdu->tx.cfg->pNSa != NULL_PTR) &&
-        (p_n_sdu->tx.cfg->pNTa != NULL_PTR))
-    {
-        CanTp_FillTxMetaData(p_n_sdu, CANTP_N_PCI_TYPE_FF);
-    }
-
-    // CanTp_FillAIField(p_n_sdu, &ofs);
-
     p_n_sdu->tx.buf.can[ofs] = ((uint8)CANTP_N_PCI_TYPE_FF << 0x04u);
     p_n_sdu->tx.buf.can[ofs] |= ((pNSdu->tx.buf.size & 0x0F00u) >> 0x08u);
     p_n_sdu->tx.buf.can[ofs + 0x01u] = pNSdu->tx.buf.size & 0xFFu;
     ofs = ofs + 0x02u;
 
-    if (CanTp_FillTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
+    if (CanTp_CopyTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
     {
         tmp_return = CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION;
 
@@ -1336,13 +1245,7 @@ static CanTp_FrameStateType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
     PduLengthType ofs = 0x01u;
 
-    if ((p_n_sdu->tx.cfg->pNSa != NULL_PTR) &&
-        (p_n_sdu->tx.cfg->pNTa != NULL_PTR))
-    {
-        CanTp_FillTxMetaData(p_n_sdu, CANTP_N_PCI_TYPE_CF);
-    }
-
-    if (CanTp_FillTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
+    if (CanTp_CopyTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
     {
         tmp_return = CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION;
 
@@ -1452,225 +1355,250 @@ static CanTp_FrameStateType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
     return tmp_return;
 }
 
-static CanTp_FrameStateType CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo)
+static CanTp_FrameStateType
+CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize)
 {
     uint16 dl;
+    PduLengthType header_size;
     CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
-    const PduLengthType header_size = CanTp_GetFrameHeaderSize(p_n_sdu->rx.cfg->af,
-                                                               CANTP_N_PCI_TYPE_SF);
-    const PduLengthType payload_size = CANTP_CAN_FRAME_SIZE - header_size;
 
-    CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;)
-
-    if (CanTp_DecodeDLValue(&dl, &pPduInfo->SduDataPtr[0x00u]) == E_OK)
+    if (p_n_sdu->rx.shared.taskState == CANTP_PROCESSING)
     {
-        p_n_sdu->rx.buf.size = pPduInfo->SduLength;
+        /* SWS_CanTp_00057: Terminate the current reception, report an indication, with parameter
+         * Result set to E_NOT_OK, to the upper layer, and process the SF/FF N-PDU as the start of a
+         * new reception */
+        PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
-        p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr = NULL_PTR;
-        p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[header_size];
-        p_n_sdu->rx.pdu_r_pdu_info.SduLength = payload_size;
-        switch (PduR_CanTpStartOfReception(p_n_sdu->rx.cfg->nSduId,
-                                           &p_n_sdu->rx.pdu_r_pdu_info,
-                                           dl,
-                                           &p_n_sdu->rx.buf.rmng))
-        {
-            case BUFREQ_OK:
-            {
-                /* SWS_CanTp_00339: After the reception of a First Frame or Single Frame, if the
-                 * function PduR_CanTpStartOfReception() returns BUFREQ_OK with a smaller available
-                 * buffer size than needed for the already received data, the CanTp module shall
-                 * abort the reception of the N-SDU and call PduR_CanTpRxIndication() with the
-                 * result E_NOT_OK. */
-                if (p_n_sdu->rx.buf.rmng < payload_size)
-                {
-                    PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
-
-                    result = CANTP_FRAME_STATE_ABORT;
-                }
-                else
-                {
-                    result = CANTP_FRAME_STATE_OK;
-                }
-
-                break;
-            }
-            default:
-            {
-                break;
-            }
-        }
+        CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, CANTP_I_RX_SF, 0x00u, CANTP_E_UNEXP_PDU)
     }
-
-    return result;
-}
-
-static CanTp_FrameStateType CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo)
-{
-    uint16 dl;
-    CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
-    CanTp_NSduType *p_n_sdu = pNSdu;
-    const PduLengthType header_size = CanTp_GetFrameHeaderSize(p_n_sdu->rx.cfg->af,
-                                                               CANTP_N_PCI_TYPE_FF);
-    const PduLengthType payload_size = CANTP_CAN_FRAME_SIZE - header_size;
-
-    if (CanTp_DecodeDLValue(&dl, &pPduInfo->SduDataPtr[0x00u]) == E_OK)
+    else
     {
         CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;)
+    }
 
-        p_n_sdu->rx.buf.size = dl;
+    /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD frames)
+     * are used for a Rx N-SDU and CanTpRxPaddingActivation is equal to CANTP_ON, then CanTp
+     * receives by means of CanTp_RxIndication() call an SF Rx N-PDU belonging to that N-SDU, with a
+     * length smaller than eight bytes (i.e. PduInfoPtr.SduLength < 8), CanTp shall reject the
+     * reception. The runtime error code CANTP_E_PADDING shall be reported to the Default Error
+     * Tracer. */
+    header_size = CANTP_SF_PCI_FIELD_SIZE + nAeSize;
 
-        p_n_sdu->rx.sn = 0x00u;
-        p_n_sdu->rx.wft_max = p_n_sdu->rx.cfg->wftMax;
-        p_n_sdu->rx.bs = p_n_sdu->rx.shared.m_param.bs;
+    dl = CanTp_DecodeDLValue(CANTP_N_PCI_TYPE_SF,
+                             p_n_sdu->rx.cfg->padding,
+                             &pPduInfo->SduDataPtr[nAeSize]);
 
-        p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[header_size];
-        p_n_sdu->rx.pdu_r_pdu_info.SduLength = payload_size;
-        p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr = pPduInfo->MetaDataPtr;
+    p_n_sdu->rx.buf.size = dl;
 
-        /* TODO: as I understand, the N_Br is the time allowed for the upper layer to provide the
-         *  required buffer. thus, the N_Br timeout will be handled according to SWS_CanTp_00082. */
-        /* SWS_CanTp_00166: At the reception of a FF or last CF of a block, the CanTp module shall
-         * start a time-out N_Br before calling PduR_CanTpStartOfReception or PduR_CanTpCopyRxData.
-         *
-         * CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR); */
+    p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[header_size];
+    p_n_sdu->rx.pdu_r_pdu_info.SduLength = dl;
+    p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr = NULL_PTR;
 
-        switch (PduR_CanTpStartOfReception(p_n_sdu->rx.cfg->nSduId,
-                                           &p_n_sdu->rx.pdu_r_pdu_info,
-                                           dl,
-                                           &p_n_sdu->rx.buf.rmng))
+    switch (PduR_CanTpStartOfReception(p_n_sdu->rx.cfg->nSduId,
+                                       &p_n_sdu->rx.pdu_r_pdu_info,
+                                       dl,
+                                       &p_n_sdu->rx.buf.rmng))
+    {
+        case BUFREQ_OK:
         {
-            case BUFREQ_E_OVFL:
+            /* SWS_CanTp_00339: After the reception of a First Frame or Single Frame, if the
+             * function PduR_CanTpStartOfReception() returns BUFREQ_OK with a smaller available
+             * buffer size than needed for the already received data, the CanTp module shall
+             * abort the reception of the N-SDU and call PduR_CanTpRxIndication() with the
+             * result E_NOT_OK. */
+            if (p_n_sdu->rx.buf.rmng < dl)
             {
-                /* SWS_CanTp_00318: After the reception of a First Frame, if the function
-                 * PduR_CanTpStartOfReception() returns BUFREQ_E_OVFL to the CanTp module, the CanTp
-                 * module shall send a Flow Control N-PDU with overflow status (FC(OVFLW)) and abort
-                 * the N-SDU reception. */
-                result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
-                p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_OVFLW;
+                PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
-                break;
-            }
-            case BUFREQ_OK:
-            {
-                if (p_n_sdu->rx.buf.rmng < payload_size)
-                {
-                    /* SWS_CanTp_00339: After the reception of a First Frame or Single Frame, if the
-                     * function PduR_CanTpStartOfReception() returns BUFREQ_OK with a smaller
-                     * available buffer size than needed for the already received data, the CanTp
-                     * module shall abort the reception of the N-SDU and call
-                     * PduR_CanTpRxIndication() with the result E_NOT_OK. */
-                    PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
-
-                    result = CANTP_FRAME_STATE_ABORT;
-                }
-                else
-                {
-                    result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
-
-                    if (p_n_sdu->rx.buf.rmng < CanTp_GetRxBlockSize(p_n_sdu))
-                    {
-                        /* SWS_CanTp_00082: After the reception of a First Frame, if the function
-                         * PduR_CanTpStartOfReception() returns BUFREQ_OK with a smaller available
-                         * buffer size than needed for the next block, the CanTp module shall start
-                         * the timer N_Br. */
-                        CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
-
-                        p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_WT;
-                    }
-                    else
-                    {
-                        p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_CTS;
-                    }
-
-                    PduR_CanTpCopyRxData(p_n_sdu->rx.cfg->nSduId,
-                                         &p_n_sdu->rx.pdu_r_pdu_info,
-                                         &p_n_sdu->rx.buf.rmng);
-                }
-
-                break;
-            }
-            case BUFREQ_E_NOT_OK:
-            {
-                /* SWS_CanTp_00081: After the reception of a First Frame or Single Frame, if the
-                 * function PduR_CanTpStartOfReception()returns BUFREQ_E_NOT_OK to the CanTp module,
-                 * the CanTp module shall abort the reception of this N-SDU. No Flow Control will be
-                 * sent and PduR_CanTpRxIndication() will not be called in this case. */
+                /* TODO:return STATE_OK? */
                 result = CANTP_FRAME_STATE_ABORT;
-
-                break;
             }
-            default:
+            else
             {
-                break;
+                CanTp_CopyRxPayload(p_n_sdu);
+
+                PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_OK);
+
+                result = CANTP_FRAME_STATE_OK;
             }
+
+            break;
+        }
+        default:
+        {
+            break;
         }
     }
 
     return result;
 }
 
-static CanTp_FrameStateType CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo)
+static CanTp_FrameStateType
+CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize)
 {
-    PduInfoType tmp_pdu;
+    PduLengthType header_size;
+    PduLengthType payload_size;
     CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
-    const PduLengthType header_size = CanTp_GetFrameHeaderSize(p_n_sdu->rx.cfg->af,
-                                                               CANTP_N_PCI_TYPE_FF);
-    const PduLengthType payload_size = CANTP_CAN_FRAME_SIZE - header_size;
+
+    if (p_n_sdu->rx.shared.taskState == CANTP_PROCESSING)
+    {
+        /* SWS_CanTp_00057: Terminate the current reception, report an indication, with parameter
+         * Result set to E_NOT_OK, to the upper layer, and process the SF/FF N-PDU as the start of a
+         * new reception */
+        PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
+
+        CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, CANTP_I_RX_FF, 0x00u, CANTP_E_UNEXP_PDU)
+    }
+    else
+    {
+        CANTP_CRITICAL_SECTION(p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;)
+    }
+
+    header_size = CANTP_FF_PCI_FIELD_SIZE + nAeSize;
+    payload_size = CANTP_CAN_FRAME_SIZE - header_size;
+
+    p_n_sdu->rx.buf.size = CanTp_DecodeDLValue(CANTP_N_PCI_TYPE_FF,
+                                               p_n_sdu->rx.cfg->padding,
+                                               &pPduInfo->SduDataPtr[nAeSize]);
+
+    p_n_sdu->rx.sn = 0x00u;
+    p_n_sdu->rx.wft_max = p_n_sdu->rx.cfg->wftMax;
+    p_n_sdu->rx.bs = p_n_sdu->rx.shared.m_param.bs;
+
+    p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[header_size];
+    p_n_sdu->rx.pdu_r_pdu_info.SduLength = pPduInfo->SduLength - header_size;
+    p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr = NULL_PTR;
+
+    /* TODO: as I understand, the N_Br is the time allowed for the upper layer to provide the
+     *  required buffer. thus, the N_Br timeout will be handled according to SWS_CanTp_00082. */
+
+    /* SWS_CanTp_00166: At the reception of a FF or last CF of a block, the CanTp module shall start
+     * a time-out N_Br before calling PduR_CanTpStartOfReception or PduR_CanTpCopyRxData.
+     *
+     * CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR); */
+
+    switch (PduR_CanTpStartOfReception(p_n_sdu->rx.cfg->nSduId,
+                                       &p_n_sdu->rx.pdu_r_pdu_info,
+                                       p_n_sdu->rx.buf.size,
+                                       &p_n_sdu->rx.buf.rmng))
+    {
+        case BUFREQ_E_OVFL:
+        {
+            /* SWS_CanTp_00318: After the reception of a First Frame, if the function
+             * PduR_CanTpStartOfReception() returns BUFREQ_E_OVFL to the CanTp module, the CanTp
+             * module shall send a Flow Control N-PDU with overflow status (FC(OVFLW)) and abort the
+             * N-SDU reception. */
+            result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
+            p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_OVFLW;
+
+            break;
+        }
+        case BUFREQ_OK:
+        {
+            /* SWS_CanTp_00339: After the reception of a First Frame or Single Frame, if the
+             * function PduR_CanTpStartOfReception() returns BUFREQ_OK with a smaller available
+             * buffer size than needed for the already received data, the CanTp module shall abort
+             * the reception of the N-SDU and call PduR_CanTpRxIndication() with the result
+             * E_NOT_OK. */
+            if (p_n_sdu->rx.buf.rmng < payload_size)
+            {
+                PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
+
+                result = CANTP_FRAME_STATE_ABORT;
+            }
+            else
+            {
+                result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
+
+                if (p_n_sdu->rx.buf.rmng < CanTp_GetRxBlockSize(p_n_sdu))
+                {
+                    /* SWS_CanTp_00082: After the reception of a First Frame, if the function
+                     * PduR_CanTpStartOfReception() returns BUFREQ_OK with a smaller available
+                     * buffer size than needed for the next block, the CanTp module shall start the
+                     * timer N_Br. */
+                    CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
+
+                    p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_WT;
+                }
+                else
+                {
+                    p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_CTS;
+                }
+
+                CanTp_CopyRxPayload(p_n_sdu);
+            }
+
+            break;
+        }
+        case BUFREQ_E_NOT_OK:
+        {
+            /* SWS_CanTp_00081: After the reception of a First Frame or Single Frame, if the
+             * function PduR_CanTpStartOfReception()returns BUFREQ_E_NOT_OK to the CanTp module,
+             * the CanTp module shall abort the reception of this N-SDU. No Flow Control will be
+             * sent and PduR_CanTpRxIndication() will not be called in this case. */
+            result = CANTP_FRAME_STATE_ABORT;
+
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+
+    return result;
+}
+
+static CanTp_FrameStateType
+CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize)
+{
+    PduLengthType header_size;
+    CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
+    CanTp_NSduType *p_n_sdu = pNSdu;
 
     CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_CR);
 
-    if (p_n_sdu->rx.state == CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION)
+    if (p_n_sdu->rx.shared.taskState == CANTP_PROCESSING)
     {
-        if (p_n_sdu->rx.shared.taskState == CANTP_PROCESSING)
+        /* If awaited, process the CF N_PDU in the on-going reception and perform the required
+         * checks (e.g. SN in right order), otherwise ignore it. */
+        if ((pPduInfo->SduDataPtr[nAeSize] & 0x0Fu) == ((p_n_sdu->rx.sn + 0x01u) & 0x0Fu))
         {
-            if ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u)
+            header_size = CANTP_CF_PCI_FIELD_SIZE + nAeSize;
+
+            p_n_sdu->rx.sn++;
+            p_n_sdu->rx.bs--;
+
+            p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[header_size];
+            p_n_sdu->rx.pdu_r_pdu_info.SduLength = pPduInfo->SduLength - header_size;
+            p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr = NULL_PTR;
+
+            CanTp_CopyRxPayload(p_n_sdu);
+
+            if (p_n_sdu->rx.buf.size != 0x00u)
             {
-                /* If awaited, process the CF N_PDU in the on-going reception and
-                 * perform the required checks (e.g. SN in right order), otherwise
-                 * ignore it. */
-                uint8 sn;
-
-                p_n_sdu->rx.sn ++;
-
-                if (CanTp_DecodeSNValue(&sn, &pPduInfo->SduDataPtr[0x00u]) == E_OK)
+                if (p_n_sdu->rx.bs == 0x00u)
                 {
-                    if (p_n_sdu->rx.sn == sn)
-                    {
-                        p_n_sdu->rx.bs --;
+                    p_n_sdu->rx.bs = p_n_sdu->rx.shared.m_param.bs;
 
-                        tmp_pdu.MetaDataPtr = pPduInfo->MetaDataPtr;
-                        tmp_pdu.SduDataPtr = &pPduInfo->SduDataPtr[header_size];
-                        tmp_pdu.SduLength = payload_size;
-                        PduR_CanTpCopyRxData(pNSdu->rx.cfg->nSduId,
-                                             &tmp_pdu,
-                                             &pNSdu->rx.buf.rmng);
-
-                        if (p_n_sdu->rx.buf.size != 0x00u)
-                        {
-                            if (p_n_sdu->rx.bs == 0x00u)
-                            {
-                                p_n_sdu->rx.bs = p_n_sdu->rx.shared.m_param.bs;
-
-                                /* SWS_CanTp_00166: At the reception of a FF or last CF of a block,
-                                 * the CanTp module shall start a time-out N_Br before calling
-                                 * PduR_CanTpStartOfReception or PduR_CanTpCopyRxData. */
-                                CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
-                                result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
-                            }
-                            else
-                            {
-                                CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_CR);
-                                result = CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION;
-                            }
-                        }
-                        else
-                        {
-                            result = CANTP_FRAME_STATE_OK;
-                        }
-                    }
+                    /* SWS_CanTp_00166: At the reception of a FF or last CF of a block, the CanTp
+                     * module shall start a time-out N_Br before calling PduR_CanTpStartOfReception
+                     * or PduR_CanTpCopyRxData. */
+                    CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
+                    result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
                 }
+                else
+                {
+                    CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_CR);
+                    result = CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION;
+                }
+            }
+            else
+            {
+                PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_OK);
+                result = CANTP_FRAME_STATE_OK;
             }
         }
     }
@@ -1799,8 +1727,8 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
 {
     CanTp_FrameStateType next_state;
     CanTp_NPciType pci;
+    PduLengthType n_ae_field_size;
     CanTp_NSduType *p_n_sdu;
-    uint8 instance_id = CANTP_I_FULL_DUPLEX_RX_FF;
 
     CANTP_DET_ASSERT_ERROR(pPduInfo == NULL_PTR,
                            0x00u,
@@ -1809,67 +1737,55 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
                            return)
 
     if ((CanTp_GetNSduFromPduId(rxPduId, &p_n_sdu) == E_OK) &&
-        (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[0x00u]) == E_OK))
+        ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u) &&
+        CanTp_GetNAeFieldSize(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK &&
+        (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
     {
-        next_state = CANTP_FRAME_STATE_INVALID;
-        if ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u)
+        /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
+         * frames) are used for a Rx N-SDU and CanTpRxPaddingActivation is equal to CANTP_ON, then
+         * CanTp receives by means of CanTp_RxIndication() call an SF Rx N-PDU belonging to that
+         * N-SDU, with a length smaller than eight bytes (i.e. PduInfoPtr.SduLength < 8), CanTp
+         * shall reject the reception. The runtime error code CANTP_E_PADDING shall be reported to
+         * the Default Error Tracer. */
+        if ((p_n_sdu->rx.cfg->padding == CANTP_ON) && (pPduInfo->SduLength < CANTP_CAN_FRAME_SIZE))
         {
-            switch (pci)
-            {
-                case CANTP_N_PCI_TYPE_SF:
-                case CANTP_N_PCI_TYPE_FF:
-                {
-                    if ((p_n_sdu->rx.shared.taskState == CANTP_PROCESSING) &&
-                        (p_n_sdu->dir == CANTP_DIRECTION_RX_TX))
-                    {
-                        /* SWS_CanTp_00057: Terminate the current reception, report an indication,
-                         * with parameter Result set to E_NOT_OK, to the upper layer, and process
-                         * the SF/FF N-PDU as the start of a new reception */
-                        PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
+            PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
-                        if (pci == CANTP_N_PCI_TYPE_SF)
-                        {
-                            instance_id = CANTP_I_FULL_DUPLEX_RX_SF;
-                        }
+            CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_PADDING)
 
-                        CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, instance_id, 0x00u, CANTP_E_UNEXP_PDU)
-                    }
-                }
-                case CANTP_N_PCI_TYPE_CF:
-                {
-                    next_state = ISO15765.ind[ISO15765_DIR_RX][pci](p_n_sdu, pPduInfo);
-                }
-                default:
-                {
-                    break;
-                }
-            }
-
-            if (next_state != CANTP_FRAME_STATE_INVALID)
-            {
-                p_n_sdu->rx.state = next_state;
-            }
+            next_state = CANTP_FRAME_STATE_OK;
         }
-        if ((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u)
+        else if (pci == CANTP_N_PCI_TYPE_SF)
+        {
+            next_state = CanTp_LDataIndRSF(p_n_sdu, pPduInfo, n_ae_field_size);
+        }
+        else if (pci == CANTP_N_PCI_TYPE_FF)
+        {
+            next_state = CanTp_LDataIndRFF(p_n_sdu, pPduInfo, n_ae_field_size);
+        }
+        else if ((pci == CANTP_N_PCI_TYPE_CF) &&
+                 (p_n_sdu->rx.shared.state == CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION))
+        {
+            next_state = CanTp_LDataIndRCF(p_n_sdu, pPduInfo, n_ae_field_size);
+        }
+        else
         {
             next_state = CANTP_FRAME_STATE_INVALID;
-            switch (p_n_sdu->tx.state)
-            {
-                case CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION:
-                {
-                    next_state = ISO15765.ind[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_FC](p_n_sdu,
-                                                                                    pPduInfo);
-                }
-                default:
-                {
-                    break;
-                }
-            }
+        }
 
-            if (next_state != CANTP_FRAME_STATE_INVALID)
-            {
-                p_n_sdu->tx.state = next_state;
-            }
+        if (next_state != CANTP_FRAME_STATE_INVALID)
+        {
+            p_n_sdu->rx.shared.state = next_state;
+        }
+    }
+
+    if (((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u) &&
+        CanTp_GetNAeFieldSize(p_n_sdu->tx.cfg->af, &n_ae_field_size) == E_OK &&
+        (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
+    {
+        if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION)
+        {
+            p_n_sdu->tx.shared.state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo);
         }
     }
 }
@@ -1885,60 +1801,43 @@ void CanTp_TxConfirmation(PduIdType txPduId, Std_ReturnType result)
         {
             if ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u)
             {
-                next_state = CANTP_FRAME_STATE_INVALID;
-
-                switch (p_n_sdu->rx.state)
+                if (p_n_sdu->rx.shared.state == CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION)
                 {
-                    case CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION:
-                    {
-                        next_state = ISO15765.con[ISO15765_DIR_RX][CANTP_N_PCI_TYPE_FC](p_n_sdu);
-
-                        break;
-                    }
-                    default:
-                    {
-                        break;
-                    }
+                    next_state = CanTp_LDataConRFC(p_n_sdu);
+                }
+                else
+                {
+                    next_state = CANTP_FRAME_STATE_INVALID;
                 }
 
                 if (next_state != CANTP_FRAME_STATE_INVALID)
                 {
-                    p_n_sdu->rx.state = next_state;
+                    p_n_sdu->rx.shared.state = next_state;
                 }
             }
+
             if ((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u)
             {
-                next_state = CANTP_FRAME_STATE_INVALID;
-
-                switch (p_n_sdu->tx.state)
+                if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION)
                 {
-                    case CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION:
-                    {
-                        next_state = ISO15765.con[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_SF](p_n_sdu);
-
-                        break;
-                    }
-                    case CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION:
-                    {
-                        next_state = ISO15765.con[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_FF](p_n_sdu);
-
-                        break;
-                    }
-                    case CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION:
-                    {
-                        next_state = ISO15765.con[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_CF](p_n_sdu);
-
-                        break;
-                    }
-                    default:
-                    {
-                        break;
-                    }
+                    next_state = CanTp_LDataConTSF(p_n_sdu);
+                }
+                else if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION)
+                {
+                    next_state = CanTp_LDataConTFF(p_n_sdu);
+                }
+                else if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION)
+                {
+                    next_state = CanTp_LDataConTCF(p_n_sdu);
+                }
+                else
+                {
+                    next_state = CANTP_FRAME_STATE_INVALID;
                 }
 
                 if (next_state != CANTP_FRAME_STATE_INVALID)
                 {
-                    p_n_sdu->tx.state = next_state;
+                    p_n_sdu->tx.shared.state = next_state;
                 }
             }
         }
@@ -2002,62 +1901,36 @@ static Std_ReturnType CanTp_GetNSduFromPduId(PduIdType pduId, CanTp_NSduType **p
     return tmp_return;
 }
 
-static PduLengthType CanTp_GetFrameHeaderSize(const CanTp_AddressingFormatType af,
-                                              const uint8 frameType)
+static Std_ReturnType CanTp_GetNAeFieldSize(const CanTp_AddressingFormatType af,
+                                           PduLengthType *pPduLength)
 {
-    PduLengthType result = 0x00u;
+    Std_ReturnType result = E_NOT_OK;
 
-    switch (af)
+    if (pPduLength != NULL_PTR)
     {
-        case CANTP_NORMALFIXED:
-        case CANTP_STANDARD:
+        switch (af)
         {
-            result = 0x00u;
+            case CANTP_EXTENDED:
+            case CANTP_MIXED:
+            case CANTP_MIXED29BIT:
+            {
+                *pPduLength = 0x01u;
+                result = E_OK;
 
-            break;
-        }
-        case CANTP_EXTENDED:
-        case CANTP_MIXED:
-        case CANTP_MIXED29BIT:
-        {
-            result = 0x01u;
+                break;
+            }
+            case CANTP_STANDARD:
+            case CANTP_NORMALFIXED:
+            {
+                *pPduLength = 0x00u;
+                result = E_OK;
 
-            break;
-        }
-        default:
-        {
-            break;
-        }
-    }
-
-    switch (frameType)
-    {
-        case CANTP_N_PCI_TYPE_SF:
-        case CANTP_N_PCI_TYPE_CF:
-        {
-            /* single frame: PCI type and SF_DL in byte[0].
-             * consecutive frame: PCI type and SN in byte[0]. */
-            result += 0x01u;
-
-            break;
-        }
-        case CANTP_N_PCI_TYPE_FF:
-        {
-            /* PCI type and MSB of FF_DL in byte[0], and LSB of FF_DL in byte[1]. */
-            result += 0x02u;
-
-            break;
-        }
-        case CANTP_N_PCI_TYPE_FC:
-        {
-            /* PCI type and FS in byte[0], BS in byte[1] and STmin in byte[2]. */
-            result += 0x03u;
-
-            break;
-        }
-        default:
-        {
-            break;
+                break;
+            }
+            default:
+            {
+                break;
+            }
         }
     }
 
@@ -2086,61 +1959,32 @@ static Std_ReturnType CanTp_DecodePCIValue(CanTp_NPciType *pPci, const uint8 *pD
     return tmp_return;
 }
 
-static Std_ReturnType CanTp_DecodeSNValue(uint8 *pSn, const uint8 *pData)
+static uint16 CanTp_DecodeDLValue(const uint8 frameType,
+                                  const CanTp_RxPaddingActivationType padding,
+                                  const uint8 *pData)
 {
-    Std_ReturnType tmp_return = E_NOT_OK;
-    uint8 sn;
+    uint16 result;
 
-    if ((pSn != NULL_PTR) && (pData != NULL_PTR))
+    result = pData[0x00u] & 0x0Fu;
+
+    if (frameType == CANTP_N_PCI_TYPE_FF)
     {
-        sn = pData[0x00u] & 0x0Fu;
-
-        *pSn = sn;
-        tmp_return = E_OK;
+        result = (uint16)(result << 0x08u) | pData[0x01u];
     }
 
-    return tmp_return;
-}
-
-static Std_ReturnType CanTp_DecodeDLValue(uint16 *pDl, const uint8 *pData)
-{
-    Std_ReturnType tmp_return = E_NOT_OK;
-    CanTp_NPciType pci;
-    uint16 dl;
-
-    if ((pDl != NULL_PTR) && (pData != NULL_PTR))
+    /* SWS_CanTp_00350: The received data link layer data length (RX_DL) shall be
+     * derived from the first received payload length of the CAN frame/PDU (CAN_DL) as
+     * follows:
+     * - For CAN_DL values less than or equal to eight bytes the RX_DL value shall be
+     *   eight.
+     * - For CAN_DL values greater than eight bytes the RX_DL value equals the CAN_DL
+     *   value.*/
+    if ((result < CANTP_CAN_FRAME_SIZE) && (padding == CANTP_ON))
     {
-        if (CanTp_DecodePCIValue(&pci, pData) == E_OK)
-        {
-            if ((pci == CANTP_N_PCI_TYPE_SF) ||
-                (pci == CANTP_N_PCI_TYPE_FF))
-            {
-                dl = pData[0x00u] & 0x0Fu;
-
-                if (pci == CANTP_N_PCI_TYPE_FF)
-                {
-                    dl = (uint16)(dl << 0x08u) | pData[0x01u];
-                }
-
-                /* SWS_CanTp_00350: The received data link layer data length (RX_DL) shall be
-                 * derived from the first received payload length of the CAN frame/PDU (CAN_DL) as
-                 * follows:
-                 * - For CAN_DL values less than or equal to eight bytes the RX_DL value shall be
-                 *   eight.
-                 * - For CAN_DL values greater than eight bytes the RX_DL value equals the CAN_DL
-                 *   value.*/
-                if (dl < 0x08u)
-                {
-                    dl = 0x08u;
-                }
-
-                *pDl = dl;
-                tmp_return = E_OK;
-            }
-        }
+        result = CANTP_CAN_FRAME_SIZE;
     }
 
-    return tmp_return;
+    return result;
 }
 
 static uint32_least CanTp_DecodeSTMinValue(const uint8 data)
@@ -2202,8 +2046,9 @@ static uint8 CanTp_EncodeSTMinValue(const uint16 value)
 static PduLengthType CanTp_GetRxBlockSize(CanTp_NSduType *pNSdu)
 {
     PduLengthType result;
-    const PduLengthType header_size = CanTp_GetFrameHeaderSize(pNSdu->rx.cfg->af,
-                                                               CANTP_N_PCI_TYPE_CF);
+    PduLengthType n_ae_field_size;
+    (void)CanTp_GetNAeFieldSize(pNSdu->rx.cfg->af, &n_ae_field_size);
+    const PduLengthType header_size = CANTP_CF_PCI_FIELD_SIZE + n_ae_field_size;
     const PduLengthType payload_size = CANTP_CAN_FRAME_SIZE - header_size;
     const PduLengthType full_bs = pNSdu->rx.shared.m_param.bs * payload_size;
     const PduLengthType last_bs = pNSdu->rx.buf.size;
@@ -2291,9 +2136,7 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
          * each processing of the MainFunction. */
         p_n_sdu->rx.pdu_r_pdu_info.SduLength = 0x00u;
         p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = NULL_PTR;
-        PduR_CanTpCopyRxData(p_n_sdu->rx.cfg->nSduId,
-                             &p_n_sdu->rx.pdu_r_pdu_info,
-                             &p_n_sdu->rx.buf.rmng);
+        CanTp_CopyRxPayload(p_n_sdu);
     }
 
     if (CanTp_NetworkLayerTimeoutExpired(p_n_sdu, CANTP_I_N_BR) == TRUE)
@@ -2311,13 +2154,13 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
     }
     else
     {
-        switch (p_n_sdu->rx.state)
+        switch (p_n_sdu->rx.shared.state)
         {
             case CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST:
             {
-                p_n_sdu->rx.state = ISO15765.req[ISO15765_DIR_RX][CANTP_N_PCI_TYPE_FC](p_n_sdu);
+                p_n_sdu->rx.shared.state = CanTp_LDataReqRFC(p_n_sdu);
 
-                switch (p_n_sdu->rx.state)
+                switch (p_n_sdu->rx.shared.state)
                 {
                     case CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION:
                     {
@@ -2391,13 +2234,13 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
     }
     else
     {
-        switch (p_n_sdu->tx.state)
+        switch (p_n_sdu->tx.shared.state)
         {
             case CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST:
             {
-                p_n_sdu->tx.state = ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_SF](p_n_sdu);
+                p_n_sdu->tx.shared.state = CanTp_LDataReqTSF(p_n_sdu);
 
-                if (p_n_sdu->tx.state == CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION)
+                if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION)
                 {
                     CanTp_TransmitTxCANData(p_n_sdu);
                 }
@@ -2406,9 +2249,9 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
             }
             case CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST:
             {
-                p_n_sdu->tx.state = ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_FF](p_n_sdu);
+                p_n_sdu->tx.shared.state = CanTp_LDataReqTFF(p_n_sdu);
 
-                if (p_n_sdu->tx.state == CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION)
+                if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION)
                 {
                     CanTp_TransmitTxCANData(p_n_sdu);
                 }
@@ -2420,9 +2263,9 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
                 if ((CanTp_FlowControlExpired(p_n_sdu) == TRUE) ||
                     (CanTp_FlowControlActive(p_n_sdu) == FALSE))
                 {
-                    p_n_sdu->tx.state = ISO15765.req[ISO15765_DIR_TX][CANTP_N_PCI_TYPE_CF](p_n_sdu);
+                    p_n_sdu->tx.shared.state = CanTp_LDataReqTCF(p_n_sdu);
 
-                    if (p_n_sdu->tx.state == CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION)
+                    if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION)
                     {
                         CanTp_TransmitTxCANData(p_n_sdu);
                     }
@@ -2445,48 +2288,6 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
             case CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION:
             case CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION:
             // case CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION:
-            default:
-            {
-                break;
-            }
-        }
-    }
-}
-
-static void CanTp_FillTxMetaData(CanTp_NSduType *pNSdu, const CanTp_NPciType pci)
-{
-    /* SWS_CanTp_00335 When calling CanIf_Transmit() for an SF, FF, or CF of a generic connection
-     * (N-PDU with MetaData), the CanTp module shall provide the stored addressing information via
-     * MetaData of the N-PDU. The addressing information in the MetaData depends on the addressing
-     * format:
-     * - Normal, Extended, Mixed 11 bit: none
-     * - Normal fixed, Mixed 29 bit: N_SA, N_TA. */
-    if ((pci == CANTP_N_PCI_TYPE_SF) ||
-        (pci == CANTP_N_PCI_TYPE_FF) ||
-        (pci == CANTP_N_PCI_TYPE_CF))
-    {
-        switch (pNSdu->tx.cfg->af)
-        {
-            case CANTP_STANDARD:
-            case CANTP_EXTENDED:
-            case CANTP_MIXED:
-            {
-                pNSdu->tx.can_if_pdu_info.MetaDataPtr = NULL_PTR;
-
-                break;
-            }
-            case CANTP_NORMALFIXED:
-            case CANTP_MIXED29BIT:
-            {
-                pNSdu->tx.can_if_pdu_info.MetaDataPtr = &pNSdu->tx.meta_data[0x00u];
-
-                pNSdu->tx.meta_data[0x00u] = pNSdu->tx.cfg->pNSa->nSa;
-                pNSdu->tx.meta_data[0x01u] = pNSdu->tx.cfg->pNTa->nTa;
-                pNSdu->tx.meta_data[0x02u] = 0x00u;
-                pNSdu->tx.meta_data[0x03u] = 0x00u;
-
-                break;
-            }
             default:
             {
                 break;
@@ -2537,7 +2338,23 @@ static void CanTp_FillTxMetaData(CanTp_NSduType *pNSdu, const CanTp_NPciType pci
 //    *pOfs = ofs;
 //}
 
-static BufReq_ReturnType CanTp_FillTxPayload(CanTp_NSduType *pNSdu, PduLengthType *pOfs)
+static BufReq_ReturnType CanTp_CopyRxPayload(CanTp_NSduType *pNSdu)
+{
+    BufReq_ReturnType result;
+
+    result = PduR_CanTpCopyRxData(pNSdu->rx.cfg->nSduId,
+                                  &pNSdu->rx.pdu_r_pdu_info,
+                                  &pNSdu->rx.buf.rmng);
+
+    if (result == BUFREQ_OK)
+    {
+        pNSdu->rx.buf.size -= pNSdu->rx.pdu_r_pdu_info.SduLength;
+    }
+
+    return result;
+}
+
+static BufReq_ReturnType CanTp_CopyTxPayload(CanTp_NSduType *pNSdu, PduLengthType *pOfs)
 {
     BufReq_ReturnType result;
     PduInfoType tmp_pdu;

@@ -3,7 +3,7 @@ language: generic
 services: docker
 
 before_install:
-  - docker build -t sauci/cantp .
+  - docker build --build-arg branch=$TRAVIS_BRANCH -t sauci/cantp .
 
 script:
-  - docker run sauci/cantp /bin/sh -c "cd build;make sdist_install;ctest -V"
+  - docker run sauci/cantp /bin/sh -c "cd docker_build;make all test CTEST_OUTPUT_ON_FAILURE=TRUE"

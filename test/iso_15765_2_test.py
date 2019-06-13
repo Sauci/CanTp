@@ -2,32 +2,6 @@ from math import ceil
 from .parameter import *
 
 
-class TestSWS00350:
-    """
-    The received data link layer data length (RX_DL) shall be derived from the first received payload length of the CAN
-    frame/PDU (CAN_DL) as follows:
-    - For CAN_DL values less than or equal to eight bytes the RX_DL value shall be eight.
-    - For CAN_DL values greater than eight bytes the RX_DL value equals the CAN_DL value.
-    """
-
-    @pytest.mark.parametrize('data_size', single_frame_sizes)
-    def test_single_frame(self, handle, data_size):
-        configurator = Helper.create_single_rx_sdu_config(handle)
-        handle.lib.CanTp_Init(configurator.config)
-        can_frame = Helper.create_rx_sf_can_frame(payload=[Helper.dummy_byte] * data_size)
-        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, can_frame))
-        handle.pdu_r_can_tp_start_of_reception.assert_called_once_with(ANY, ANY, 8, ANY)
-
-    @pytest.mark.parametrize('data_size', multi_frames_sizes)
-    def test_first_frame(self, handle, data_size):
-        configurator = Helper.create_single_rx_sdu_config(handle, n_br=0)
-        handle.lib.CanTp_Init(configurator.config)
-        can_frame = Helper.create_rx_ff_can_frame(payload=[Helper.dummy_byte] * data_size)
-        handle.lib.CanTp_RxIndication(0, Helper.create_rx_pdu_info(handle, can_frame))
-        handle.lib.CanTp_MainFunction()
-        handle.pdu_r_can_tp_start_of_reception.assert_called_once_with(ANY, ANY, data_size, ANY)
-
-
 @pytest.mark.skip('non-deterministic fails, should be investigated...')
 @pytest.mark.parametrize('data_size', multi_frames_sizes)
 @pytest.mark.parametrize('bs', block_sizes)
