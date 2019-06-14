@@ -298,8 +298,16 @@ static Std_ReturnType CanTp_GetNSduFromPduId(PduIdType pduId, CanTp_NSduType **p
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static Std_ReturnType CanTp_GetNAeFieldSize(const CanTp_AddressingFormatType af,
-                                            PduLengthType *pPduLength);
+static PduLengthType CanTp_GetRxBlockSize(CanTp_NSduType *pNSdu);
+
+#define CanTp_STOP_SEC_CODE_FAST
+#include "CanTp_MemMap.h"
+
+#define CanTp_START_SEC_CODE_FAST
+#include "CanTp_MemMap.h"
+
+static Std_ReturnType CanTp_DecodeNAeValue(const CanTp_AddressingFormatType af,
+                                           PduLengthType *pPduLength);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -368,14 +376,6 @@ static uint16 CanTp_DecodeDLValue(const uint8 frameType,
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static PduLengthType CanTp_GetRxBlockSize(CanTp_NSduType *pNSdu);
-
-#define CanTp_STOP_SEC_CODE_FAST
-#include "CanTp_MemMap.h"
-
-#define CanTp_START_SEC_CODE_FAST
-#include "CanTp_MemMap.h"
-
 static void CanTp_AbortTxSession(CanTp_NSduType *pNSdu, uint8 instanceId, boolean confirm);
 
 #define CanTp_STOP_SEC_CODE_FAST
@@ -416,7 +416,7 @@ static BufReq_ReturnType CanTp_CopyTxPayload(CanTp_NSduType *pNSdu, PduLengthTyp
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static void CanTp_FillPadding(uint8 *pBuffer, PduLengthType *pOfs, const uint8 value);
+static void CanTp_SetPadding(uint8 *pBuffer, PduLengthType *pOfs, const uint8 value);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -880,7 +880,7 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
     if ((CanTp_GetNSduFromPduId(rxPduId, &p_n_sdu) == E_OK) &&
         ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u))
     {
-        (void)CanTp_GetNAeFieldSize(p_n_sdu->rx.cfg->af, &n_ae_field_size);
+        (void)CanTp_DecodeNAeValue(p_n_sdu->rx.cfg->af, &n_ae_field_size);
         CANTP_CRITICAL_SECTION(task_state = p_n_sdu->rx.shared.taskState;)
 
         if (task_state == CANTP_PROCESSING)
@@ -1220,7 +1220,7 @@ static CanTp_FrameStateType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
          * ECUC_CanTp_00298). */
         if (p_n_sdu->tx.cfg->padding == CANTP_ON)
         {
-            CanTp_FillPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
+            CanTp_SetPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
         }
 
         p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
@@ -1256,7 +1256,7 @@ static CanTp_FrameStateType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
          * ECUC_CanTp_00298). */
         if (p_n_sdu->tx.cfg->padding == CANTP_ON)
         {
-            CanTp_FillPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
+            CanTp_SetPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
         }
 
         p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
@@ -1292,7 +1292,7 @@ static CanTp_FrameStateType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
          * ECUC_CanTp_00298). */
         if (p_n_sdu->tx.cfg->padding == CANTP_ON)
         {
-            CanTp_FillPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
+            CanTp_SetPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
         }
 
         p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
@@ -1373,7 +1373,7 @@ static CanTp_FrameStateType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
      * ECUC_CanTp_00298). */
     if (p_n_sdu->rx.cfg->padding == CANTP_ON)
     {
-        CanTp_FillPadding(&p_n_sdu->rx.buf.can[ofs], &ofs, CanTp_ConfigPtr->paddingByte);
+        CanTp_SetPadding(&p_n_sdu->rx.buf.can[ofs], &ofs, CanTp_ConfigPtr->paddingByte);
     }
 
     p_pdu_info->SduDataPtr = &p_n_sdu->rx.buf.can[0x00u];
@@ -1767,7 +1767,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
     if (CanTp_GetNSduFromPduId(rxPduId, &p_n_sdu) == E_OK)
     {
         if (((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u) &&
-            CanTp_GetNAeFieldSize(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK &&
+            CanTp_DecodeNAeValue(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK &&
             (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
         {
             /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
@@ -1819,7 +1819,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
         }
 
         if (((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u) &&
-            CanTp_GetNAeFieldSize(p_n_sdu->tx.cfg->af, &n_ae_field_size) == E_OK &&
+            CanTp_DecodeNAeValue(p_n_sdu->tx.cfg->af, &n_ae_field_size) == E_OK &&
             (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
         {
             if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION)
@@ -1945,7 +1945,29 @@ static Std_ReturnType CanTp_GetNSduFromPduId(PduIdType pduId, CanTp_NSduType **p
     return tmp_return;
 }
 
-static Std_ReturnType CanTp_GetNAeFieldSize(const CanTp_AddressingFormatType af,
+static PduLengthType CanTp_GetRxBlockSize(CanTp_NSduType *pNSdu)
+{
+    PduLengthType result;
+    PduLengthType n_ae_field_size;
+    (void)CanTp_DecodeNAeValue(pNSdu->rx.cfg->af, &n_ae_field_size);
+    const PduLengthType header_size = CANTP_CF_PCI_FIELD_SIZE + n_ae_field_size;
+    const PduLengthType payload_size = CANTP_CAN_FRAME_SIZE - header_size;
+    const PduLengthType full_bs = pNSdu->rx.shared.m_param.bs * payload_size;
+    const PduLengthType last_bs = pNSdu->rx.buf.size;
+
+    if ((last_bs < full_bs) || (full_bs == 0x00u))
+    {
+        result = last_bs;
+    }
+    else
+    {
+        result = full_bs;
+    }
+
+    return result;
+}
+
+static Std_ReturnType CanTp_DecodeNAeValue(const CanTp_AddressingFormatType af,
                                             PduLengthType *pPduLength)
 {
     Std_ReturnType result = E_NOT_OK;
@@ -1979,6 +2001,12 @@ static Std_ReturnType CanTp_GetNAeFieldSize(const CanTp_AddressingFormatType af,
     }
 
     return result;
+}
+
+static Std_ReturnType CanTp_EncodeNAeValue(const CanTp_AddressingFormatType af,
+                                           PduLengthType *pPduLength)
+{
+    
 }
 
 static Std_ReturnType CanTp_DecodePCIValue(CanTp_NPciType *pPci, const uint8 *pData)
@@ -2082,28 +2110,6 @@ static uint8 CanTp_EncodeSTMinValue(const uint16 value)
     else
     {
         result = 0x7Fu;
-    }
-
-    return result;
-}
-
-static PduLengthType CanTp_GetRxBlockSize(CanTp_NSduType *pNSdu)
-{
-    PduLengthType result;
-    PduLengthType n_ae_field_size;
-    (void)CanTp_GetNAeFieldSize(pNSdu->rx.cfg->af, &n_ae_field_size);
-    const PduLengthType header_size = CANTP_CF_PCI_FIELD_SIZE + n_ae_field_size;
-    const PduLengthType payload_size = CANTP_CAN_FRAME_SIZE - header_size;
-    const PduLengthType full_bs = pNSdu->rx.shared.m_param.bs * payload_size;
-    const PduLengthType last_bs = pNSdu->rx.buf.size;
-
-    if ((last_bs < full_bs) || (full_bs == 0x00u))
-    {
-        result = last_bs;
-    }
-    else
-    {
-        result = full_bs;
     }
 
     return result;
@@ -2456,7 +2462,7 @@ static BufReq_ReturnType CanTp_CopyTxPayload(CanTp_NSduType *pNSdu, PduLengthTyp
     return result;
 }
 
-static void CanTp_FillPadding(uint8 *pBuffer, PduLengthType *pOfs, const uint8 value)
+static void CanTp_SetPadding(uint8 *pBuffer, PduLengthType *pOfs, const uint8 value)
 {
     uint8 *p_buffer = pBuffer;
     PduLengthType ofs = *pOfs;
