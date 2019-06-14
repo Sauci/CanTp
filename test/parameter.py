@@ -2,6 +2,8 @@ import hashlib
 import json
 import pytest
 
+dummy_byte = 0xFF
+
 single_frame_sizes = [pytest.param(fs, id='SF_DL = {}'.format(fs)) for fs in (1, 2, 6)]
 multi_frames_sizes = [pytest.param(fs, id='FF_DL = {}'.format(fs)) for fs in (8, 4095)]
 
@@ -29,10 +31,7 @@ n_cr_timeouts = [pytest.param(t, id='N_Cr = {}s'.format(t)) for t in n_xx_timeou
 
 addresses = (0, 10, 100, 255)
 
-n_sa = [pytest.param(a, id='N_Sa = 0x{:02X}'.format(a)) for a in addresses]
-n_ta = [pytest.param(a, id='N_Ta = 0x{:02X}'.format(a)) for a in addresses]
-
-block_sizes = [pytest.param(bs, id='BS = {}'.format(bs)) for bs in (0, 1, 10, 15)]
+block_sizes = [pytest.param(bs, id='BS = {}'.format(bs)) for bs in (0, 1, 15, 20)]
 wait_for_tx_max = [pytest.param(i, id='WFT max = {}'.format(i)) for i in (1, 2, 3, 4, 5, 6, 7)]
 
 
@@ -55,7 +54,10 @@ class DefaultReceiver(Config):
                  main_period=1.0 / 1000000.0,
                  com_type='CANTP_PHYSICAL',
                  ch_mode='CANTP_MODE_HALF_DUPLEX',
-                 padding=None):
+                 padding=None,
+                 n_sa=0x5A,
+                 n_ta=0x7A,
+                 n_ae=0xAE):
         super(DefaultReceiver, self).__init__({
             "configurations": [
                 {
@@ -66,6 +68,9 @@ class DefaultReceiver(Config):
                             "channel mode": ch_mode,
                             "receivers": [
                                 {
+                                    "source address": n_sa,
+                                    "target address": n_ta,
+                                    "address extension": n_ae,
                                     "enable padding": padding is not None,
                                     "communication type": com_type,
                                     "network service data unit identifier": 0,
@@ -103,7 +108,10 @@ class DefaultSender(Config):
                  main_period=1.0 / 1000000.0,
                  com_type='CANTP_PHYSICAL',
                  ch_mode='CANTP_MODE_HALF_DUPLEX',
-                 padding=None):
+                 padding=None,
+                 n_sa=0x5A,
+                 n_ta=0x7A,
+                 n_ae=0xAE):
         super(DefaultSender, self).__init__({
             "configurations": [
                 {
@@ -114,6 +122,9 @@ class DefaultSender(Config):
                             "channel mode": ch_mode,
                             "transmitters": [
                                 {
+                                    "source address": n_sa,
+                                    "target address": n_ta,
+                                    "address extension": n_ae,
                                     "enable padding": padding is not None,
                                     "communication type": com_type,
                                     "network service data unit identifier": 0,
@@ -153,7 +164,10 @@ class DefaultFullDuplex(Config):
                  wft_max=1,
                  main_period=1.0 / 1000000.0,
                  com_type='CANTP_PHYSICAL',
-                 padding=None):
+                 padding=None,
+                 n_sa=0x5A,
+                 n_ta=0x7A,
+                 n_ae=0xAE):
         receiver = DefaultReceiver(af=af,
                                    n_ar=n_ar,
                                    n_br=n_br,
@@ -163,7 +177,11 @@ class DefaultFullDuplex(Config):
                                    wft_max=wft_max,
                                    main_period=main_period,
                                    com_type=com_type,
-                                   ch_mode='CANTP_MODE_FULL_DUPLEX').receivers[0]
+                                   ch_mode='CANTP_MODE_FULL_DUPLEX',
+                                   padding=padding,
+                                   n_sa=n_sa,
+                                   n_ta=n_ta,
+                                   n_ae=n_ae).receivers[0]
         sender = DefaultSender(af=af,
                                n_as=n_as,
                                n_bs=n_bs,
@@ -171,7 +189,10 @@ class DefaultFullDuplex(Config):
                                main_period=main_period,
                                com_type=com_type,
                                ch_mode='CANTP_MODE_FULL_DUPLEX',
-                               padding=padding).senders[0]
+                               padding=padding,
+                               n_sa=n_sa,
+                               n_ta=n_ta,
+                               n_ae=n_ae).senders[0]
         super(DefaultFullDuplex, self).__init__({"configurations": [
             {
                 "padding byte": 255 if padding is None else padding,

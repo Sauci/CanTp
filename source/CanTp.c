@@ -306,7 +306,7 @@ static PduLengthType CanTp_GetRxBlockSize(CanTp_NSduType *pNSdu);
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static Std_ReturnType CanTp_DecodeNAeValue(const CanTp_AddressingFormatType af,
+static Std_ReturnType CanTp_DecodeNAIValue(const CanTp_AddressingFormatType af,
                                            PduLengthType *pPduLength);
 
 #define CanTp_STOP_SEC_CODE_FAST
@@ -315,8 +315,11 @@ static Std_ReturnType CanTp_DecodeNAeValue(const CanTp_AddressingFormatType af,
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static Std_ReturnType CanTp_EncodeNAeValue(const CanTp_AddressingFormatType af,
-                                           PduLengthType *pPduLength);
+static Std_ReturnType CanTp_EncodeNAIValue(const CanTp_AddressingFormatType af,
+                                           const CanTp_NAeType *pNAe,
+                                           const CanTp_NTaType *pNTa,
+                                           uint8 *pBuffer,
+                                           PduLengthType *pOfs);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -366,9 +369,9 @@ static Std_ReturnType CanTp_DecodePCIValue(CanTp_NPciType *pPci, const uint8 *pD
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static uint16 CanTp_DecodeDLValue(const uint8 frameType,
-                                  const CanTp_RxPaddingActivationType padding,
-                                  const uint8 *pData);
+static PduLengthType CanTp_DecodeDLValue(const CanTp_NPciType frameType,
+                                         const CanTp_RxPaddingActivationType padding,
+                                         const uint8 *pData);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -880,7 +883,7 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
     if ((CanTp_GetNSduFromPduId(rxPduId, &p_n_sdu) == E_OK) &&
         ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u))
     {
-        (void)CanTp_DecodeNAeValue(p_n_sdu->rx.cfg->af, &n_ae_field_size);
+        (void)CanTp_DecodeNAIValue(p_n_sdu->rx.cfg->af, &n_ae_field_size);
         CANTP_CRITICAL_SECTION(task_state = p_n_sdu->rx.shared.taskState;)
 
         if (task_state == CANTP_PROCESSING)
@@ -1204,27 +1207,34 @@ static CanTp_FrameStateType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
     PduLengthType ofs = 0x00u;
 
-    p_n_sdu->tx.buf.can[ofs] = ((uint8)CANTP_N_PCI_TYPE_SF << 0x04u);
-    p_n_sdu->tx.buf.can[ofs] |= pNSdu->tx.buf.size;
-    ofs = ofs + 0x01u;
+    p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
 
-    if (CanTp_CopyTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
+    if (CanTp_EncodeNAIValue(p_n_sdu->tx.cfg->af,
+                             p_n_sdu->tx.cfg->pNAe,
+                             p_n_sdu->tx.cfg->pNTa,
+                             &p_pdu_info->SduDataPtr[ofs],
+                             &ofs) == E_OK)
     {
-        tmp_return = CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION;
+        p_pdu_info->SduDataPtr[ofs] = (uint8)((uint8)CANTP_N_PCI_TYPE_SF << 0x04u) | (uint8)pNSdu->tx.buf.size;
+        ofs = ofs + 0x01u;
 
-        /* SWS_CanTp_00348: if frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
-         * frames) are used for a Tx N-SDU and if CanTpTxPaddingActivation is equal to CANTP_ON,
-         * CanTp shall transmit by means of CanIf_Transmit() call, SF Tx N-PDU or last CF Tx N-PDU
-         * that belongs to that Tx N-SDU with the length of eight bytes(i.e. PduInfoPtr.SduLength =
-         * 8). Unused bytes in N-PDU shall be updated with CANTP_PADDING_BYTE (see
-         * ECUC_CanTp_00298). */
-        if (p_n_sdu->tx.cfg->padding == CANTP_ON)
+        if (CanTp_CopyTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
         {
-            CanTp_SetPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
-        }
+            tmp_return = CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION;
 
-        p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
-        p_pdu_info->SduLength = ofs;
+            /* SWS_CanTp_00348: if frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
+             * frames) are used for a Tx N-SDU and if CanTpTxPaddingActivation is equal to CANTP_ON,
+             * CanTp shall transmit by means of CanIf_Transmit() call, SF Tx N-PDU or last CF Tx
+             * N-PDU that belongs to that Tx N-SDU with the length of eight bytes(i.e.
+             * PduInfoPtr.SduLength = 8). Unused bytes in N-PDU shall be updated with
+             * CANTP_PADDING_BYTE (see ECUC_CanTp_00298). */
+            if (p_n_sdu->tx.cfg->padding == CANTP_ON)
+            {
+                CanTp_SetPadding(&p_pdu_info->SduDataPtr[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
+            }
+
+            p_pdu_info->SduLength = ofs;
+        }
     }
 
     return tmp_return;
@@ -1237,30 +1247,38 @@ static CanTp_FrameStateType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
     PduLengthType ofs = 0x00u;
 
-    p_n_sdu->tx.sn = 0x00u;
+    p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
 
-    p_n_sdu->tx.buf.can[ofs] = ((uint8)CANTP_N_PCI_TYPE_FF << 0x04u);
-    p_n_sdu->tx.buf.can[ofs] |= ((pNSdu->tx.buf.size & 0x0F00u) >> 0x08u);
-    p_n_sdu->tx.buf.can[ofs + 0x01u] = pNSdu->tx.buf.size & 0xFFu;
-    ofs = ofs + 0x02u;
-
-    if (CanTp_CopyTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
+    if (CanTp_EncodeNAIValue(p_n_sdu->tx.cfg->af,
+                             p_n_sdu->tx.cfg->pNAe,
+                             p_n_sdu->tx.cfg->pNTa,
+                             &p_pdu_info->SduDataPtr[ofs],
+                             &ofs) == E_OK)
     {
-        tmp_return = CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION;
+        p_n_sdu->tx.sn = 0x00u;
 
-        /* SWS_CanTp_00348: if frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
-         * frames) are used for a Tx N-SDU and if CanTpTxPaddingActivation is equal to CANTP_ON,
-         * CanTp shall transmit by means of CanIf_Transmit() call, SF Tx N-PDU or last CF Tx N-PDU
-         * that belongs to that Tx N-SDU with the length of eight bytes(i.e. PduInfoPtr.SduLength =
-         * 8). Unused bytes in N-PDU shall be updated with CANTP_PADDING_BYTE (see
-         * ECUC_CanTp_00298). */
-        if (p_n_sdu->tx.cfg->padding == CANTP_ON)
+        p_pdu_info->SduDataPtr[ofs] = (uint8)((uint8)CANTP_N_PCI_TYPE_FF << 0x04u) | ((pNSdu->tx.buf.size & 0x0F00u) >> 0x08u);
+        ofs ++;
+        p_pdu_info->SduDataPtr[ofs] = pNSdu->tx.buf.size & 0xFFu;
+        ofs ++;
+
+        if (CanTp_CopyTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
         {
-            CanTp_SetPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
-        }
+            tmp_return = CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION;
 
-        p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
-        p_pdu_info->SduLength = ofs;
+            /* SWS_CanTp_00348: if frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
+             * frames) are used for a Tx N-SDU and if CanTpTxPaddingActivation is equal to CANTP_ON,
+             * CanTp shall transmit by means of CanIf_Transmit() call, SF Tx N-PDU or last CF Tx
+             * N-PDU that belongs to that Tx N-SDU with the length of eight bytes(i.e.
+             * PduInfoPtr.SduLength = 8). Unused bytes in N-PDU shall be updated with
+             * CANTP_PADDING_BYTE (see ECUC_CanTp_00298). */
+            if (p_n_sdu->tx.cfg->padding == CANTP_ON)
+            {
+                CanTp_SetPadding(&p_pdu_info->SduDataPtr[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
+            }
+
+            p_pdu_info->SduLength = ofs;
+        }
     }
 
     return tmp_return;
@@ -1271,32 +1289,38 @@ static CanTp_FrameStateType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
     CanTp_FrameStateType tmp_return = CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST;
     CanTp_NSduType *p_n_sdu = pNSdu;
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
-    PduLengthType ofs = 0x01u;
+    PduLengthType ofs = 0x00u;
 
-    if (CanTp_CopyTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
+    p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
+
+    if (CanTp_EncodeNAIValue(p_n_sdu->tx.cfg->af,
+                             p_n_sdu->tx.cfg->pNAe,
+                             p_n_sdu->tx.cfg->pNTa,
+                             &p_pdu_info->SduDataPtr[ofs],
+                             &ofs) == E_OK)
     {
-        tmp_return = CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION;
+        p_pdu_info->SduDataPtr[ofs] = (uint8)((uint8)CANTP_N_PCI_TYPE_CF << 0x04u) | (p_n_sdu->tx.sn & 0x0Fu);
+        ofs ++;
 
-        p_n_sdu->tx.sn ++;
-
-        // CanTp_FillAIField(p_n_sdu, &ofs);
-
-        p_n_sdu->tx.buf.can[0x00u] = ((uint8)CANTP_N_PCI_TYPE_CF << 0x04u);
-        p_n_sdu->tx.buf.can[0x00u] |= (p_n_sdu->tx.sn & 0x0Fu);
-
-        /* SWS_CanTp_00348: if frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
-         * frames) are used for a Tx N-SDU and if CanTpTxPaddingActivation is equal to CANTP_ON,
-         * CanTp shall transmit by means of CanIf_Transmit() call, SF Tx N-PDU or last CF Tx N-PDU
-         * that belongs to that Tx N-SDU with the length of eight bytes(i.e. PduInfoPtr.SduLength =
-         * 8). Unused bytes in N-PDU shall be updated with CANTP_PADDING_BYTE (see
-         * ECUC_CanTp_00298). */
-        if (p_n_sdu->tx.cfg->padding == CANTP_ON)
+        if (CanTp_CopyTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
         {
-            CanTp_SetPadding(&p_n_sdu->tx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
-        }
+            tmp_return = CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION;
 
-        p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
-        p_pdu_info->SduLength = ofs;
+            p_n_sdu->tx.sn ++;
+
+            /* SWS_CanTp_00348: if frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
+             * frames) are used for a Tx N-SDU and if CanTpTxPaddingActivation is equal to CANTP_ON,
+             * CanTp shall transmit by means of CanIf_Transmit() call, SF Tx N-PDU or last CF Tx
+             * N-PDU that belongs to that Tx N-SDU with the length of eight bytes(i.e.
+             * PduInfoPtr.SduLength = 8). Unused bytes in N-PDU shall be updated with
+             * CANTP_PADDING_BYTE (see ECUC_CanTp_00298). */
+            if (p_n_sdu->tx.cfg->padding == CANTP_ON)
+            {
+                CanTp_SetPadding(&p_pdu_info->SduDataPtr[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
+            }
+
+            p_pdu_info->SduLength = ofs;
+        }
     }
 
     return tmp_return;
@@ -1307,78 +1331,87 @@ static CanTp_FrameStateType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
     CanTp_FrameStateType tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
     CanTp_NSduType *p_n_sdu = pNSdu;
     PduInfoType *p_pdu_info = &p_n_sdu->rx.can_if_pdu_info;
-    uint16_least ofs = 0x03u;
+    uint16_least ofs = 0x00u;
 
-    //CanTp_FillAIField(p_n_sdu, &ofs);
 
-    if (p_n_sdu->rx.fs == CANTP_FLOW_STATUS_TYPE_WT)
+    if (CanTp_EncodeNAIValue(p_n_sdu->rx.cfg->af,
+                             p_n_sdu->rx.cfg->pNAe,
+                             p_n_sdu->rx.cfg->pNTa,
+                             &p_n_sdu->rx.buf.can[ofs],
+                             &ofs) == E_OK)
     {
-        if (CanTp_NetworkLayerTimeoutExpired(p_n_sdu, CANTP_I_N_BR) == TRUE)
+        if (p_n_sdu->rx.fs == CANTP_FLOW_STATUS_TYPE_WT)
         {
-            if (p_n_sdu->rx.wft_max != 0x00u)
+            if (CanTp_NetworkLayerTimeoutExpired(p_n_sdu, CANTP_I_N_BR) == TRUE)
             {
-                p_n_sdu->rx.wft_max--;
-
-                CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
-
-                if (p_n_sdu->rx.buf.rmng < CanTp_GetRxBlockSize(p_n_sdu))
+                if (p_n_sdu->rx.wft_max != 0x00u)
                 {
-                    /* SWS_CanTp_00341: If the N_Br timer expires and the available buffer size is
-                     * still not big enough, the CanTp module shall send a new FC(WAIT) to suspend
-                     * the N-SDU reception and reload the N_Br timer. */
-                    CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
-                }
+                    p_n_sdu->rx.wft_max--;
 
-                tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION;
+                    CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
+
+                    if (p_n_sdu->rx.buf.rmng < CanTp_GetRxBlockSize(p_n_sdu))
+                    {
+                        /* SWS_CanTp_00341: If the N_Br timer expires and the available buffer size
+                         * is still not big enough, the CanTp module shall send a new FC(WAIT) to
+                         * suspend the N-SDU reception and reload the N_Br timer. */
+                        CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
+                    }
+
+                    tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION;
+                }
+                else
+                {
+                    /* SWS_CanTp_00223: The CanTp module shall send a maximum of WFTmax consecutive
+                     * FC(WAIT) N-PDU. If this number is reached, the CanTp module shall abort the
+                     * reception of this N-SDU (the receiver did not send any FC N-PDU, so the N_Bs
+                     * timer expires on the sender side and then the transmission is aborted) and a
+                     * receiving indication with E_NOT_OK occurs. */
+                    tmp_return = CANTP_FRAME_STATE_ABORT;
+                }
             }
             else
             {
-                /* SWS_CanTp_00223: The CanTp module shall send a maximum of WFTmax consecutive
-                 * FC(WAIT) N-PDU. If this number is reached, the CanTp module shall abort the
-                 * reception of this N-SDU (the receiver did not send any FC N-PDU, so the N_Bs
-                 * timer expires on the sender side and then the transmission is aborted) and a
-                 * receiving indication with E_NOT_OK occurs. */
-                tmp_return = CANTP_FRAME_STATE_ABORT;
+                if (p_n_sdu->rx.buf.rmng >= CanTp_GetRxBlockSize(p_n_sdu))
+                {
+                    CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
+                    p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_CTS;
+
+                    tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION;
+                }
             }
+        }
+        else if (p_n_sdu->rx.fs == CANTP_FLOW_STATUS_TYPE_OVFLW)
+        {
+            tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_OVFLW_TX_CONFIRMATION;
         }
         else
         {
-            if (p_n_sdu->rx.buf.rmng >= CanTp_GetRxBlockSize(p_n_sdu))
-            {
-                CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
-                p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_CTS;
-
-                tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION;
-            }
+            tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION;
         }
-    }
-    else if (p_n_sdu->rx.fs == CANTP_FLOW_STATUS_TYPE_OVFLW)
-    {
-        tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_OVFLW_TX_CONFIRMATION;
-    }
-    else
-    {
-        tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION;
-    }
 
-    p_n_sdu->rx.buf.can[0x00u] = (0x03u << 0x04u) | (uint8)p_n_sdu->rx.fs;
-    p_n_sdu->rx.buf.can[0x01u] = p_n_sdu->rx.cfg->bs;
-    p_n_sdu->rx.buf.can[0x02u] = CanTp_EncodeSTMinValue(p_n_sdu->rx.shared.m_param.st_min);
+        p_n_sdu->rx.buf.can[ofs] = (0x03u << 0x04u) | (uint8)p_n_sdu->rx.fs;
+        ofs ++;
+        p_n_sdu->rx.buf.can[ofs] = p_n_sdu->rx.cfg->bs;
+        ofs ++;
+        p_n_sdu->rx.buf.can[ofs] = CanTp_EncodeSTMinValue(p_n_sdu->rx.shared.m_param.st_min);
+        ofs ++;
 
-    /* SWS_CanTp_00348: if frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
-     * frames) are used for a Tx N-SDU and if CanTpTxPaddingActivation is equal to CANTP_ON,
-     * CanTp shall transmit by means of CanIf_Transmit() call, SF Tx N-PDU or last CF Tx N-PDU
-     * that belongs to that Tx N-SDU with the length of eight bytes(i.e. PduInfoPtr.SduLength =
-     * 8). Unused bytes in N-PDU shall be updated with CANTP_PADDING_BYTE (see
-     * ECUC_CanTp_00298). */
-    if (p_n_sdu->rx.cfg->padding == CANTP_ON)
-    {
-        CanTp_SetPadding(&p_n_sdu->rx.buf.can[ofs], &ofs, CanTp_ConfigPtr->paddingByte);
+        /* SWS_CanTp_00348: if frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
+         * frames) are used for a Tx N-SDU and if CanTpTxPaddingActivation is equal to CANTP_ON,
+         * CanTp shall transmit by means of CanIf_Transmit() call, SF Tx N-PDU or last CF Tx N-PDU
+         * that belongs to that Tx N-SDU with the length of eight bytes(i.e. PduInfoPtr.SduLength =
+         * 8). Unused bytes in N-PDU shall be updated with CANTP_PADDING_BYTE (see
+         * ECUC_CanTp_00298). */
+        if (p_n_sdu->rx.cfg->padding == CANTP_ON)
+        {
+            CanTp_SetPadding(&p_n_sdu->rx.buf.can[0x00u], &ofs, CanTp_ConfigPtr->paddingByte);
+        }
+
+        p_pdu_info->SduDataPtr = &p_n_sdu->rx.buf.can[0x00u];
+        p_pdu_info->MetaDataPtr = NULL_PTR;
+        p_pdu_info->SduLength = ofs;
     }
-
-    p_pdu_info->SduDataPtr = &p_n_sdu->rx.buf.can[0x00u];
-    p_pdu_info->MetaDataPtr = NULL_PTR;
-    p_pdu_info->SduLength = ofs;
 
     return tmp_return;
 }
@@ -1767,7 +1800,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
     if (CanTp_GetNSduFromPduId(rxPduId, &p_n_sdu) == E_OK)
     {
         if (((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u) &&
-            CanTp_DecodeNAeValue(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK &&
+            CanTp_DecodeNAIValue(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK &&
             (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
         {
             /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
@@ -1819,7 +1852,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
         }
 
         if (((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u) &&
-            CanTp_DecodeNAeValue(p_n_sdu->tx.cfg->af, &n_ae_field_size) == E_OK &&
+            CanTp_DecodeNAIValue(p_n_sdu->tx.cfg->af, &n_ae_field_size) == E_OK &&
             (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
         {
             if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION)
@@ -1949,7 +1982,7 @@ static PduLengthType CanTp_GetRxBlockSize(CanTp_NSduType *pNSdu)
 {
     PduLengthType result;
     PduLengthType n_ae_field_size;
-    (void)CanTp_DecodeNAeValue(pNSdu->rx.cfg->af, &n_ae_field_size);
+    (void)CanTp_DecodeNAIValue(pNSdu->rx.cfg->af, &n_ae_field_size);
     const PduLengthType header_size = CANTP_CF_PCI_FIELD_SIZE + n_ae_field_size;
     const PduLengthType payload_size = CANTP_CAN_FRAME_SIZE - header_size;
     const PduLengthType full_bs = pNSdu->rx.shared.m_param.bs * payload_size;
@@ -1967,8 +2000,8 @@ static PduLengthType CanTp_GetRxBlockSize(CanTp_NSduType *pNSdu)
     return result;
 }
 
-static Std_ReturnType CanTp_DecodeNAeValue(const CanTp_AddressingFormatType af,
-                                            PduLengthType *pPduLength)
+static Std_ReturnType CanTp_DecodeNAIValue(const CanTp_AddressingFormatType af,
+                                           PduLengthType *pPduLength)
 {
     Std_ReturnType result = E_NOT_OK;
 
@@ -2003,10 +2036,41 @@ static Std_ReturnType CanTp_DecodeNAeValue(const CanTp_AddressingFormatType af,
     return result;
 }
 
-static Std_ReturnType CanTp_EncodeNAeValue(const CanTp_AddressingFormatType af,
-                                           PduLengthType *pPduLength)
+static Std_ReturnType CanTp_EncodeNAIValue(const CanTp_AddressingFormatType af,
+                                           const CanTp_NAeType *pNAe,
+                                           const CanTp_NTaType *pNTa,
+                                           uint8 *pBuffer,
+                                           PduLengthType *pOfs)
 {
-    
+    Std_ReturnType result;
+    PduLengthType ofs = *pOfs;
+
+    if ((af == CANTP_EXTENDED) && (pNTa != NULL_PTR))
+    {
+        pBuffer[0x00u] = pNTa->nTa;
+        ofs += 0x01u;
+
+        result = E_OK;
+    }
+    else if (((af == CANTP_MIXED) || (af == CANTP_MIXED29BIT)) && (pNAe != NULL_PTR))
+    {
+        pBuffer[0x00u] = pNAe->nAe;
+        ofs += 0x01u;
+
+        result = E_OK;
+    }
+    else if ((af == CANTP_STANDARD) || (af == CANTP_NORMALFIXED))
+    {
+        result = E_OK;
+    }
+    else
+    {
+        result = E_NOT_OK;
+    }
+
+    *pOfs = ofs;
+
+    return result;
 }
 
 static Std_ReturnType CanTp_DecodePCIValue(CanTp_NPciType *pPci, const uint8 *pData)
@@ -2031,11 +2095,11 @@ static Std_ReturnType CanTp_DecodePCIValue(CanTp_NPciType *pPci, const uint8 *pD
     return tmp_return;
 }
 
-static uint16 CanTp_DecodeDLValue(const uint8 frameType,
-                                  const CanTp_RxPaddingActivationType padding,
-                                  const uint8 *pData)
+static PduLengthType CanTp_DecodeDLValue(const CanTp_NPciType frameType,
+                                         const CanTp_RxPaddingActivationType padding,
+                                         const uint8 *pData)
 {
-    uint16 result;
+    PduLengthType result;
 
     result = pData[0x00u] & 0x0Fu;
 
@@ -2345,48 +2409,6 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
         }
     }
 }
-
-//static void CanTp_FillAIField(const CanTp_AddressingFormatType af,
-//                              const uint8 n_sa,
-//                              const uint8 n_ta,
-//                              const uint8 n_ae,
-//                              uint8 *pBuffer,
-//                              PduLengthType *pOfs)
-//{
-//    PduLengthType ofs = *pOfs;
-//
-//    /* TODO: fill PDU meta data. */
-//
-//    /* SWS_CanTp_00334: when CanTp_Transmit is called for an N-SDU with meta data, the CanTp module
-//     * shall store the addressing information contained in the meta data of the N-SDU and use this
-//     * information for transmission of SF, FF, and CF N-PDUs and for identification of FC N-PDUs. */
-//    switch (af)
-//    {
-//        case CANTP_EXTENDED:
-//        {
-//            pBuffer[ofs++] = n_ta;
-//
-//            break;
-//        }
-//        case CANTP_MIXED:
-//        case CANTP_MIXED29BIT:
-//        {
-//            pBuffer[ofs++] = n_ae;
-//
-//            break;
-//        }
-//        case CANTP_STANDARD:
-//        case CANTP_NORMALFIXED:
-//        default:
-//        {
-//            (void)n_sa;
-//
-//            break;
-//        }
-//    }
-//
-//    *pOfs = ofs;
-//}
 
 static BufReq_ReturnType CanTp_CopyRxPayload(CanTp_NSduType *pNSdu)
 {
