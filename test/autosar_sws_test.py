@@ -2,8 +2,6 @@ from unittest.mock import ANY
 from .parameter import *
 from .ffi import CanTpTest
 
-dummy_byte = 0xFF
-
 
 class TestSWS00031:
     """
@@ -335,6 +333,25 @@ class TestSWS00081:
         handle.can_if_transmit.assert_not_called()
 
 
+class TestSWS00093:
+    """
+    If a multiple segmented session occurs (on both receiver and sender side) with a handle whose communication type is
+    functional, the CanTp module shall reject the request and report the runtime error code CANTP_E_INVALID_TATYPE to
+    the Default Error Tracer.
+    """
+
+    def test_receiver_side(self):
+        handle = CanTpTest(DefaultReceiver(com_type='CANTP_FUNCTIONAL'))
+        ff, _ = handle.get_receiver_multi_frame()
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+        handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_INVALID_TATYPE'))
+
+    def test_sender_side(self):
+        handle = CanTpTest(DefaultSender(com_type='CANTP_FUNCTIONAL'))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * 8))
+        handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_INVALID_TATYPE'))
+
+
 def test_sws_00176():
     """
     The function CanTp_Transmit() shall be asynchronous.
@@ -611,6 +628,117 @@ def test_sws_00263():
     handle.pdu_r_can_tp_rx_indication.called_once_with(ANY, handle.define('E_NOT_OK'))
 
 
+class TestSWS00281:
+    """
+    However, if the message is configured to use an extended or a mixed addressing format, the CanTp module must fill
+    the first byte of each transmitted segment (SF, FF and CF) with the N_TA (in case of extended addressing) or N_AE
+    (in case of mixed addressing) value. Therefore a CAN NSduId may also be related to a N_TA or N_AE value.
+    """
+
+    @pytest.mark.parametrize('af', addressing_formats)
+    def test_single_frame(self, af):
+        handle = CanTpTest(DefaultSender(af=af))
+        tx_data = (dummy_byte,) * handle.get_payload_size(af, 'SF')
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
+        handle.lib.CanTp_MainFunction()
+        handle.can_if_transmit.assert_called_once()
+        if af in ('CANTP_EXTENDED',):
+            assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] == default_n_ta
+        elif af in ('CANTP_MIXED', 'CANTP_MIXED29BIT'):
+            assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] == default_n_ae
+        elif af in ('CANTP_STANDARD', 'CANTP_NORMALFIXED'):
+            assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] not in (default_n_ta, default_n_ae)
+        else:
+            pytest.fail()
+
+    @pytest.mark.parametrize('af', addressing_formats)
+    def test_first_frame(self, af):
+        handle = CanTpTest(DefaultSender(af=af))
+        tx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
+        handle.lib.CanTp_MainFunction()
+        handle.can_if_transmit.assert_called_once()
+        if af in ('CANTP_EXTENDED',):
+            assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] == default_n_ta
+        elif af in ('CANTP_MIXED', 'CANTP_MIXED29BIT'):
+            assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] == default_n_ae
+        elif af in ('CANTP_STANDARD', 'CANTP_NORMALFIXED'):
+            assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] not in (default_n_ta, default_n_ae)
+        else:
+            pytest.fail()
+
+    @pytest.mark.parametrize('af', addressing_formats)
+    def test_consecutive_frame(self, af):
+        handle = CanTpTest(DefaultSender(af=af))
+        tx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)
+        cf = handle.get_receiver_flow_control(af=af)
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cf))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_count == 2
+        if af in ('CANTP_EXTENDED',):
+            assert handle.can_if_transmit.call_args_list[1][0][1].SduDataPtr[0] == default_n_ta
+        elif af in ('CANTP_MIXED', 'CANTP_MIXED29BIT'):
+            assert handle.can_if_transmit.call_args_list[1][0][1].SduDataPtr[0] == default_n_ae
+        elif af in ('CANTP_STANDARD', 'CANTP_NORMALFIXED'):
+            assert handle.can_if_transmit.call_args_list[1][0][1].SduDataPtr[0] not in (default_n_ta, default_n_ae)
+        else:
+            pytest.fail()
+
+
+@pytest.mark.parametrize('af', addressing_formats)
+def test_sws_00283(af):
+    """
+    For extended addressing format, the first data byte of the FC also contains the N_TA value or a unique combination
+    of N_TA and N_TAtype value. For mixed addressing format, the first data byte of the FC contains the N_AE value.
+    """
+
+    handle = CanTpTest(DefaultReceiver(af=af))
+    ff, _ = handle.get_receiver_multi_frame(af=af)
+    handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+    handle.lib.CanTp_MainFunction()
+    handle.can_if_transmit.assert_called_once()
+    if af in ('CANTP_EXTENDED',):
+        assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] == default_n_ta
+    elif af in ('CANTP_MIXED', 'CANTP_MIXED29BIT'):
+        assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] == default_n_ae
+    elif af in ('CANTP_STANDARD', 'CANTP_NORMALFIXED'):
+        assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] not in (default_n_ta, default_n_ae)
+    else:
+        pytest.fail()
+
+
+class TestSWS00293:
+
+    @pytest.mark.parametrize('code_name, value', [pytest.param('CANTP_E_PARAM_CONFIG', 0x01),
+                                                  pytest.param('CANTP_E_PARAM_ID', 0x02),
+                                                  pytest.param('CANTP_E_PARAM_POINTER', 0x03),
+                                                  pytest.param('CANTP_E_INIT_FAILED', 0x04),
+                                                  pytest.param('CANTP_E_UNINIT', 0x20),
+                                                  pytest.param('CANTP_E_INVALID_TX_ID', 0x30),
+                                                  pytest.param('CANTP_E_INVALID_RX_ID', 0x40)])
+    def test_error_codes(self, code_name, value):
+        handle = CanTpTest(DefaultSender())
+        assert handle.define(code_name) == value
+
+    @pytest.mark.skip(reason='not implemented')
+    def test_e_init_failed(self):
+        pass
+
+    def test_e_invalid_rx_id(self):
+        handle = CanTpTest(DefaultReceiver())
+        sf = handle.get_receiver_single_frame()
+        handle.lib.CanTp_RxIndication(1, handle.get_pdu_info(sf))
+        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_INVALID_RX_ID'))
+
+    def test_e_invalid_tx_id(self):
+        handle = CanTpTest(DefaultSender())
+        handle.lib.CanTp_Transmit(1, handle.get_pdu_info((dummy_byte,) * 100))
+        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_INVALID_TX_ID'))
+
+
 @pytest.mark.parametrize('parameter', change_parameter_api)
 def test_sws_00304(parameter):
     """
@@ -670,6 +798,16 @@ def test_sws_00318():
     handle.det_report_error.assert_called_once_with(ANY, handle.define('CANTP_I_N_BUFFER_OVFLW'), ANY, handle.define('CANTP_E_RX_COM'))
     handle.lib.CanTp_MainFunction()
     handle.can_if_transmit.assert_called_once()
+
+
+def test_sws_00319():
+    """
+    If DET is enabled the function CanTp_GetVersionInfo shall rise CANTP_E_PARAM_POINTER error if the argument is a NULL
+    pointer and return without any action.
+    """
+    handle = CanTpTest(DefaultSender())
+    handle.lib.CanTp_GetVersionInfo(handle.ffi.NULL)
+    handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PARAM_POINTER'))
 
 
 def test_sws_00321():
