@@ -720,6 +720,16 @@ def test_sws_00318():
     handle.can_if_transmit.assert_called_once()
 
 
+def test_sws_00319():
+    """
+    If DET is enabled the function CanTp_GetVersionInfo shall rise CANTP_E_PARAM_POINTER error if the argument is a NULL
+    pointer and return without any action.
+    """
+    handle = CanTpTest(DefaultSender())
+    handle.lib.CanTp_GetVersionInfo(handle.ffi.NULL)
+    handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PARAM_POINTER'))
+
+
 def test_sws_00321():
     """
     If DET is enabled the function CanTp_Transmit shall rise CANTP_E_PARAM_POINTER error if the argument PduInfoPtr is a
