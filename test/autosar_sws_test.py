@@ -654,7 +654,7 @@ class TestSWS00281:
     @pytest.mark.parametrize('af', addressing_formats)
     def test_first_frame(self, af):
         handle = CanTpTest(DefaultSender(af=af))
-        tx_data = (dummy_byte,) * handle.get_payload_size(af, 'SF') + 1
+        tx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
         handle.lib.CanTp_MainFunction()
         handle.can_if_transmit.assert_called_once()
