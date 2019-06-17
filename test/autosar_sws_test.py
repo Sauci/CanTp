@@ -688,6 +688,28 @@ class TestSWS00281:
             pytest.fail()
 
 
+@pytest.mark.parametrize('af', addressing_formats)
+def test_sws_00283(af):
+    """
+    For extended addressing format, the first data byte of the FC also contains the N_TA value or a unique combination
+    of N_TA and N_TAtype value. For mixed addressing format, the first data byte of the FC contains the N_AE value.
+    """
+
+    handle = CanTpTest(DefaultReceiver(af=af))
+    ff, _ = handle.get_receiver_multi_frame(af=af)
+    handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+    handle.lib.CanTp_MainFunction()
+    handle.can_if_transmit.assert_called_once()
+    if af in ('CANTP_EXTENDED',):
+        assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] == default_n_ta
+    elif af in ('CANTP_MIXED', 'CANTP_MIXED29BIT'):
+        assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] == default_n_ae
+    elif af in ('CANTP_STANDARD', 'CANTP_NORMALFIXED'):
+        assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] not in (default_n_ta, default_n_ae)
+    else:
+        pytest.fail()
+
+
 class TestSWS00293:
 
     @pytest.mark.parametrize('code_name, value', [pytest.param('CANTP_E_PARAM_CONFIG', 0x01),
