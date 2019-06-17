@@ -2,8 +2,6 @@ from unittest.mock import ANY
 from .parameter import *
 from .ffi import CanTpTest
 
-dummy_byte = 0xFF
-
 
 class TestSWS00031:
     """
@@ -628,6 +626,66 @@ def test_sws_00263():
     handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
     handle.lib.CanTp_CancelReceive(0)
     handle.pdu_r_can_tp_rx_indication.called_once_with(ANY, handle.define('E_NOT_OK'))
+
+
+class TestSWS00281:
+    """
+    However, if the message is configured to use an extended or a mixed addressing format, the CanTp module must fill
+    the first byte of each transmitted segment (SF, FF and CF) with the N_TA (in case of extended addressing) or N_AE
+    (in case of mixed addressing) value. Therefore a CAN NSduId may also be related to a N_TA or N_AE value.
+    """
+
+    @pytest.mark.parametrize('af', addressing_formats)
+    def test_single_frame(self, af):
+        handle = CanTpTest(DefaultSender(af=af))
+        tx_data = (dummy_byte,) * handle.get_payload_size(af, 'SF')
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
+        handle.lib.CanTp_MainFunction()
+        handle.can_if_transmit.assert_called_once()
+        if af in ('CANTP_EXTENDED',):
+            assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] == default_n_ta
+        elif af in ('CANTP_MIXED', 'CANTP_MIXED29BIT'):
+            assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] == default_n_ae
+        elif af in ('CANTP_STANDARD', 'CANTP_NORMALFIXED'):
+            assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] not in (default_n_ta, default_n_ae)
+        else:
+            pytest.fail()
+
+    @pytest.mark.parametrize('af', addressing_formats)
+    def test_first_frame(self, af):
+        handle = CanTpTest(DefaultSender(af=af))
+        tx_data = (dummy_byte,) * handle.get_payload_size(af, 'SF') + 1
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
+        handle.lib.CanTp_MainFunction()
+        handle.can_if_transmit.assert_called_once()
+        if af in ('CANTP_EXTENDED',):
+            assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] == default_n_ta
+        elif af in ('CANTP_MIXED', 'CANTP_MIXED29BIT'):
+            assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] == default_n_ae
+        elif af in ('CANTP_STANDARD', 'CANTP_NORMALFIXED'):
+            assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] not in (default_n_ta, default_n_ae)
+        else:
+            pytest.fail()
+
+    @pytest.mark.parametrize('af', addressing_formats)
+    def test_consecutive_frame(self, af):
+        handle = CanTpTest(DefaultSender(af=af))
+        tx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)
+        cf = handle.get_receiver_flow_control(af=af)
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cf))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_count == 2
+        if af in ('CANTP_EXTENDED',):
+            assert handle.can_if_transmit.call_args_list[1][0][1].SduDataPtr[0] == default_n_ta
+        elif af in ('CANTP_MIXED', 'CANTP_MIXED29BIT'):
+            assert handle.can_if_transmit.call_args_list[1][0][1].SduDataPtr[0] == default_n_ae
+        elif af in ('CANTP_STANDARD', 'CANTP_NORMALFIXED'):
+            assert handle.can_if_transmit.call_args_list[1][0][1].SduDataPtr[0] not in (default_n_ta, default_n_ae)
+        else:
+            pytest.fail()
 
 
 class TestSWS00293:

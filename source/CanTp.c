@@ -2045,6 +2045,10 @@ static Std_ReturnType CanTp_EncodeNAIValue(const CanTp_AddressingFormatType af,
     Std_ReturnType result;
     PduLengthType ofs = *pOfs;
 
+    /* SWS_CanTp_00281: if the message is configured to use an extended or a mixed addressing
+     * format, the CanTp module must fill the first byte of each transmitted segment (SF, FF and CF)
+     * with the N_TA (in case of extended addressing) or N_AE (in case of mixed addressing) value.
+     * Therefore a CAN NSduId may also be related to a N_TA or N_AE value.*/
     if ((af == CANTP_EXTENDED) && (pNTa != NULL_PTR))
     {
         pBuffer[0x00u] = pNTa->nTa;
