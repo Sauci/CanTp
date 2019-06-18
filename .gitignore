@@ -2,7 +2,7 @@
 *.pyc
 .idea
 *build*
-config/pc_lint/*
+config/pc_lint/MISRA*
 debug/*
 external/*
 report/*

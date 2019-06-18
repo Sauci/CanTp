@@ -111,15 +111,17 @@ if (${enable_static_code_analysis})
         ${CMAKE_CURRENT_SOURCE_DIR}/external
         ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint)
 
-    file(DOWNLOAD https://gist.githubusercontent.com/Sauci/39b03e60642a910e358d4dd0871a0b05/raw/05284b7f09b31c3cbe1f93badc74ce2ae0b73162/add_pc_lint_target.cmake
+    file(DOWNLOAD https://gist.githubusercontent.com/Sauci/39b03e60642a910e358d4dd0871a0b05/raw/794c3adb2c4ef6e909f4dab0d1f5005cb5003801/add_pc_lint_target.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/external/add_pc_lint_target.cmake)
 
     file(DOWNLOAD https://gimpel.com/html/pub90/au-misra2.lnt
-        ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/misra_2004.lnt)
+        ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/MISRA04.lnt)
 
     include(external/add_pc_lint_target.cmake)
 
     add_pc_lint_target(NAME CanTp
         DEPENDENCIES ${can_tp_cfg_out}/CanTp_Cfg.h
-        OPTION_FILES ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/misra_2004.lnt)
+        OPTION_FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/MISRA04.lnt
+        ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/CanTp.lnt)
 endif ()
