@@ -7,7 +7,7 @@ project(CanTp VERSION 0.1.0 LANGUAGES C)
 # by default, developement error detection is enabled.
 option(enable_det "enable/disable developement error detection feature." ON)
 
-# if set, enable_test enables the module is built for testing purposes, which means:
+# if set, the module is built for testing purposes, which means:
 # - the compiler definition CANTP_BUILD_CFFI_INTERFACE is set
 # - the stubbed headers are used instead of user-provided headers
 # if not set, the user is responsible of providing the required headers (CanIf.h, ComStack_Types.h,
