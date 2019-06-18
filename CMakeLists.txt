@@ -120,5 +120,6 @@ if (${enable_static_code_analysis})
     include(external/add_pc_lint_target.cmake)
 
     add_pc_lint_target(NAME CanTp
+        DEPENDENCIES ${can_tp_cfg_out}/CanTp_Cfg.h
         OPTION_FILES ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/misra_2004.lnt)
 endif ()
