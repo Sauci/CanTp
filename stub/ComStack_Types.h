@@ -14,7 +14,9 @@ extern "C"
 
 #endif /* ifdef __cplusplus */
 
+#ifndef STD_TYPES_H
 #include "Std_Types.h"
+#endif /* #ifndef STD_TYPES_H */
 
 typedef uint16 PduIdType;
 
