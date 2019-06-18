@@ -116,7 +116,7 @@ class MockGen(FFI):
         try:
             sys.path.append(tmpdir)
             self.ffi_module = import_module(name)
-        except Exception as e:
+        except ModuleNotFoundError:
             lib_path = self.compile(tmpdir=tmpdir)
             sys.path.append(os.path.dirname(lib_path))
             self.ffi_module = import_module(name)

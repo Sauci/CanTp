@@ -1,5 +1,5 @@
 /**
- * @file Det.h
+ * @file Det.c
  * @author Guillaume Sottas
  * @date 27/10/2016
  */

@@ -1,1 +1,1 @@
-/** * @file CanIf.h * @author Guillaume Sottas * @date 07/12/2017 */#include "CanIf.h"Std_ReturnType CanIf_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo){    return E_OK;}
+/** * @file CanIf.c * @author Guillaume Sottas * @date 07/12/2017 */#include "CanIf.h"Std_ReturnType CanIf_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo){    return E_OK;}

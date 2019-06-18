@@ -89,9 +89,9 @@ class TestSWS00057:
 
     @pytest.mark.parametrize('af', addressing_formats)
     def test_unexpected_sf_reception_while_segmented_transmit_is_in_progress_half_duplex(self, af):
-        handle = CanTpTest(DefaultSender(n_cs=0))
+        handle = CanTpTest(DefaultSender(af=af, n_cs=0))
         tx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)  # exactly one CF.
-        fc = handle.get_receiver_flow_control(af=af, bs=0, st_min=0, padding=0xFF)
+        fc = handle.get_receiver_flow_control(af=af, bs=0, st_min=0)
         sf = handle.get_receiver_single_frame(af=af)
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
         handle.lib.CanTp_MainFunction()
@@ -107,9 +107,9 @@ class TestSWS00057:
 
     @pytest.mark.parametrize('af', addressing_formats)
     def test_unexpected_ff_reception_while_segmented_transmit_is_in_progress_half_duplex(self, af):
-        handle = CanTpTest(DefaultSender(n_cs=0))
+        handle = CanTpTest(DefaultSender(af=af, n_cs=0))
         tx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)  # exactly one CF.
-        fc = handle.get_receiver_flow_control(af=af, bs=0, st_min=0, padding=0xFF)
+        fc = handle.get_receiver_flow_control(af=af, bs=0, st_min=0)
         ff, _ = handle.get_receiver_multi_frame(af=af)
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
         handle.lib.CanTp_MainFunction()
@@ -125,10 +125,10 @@ class TestSWS00057:
 
     @pytest.mark.parametrize('af', addressing_formats)
     def test_unexpected_cf_reception_while_segmented_transmit_is_in_progress_half_duplex(self, af):
-        handle = CanTpTest(DefaultSender(n_cs=0))
+        handle = CanTpTest(DefaultSender(af=af, n_cs=0))
         tx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)
         _, cfs = handle.get_receiver_multi_frame()
-        fc = handle.get_receiver_flow_control(af=af, bs=0, st_min=0, padding=0xFF)
+        fc = handle.get_receiver_flow_control(af=af, bs=0, st_min=0)
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
@@ -168,7 +168,7 @@ class TestSWS00057:
         handle = CanTpTest(DefaultFullDuplex(af=af))
         tx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)  # exactly one CF.
         ff, _ = handle.get_receiver_multi_frame(af=af)
-        fc = handle.get_receiver_flow_control(af=af, bs=0, st_min=0, padding=0xFF)
+        fc = handle.get_receiver_flow_control(af=af, bs=0, st_min=0)
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
@@ -188,7 +188,7 @@ class TestSWS00057:
         handle = CanTpTest(DefaultFullDuplex(af=af))
         tx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)
         _, cfs = handle.get_receiver_multi_frame()
-        fc = handle.get_receiver_flow_control(af=af, bs=0, st_min=0, padding=0xFF)
+        fc = handle.get_receiver_flow_control(af=af, bs=0, st_min=0)
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
@@ -205,7 +205,7 @@ class TestSWS00057:
     def test_unexpected_fc_reception_while_segmented_transmit_is_in_progress(self, af, channel_mode):
         handle = CanTpTest(DefaultSender(af=af, ch_mode=channel_mode, n_cs=0))
         tx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)
-        fc = handle.get_receiver_flow_control(af=af, bs=0, st_min=0, padding=0xFF)
+        fc = handle.get_receiver_flow_control(af=af, bs=0, st_min=0)
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))

@@ -727,6 +727,8 @@ void CanTp_Init(const CanTp_ConfigType *pConfig)
     }
 }
 
+#if (CANTP_GET_VERSION_INFO_API == STD_ON)
+
 void CanTp_GetVersionInfo(Std_VersionInfoType *pVersionInfo)
 {
     CANTP_DET_ASSERT_ERROR(pVersionInfo == NULL_PTR,
@@ -741,6 +743,8 @@ void CanTp_GetVersionInfo(Std_VersionInfoType *pVersionInfo)
     pVersionInfo->sw_minor_version = CANTP_SW_MINOR_VERSION;
     pVersionInfo->sw_patch_version = CANTP_SW_PATCH_VERSION;
 }
+
+#endif /* #if (CANTP_GET_VERSION_INFO_API == STD_ON) */
 
 void CanTp_Shutdown(void)
 {
@@ -926,6 +930,8 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
     return tmp_return;
 }
 
+#if (CANTP_CHANGE_PARAMETER_API == STD_ON)
+
 Std_ReturnType CanTp_ChangeParameter(PduIdType pduId, TPParameterType parameter, uint16 value)
 {
     CanTp_NSduType *p_n_sdu;
@@ -971,6 +977,10 @@ Std_ReturnType CanTp_ChangeParameter(PduIdType pduId, TPParameterType parameter,
 
     return tmp_return;
 }
+
+#endif /* #if (CANTP_CHANGE_PARAMETER_API == STD_ON) */
+
+#if (CANTP_READ_PARAMETER_API == STD_ON)
 
 Std_ReturnType CanTp_ReadParameter(PduIdType pduId, TPParameterType parameter, uint16 *pValue)
 {
@@ -1019,6 +1029,8 @@ Std_ReturnType CanTp_ReadParameter(PduIdType pduId, TPParameterType parameter, u
 
     return tmp_return;
 }
+
+#endif /* #if (CANTP_READ_PARAMETER_API == STD_ON) */
 
 /** @} */
 

@@ -7,7 +7,7 @@ project(CanTp VERSION 0.1.0 LANGUAGES C)
 # by default, developement error detection is enabled.
 option(enable_det "enable/disable developement error detection feature." ON)
 
-# if set, enable_test enables the module is built for testing purposes, which means:
+# if set, the module is built for testing purposes, which means:
 # - the compiler definition CANTP_BUILD_CFFI_INTERFACE is set
 # - the stubbed headers are used instead of user-provided headers
 # if not set, the user is responsible of providing the required headers (CanIf.h, ComStack_Types.h,
@@ -69,13 +69,11 @@ target_compile_definitions(${PROJECT_NAME}
     PRIVATE CANTP_SW_VERSION_MINOR=${PROJECT_VERSION_MINOR}
     PRIVATE CANTP_SW_VERSION_PATCH=${PROJECT_VERSION_PATCH}
     PUBLIC CANTP_API=STD_ON
-    PUBLIC CANTP_INIT_API=STD_ON
+    # ECUC_CanTp_00283
     PUBLIC CANTP_GET_VERSION_INFO_API=STD_ON
-    PUBLIC CANTP_SHUTDOWN_API=STD_ON
-    PUBLIC CANTP_TRANSMIT_API=STD_ON
-    PUBLIC CANTP_CANCEL_TRANSMIT_API=STD_ON
-    PUBLIC CANTP_CANCEL_RECEIVE_API=STD_ON
+    # ECUC_CanTp_00299
     PUBLIC CANTP_CHANGE_PARAMETER_API=STD_ON
+    # ECUC_CanTp_00300
     PUBLIC CANTP_READ_PARAMETER_API=STD_ON
     PUBLIC CANTP_BUILD_CFFI_INTERFACE=$<IF:$<BOOL:${enable_test}>,STD_ON,STD_OFF>)
 
