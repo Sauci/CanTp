@@ -3,5 +3,6 @@
 .idea
 *build*
 debug/*
+external/*
 report/*
 test/ffi/cffi_config.py

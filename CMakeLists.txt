@@ -15,6 +15,10 @@ option(enable_det "enable/disable developement error detection feature." ON)
 # by default, tests are enabled.
 option(enable_test "enable/disable tests." ON)
 
+# if set, an additional target will be available to perform static code analysis with PC-Lint.
+# by default, static code analysis is disabled.
+option(enable_static_code_analysis "enable/disable static code analysis." OFF)
+
 # can_tp_cfg_in defines the default configuration file used to generate the auto-generated code of
 # the module (CanTp_Cfg.c and CanTp_Cfg.h).
 # by default, it uses the file located at ./config/CanTp.json.
@@ -100,4 +104,18 @@ if (${enable_test})
     file(GENERATE
         OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/test/ffi/cffi_config.py
         INPUT ${CMAKE_BINARY_DIR}/cffi_config.tmp.py)
+endif ()
+
+if (${enable_static_code_analysis})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/external)
+    include(FetchContent)
+
+    FetchContent_Populate(add_pc_lint
+        URL https://gist.github.com/Sauci/39b03e60642a910e358d4dd0871a0b05/archive/05284b7f09b31c3cbe1f93badc74ce2ae0b73162.zip
+        QUIET
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external
+        BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external)
+    include(external/add_pc_lint_target.cmake)
+    add_pc_lint_target(NAME CanTp
+        SUMMARY)
 endif ()
