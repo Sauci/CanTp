@@ -12,12 +12,15 @@
  * @ingroup CANTP_CBK
  */
 
+#ifndef CANTP_CBK_H
+#define CANTP_CBK_H
+
 #ifdef __cplusplus
 
 extern "C"
 {
 
-#endif /* ifdef __cplusplus */
+#endif /* #ifdef __cplusplus */
 
 /*-----------------------------------------------------------------------------------------------*/
 /* included files (#include).                                                                    */
@@ -77,4 +80,6 @@ void CanTp_TxConfirmation(PduIdType txPduId, Std_ReturnType result);
 
 }
 
-#endif /* ifdef __cplusplus */
+#endif /* #ifdef __cplusplus */
+
+#endif /* #ifndef CANTP_CBK_H */
