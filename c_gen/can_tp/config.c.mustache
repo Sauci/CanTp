@@ -91,16 +91,16 @@ const CanTp_RxNSduType CanTp_RxNSduConfig{{CONFIG_ID}}[] = {
         {{#source address}}&CanTp_NSa{{.}}{{/source address}}{{^source address}}NULL_PTR{{/source address}}, /* source address (pNSa). */
         {{#target address}}&CanTp_NTa{{.}}{{/target address}}{{^target address}}NULL_PTR{{/target address}}, /* target address (pNTa). */
         {{#address extension}}&CanTp_NAe{{.}}{{/address extension}}{{^address extension}}NULL_PTR{{/address extension}}, /* address extension (pNAe). */
-        {{#block size}}{{.}}u{{/block size}}{{^block size}}CANTP_DEFAULT_BLOCK_SIZE{{/block size}}, /* block size. */
-        {{#N_Ar timeout}}CANTP_CONVERT_SEC_TO_U_SEC({{.}}){{/N_Ar timeout}}{{^N_Ar timeout}}CANTP_DEFAULT_N_AR_TIMEOUT{{/N_Ar timeout}} , /* A timeout. */
+        {{#block size}}{{.}}u{{/block size}}{{^block size}}0x00u{{/block size}}, /* block size. */
+        ((uint32)((float){{#N_Ar timeout}}{{.}}{{/N_Ar timeout}}{{^N_Ar timeout}}1.0{{/N_Ar timeout}} * (float)1000000)), /* A timeout. */
         /* TODO: calculate N_Br according to performance requirement if not defined by user. */
-        CANTP_CONVERT_SEC_TO_U_SEC({{#N_Br timeout}}{{.}}{{/N_Br timeout}}{{^N_Br timeout}}0.0{{/N_Br timeout}}) , /* B timeout. */
-        {{#N_Cr timeout}}CANTP_CONVERT_SEC_TO_U_SEC({{.}}){{/N_Cr timeout}}{{^N_Cr timeout}}CANTP_DEFAULT_N_CR_TIMEOUT{{/N_Cr timeout}} , /* C timeout. */
-        {{#wait for transmission maximum}}{{.}}u{{/wait for transmission maximum}}{{^wait for transmission maximum}}CANTP_DEFAULT_WFT_MAX{{/wait for transmission maximum}}, /* wait for transmission maximum. */
-        {{#minimum separation time}}{{.}}u{{/minimum separation time}}{{^minimum separation time}}CANTP_DEFAULT_ST_MIN{{/minimum separation time}}, /* minimum separation time. */
+        ((uint32)((float){{#N_Br timeout}}{{.}}{{/N_Br timeout}}{{^N_Br timeout}}0.9{{/N_Br timeout}} * (float)1000000)), /* B timeout. */
+        ((uint32)((float){{#N_Cr timeout}}{{.}}{{/N_Cr timeout}}{{^N_Cr timeout}}1.0{{/N_Cr timeout}} * (float)1000000)), /* C timeout. */
+        {{#wait for transmission maximum}}{{.}}u{{/wait for transmission maximum}}{{^wait for transmission maximum}}0x10u{{/wait for transmission maximum}}, /* wait for transmission maximum. */
+        {{#minimum separation time}}{{.}}u{{/minimum separation time}}{{^minimum separation time}}0x00u{{/minimum separation time}}, /* minimum separation time. */
         {{addressing format}}, /* addressing format (CanTpTxAddressingFormat). */
         {{#enable padding}}TRUE{{/enable padding}}{{^enable padding}}FALSE{{/enable padding}}, /* padding enabled. */
-        {{#communication type}}{{.}}{{/communication type}}{{^communication type}}CANTP_DEFAULT_COMMUNICATION_TYPE{{/communication type}}, /* communication type. */
+        {{#communication type}}{{.}}{{/communication type}}{{^communication type}}CANTP_PHYSICAL{{/communication type}}, /* communication type. */
         {{network service data unit reference}}u /* network service data unit reference. */
     },
     {{/receivers}}
@@ -115,13 +115,13 @@ static const CanTp_TxNSduType CanTp_TxNSduConfig{{CONFIG_ID}}[] = {
         {{#source address}}&CanTp_NSa{{.}}{{/source address}}{{^source address}}NULL_PTR{{/source address}}, /* source address (pNSa). */
         {{#target address}}&CanTp_NTa{{.}}{{/target address}}{{^target address}}NULL_PTR{{/target address}}, /* target address (pNTa). */
         {{#address extension}}&CanTp_NAe{{.}}{{/address extension}}{{^address extension}}NULL_PTR{{/address extension}}, /* address extension (pNAe). */
-        {{#N_As timeout}}CANTP_CONVERT_SEC_TO_U_SEC({{.}}){{/N_As timeout}}{{^N_As timeout}}CANTP_DEFAULT_N_AS_TIMEOUT{{/N_As timeout}} , /* A timeout. */
-        {{#N_Bs timeout}}CANTP_CONVERT_SEC_TO_U_SEC({{.}}){{/N_Bs timeout}}{{^N_Bs timeout}}CANTP_DEFAULT_N_BS_TIMEOUT{{/N_Bs timeout}} , /* B timeout. */
-        {{#N_Cs timeout}}CANTP_CONVERT_SEC_TO_U_SEC({{.}}){{/N_Cs timeout}}{{^N_Cs timeout}}CANTP_DEFAULT_N_CS_TIMEOUT{{/N_Cs timeout}} , /* C timeout. */
+        ((uint32)((float){{#N_As timeout}}{{.}}{{/N_As timeout}}{{^N_As timeout}}1.0{{/N_As timeout}} * (float)1000000)), /* A timeout. */
+        ((uint32)((float){{#N_Bs timeout}}{{.}}{{/N_Bs timeout}}{{^N_Bs timeout}}1.0{{/N_Bs timeout}} * (float)1000000)), /* B timeout. */
+        ((uint32)((float){{#N_Cs timeout}}{{.}}{{/N_Cs timeout}}{{^N_Cs timeout}}0.9{{/N_Cs timeout}} * (float)1000000)), /* C timeout. */
         {{#enable transmit cancellation}}TRUE{{/enable transmit cancellation}}{{^enable transmit cancellation}}FALSE{{/enable transmit cancellation}}, /* transmit cancellation enabled (CanTpTc). */
         {{addressing format}}, /* addressing format (CanTpTxAddressingFormat). */
         {{#enable padding}}TRUE{{/enable padding}}{{^enable padding}}FALSE{{/enable padding}}, /* padding enabled (CanTpTxPaddingActivation). */
-        {{#communication type}}{{.}}{{/communication type}}{{^communication type}}CANTP_DEFAULT_COMMUNICATION_TYPE{{/communication type}}, /* communication type. */
+        {{#communication type}}{{.}}{{/communication type}}{{^communication type}}CANTP_PHYSICAL{{/communication type}}, /* communication type. */
         {{network service data unit reference}}u /* network service data unit reference (CanTpTxNSduRef). */
     },
     {{/transmitters}}
@@ -147,7 +147,7 @@ static const CanTp_ChannelType CanTp_ChannelConfig{{CONFIG_ID}}[] = {
 const CanTp_ConfigType CanTp_Config[{{num_of_config}}u] = {
     {{#configurations}}
     {
-        {{#main function period}}CANTP_CONVERT_SEC_TO_U_SEC({{.}}) /* main function period. */{{/main function period}}{{^main function period}}CANTP_CONVERT_SEC_TO_U_SEC(1e-6) /* defaulted main function period. */{{/main function period}},
+        ((uint32)((float){{#main function period}}{{.}}{{/main function period}}{{^main function period}}1e-6{{/main function period}} * (float)1000000)) /* main function period. */,
         sizeof(CanTp_ChannelConfig{{CONFIG_ID}}) / sizeof(CanTp_ChannelConfig{{CONFIG_ID}}[0x00u]),
         &CanTp_ChannelConfig{{CONFIG_ID}}[0x00u],
         {{#padding byte}}{{.}}u /* padding byte value (CanTpPaddingByte). */{{/padding byte}}{{^padding byte}}0xFFu /* defaulted padding byte value (CanTpPaddingByte). */{{/padding byte}}

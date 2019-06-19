@@ -1,6 +1,6 @@
+#ifndef CANTP_TYPES_H
 #include "CanTp_Types.h"
-
-#define CANTP_CONVERT_SEC_TO_U_SEC(timeout) ((uint32)((float)timeout * (float)1000000))
+#endif /* #ifndef CANTP_TYPES_H */
 
 #ifndef CANTP_MAX_NUM_OF_CHANNEL
 #define CANTP_MAX_NUM_OF_CHANNEL ({{max_num_of_channel}}u)
@@ -9,105 +9,5 @@
 #ifndef CANTP_MAX_NUM_OF_N_SDU
 #define CANTP_MAX_NUM_OF_N_SDU ({{num_of_n_sdu}}u)
 #endif /* #ifndef CANTP_MAX_NUM_OF_N_SDU */
-
-#ifndef CANTP_DEFAULT_BLOCK_SIZE
-{{#default settings.block size}}
-#define CANTP_DEFAULT_BLOCK_SIZE ({{.}}u) /* default block size. */
-{{/default settings.block size}}
-{{^default settings.block size}}
-// #warning default BS parameter is not defined, defaulting to 0.
-#define CANTP_DEFAULT_BLOCK_SIZE (0x00u) /* default block size. */
-{{/default settings.block size}}
-#endif /* #ifndef CANTP_DEFAULT_BLOCK_SIZE */
-
-#ifndef CANTP_DEFAULT_COMMUNICATION_TYPE
-{{#default settings.communication type}}
-#define CANTP_DEFAULT_COMMUNICATION_TYPE {{.}} /* default communication type. */
-{{/default settings.communication type}}
-{{^default settings.communication type}}
-// #warning default communication type is not defined, defaulting to CANTP_PHYSICAL.
-#define CANTP_DEFAULT_COMMUNICATION_TYPE CANTP_PHYSICAL /* default communication type. */
-{{/default settings.communication type}}
-#endif /* #ifndef CANTP_DEFAULT_COMMUNICATION_TYPE */
-
-#ifndef CANTP_DEFAULT_WFT_MAX
-{{#default settings.wait for transmission maximum}}
-#define CANTP_DEFAULT_WFT_MAX ({{.}}u) /* default wait for transmission maximum. */
-{{/default settings.wait for transmission maximum}}
-{{^default settings.wait for transmission maximum}}
-// #warning default WFTmax parameter is not defined, defaulting to 16.
-#define CANTP_DEFAULT_WFT_MAX (0x10u) /* default wait for transmission maximum. */
-{{/default settings.wait for transmission maximum}}
-#endif /* #ifndef CANTP_DEFAULT_WFT_MAX */
-
-#ifndef CANTP_DEFAULT_ST_MIN
-{{#default settings.minimum separation time}}
-#define CANTP_DEFAULT_ST_MIN ({{.}}u) /* default minimum separation time. */
-{{/default settings.minimum separation time}}
-{{^default settings.minimum separation time}}
-// #warning default STmin parameter is not defined, defaulting to 0.
-#define CANTP_DEFAULT_ST_MIN (0x00u) /* default minimum separation time. */
-{{/default settings.minimum separation time}}
-#endif /* #ifndef CANTP_DEFAULT_ST_MIN */
-
-#ifndef CANTP_DEFAULT_N_AS_TIMEOUT
-{{#default settings.N_As timeout}}
-#define CANTP_DEFAULT_N_AS_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC({{.}}) /* default N_As timeout. */
-{{/default settings.N_As timeout}}
-{{^default settings.N_As timeout}}
-// #warning default N_As timeout is not defined, defaulting to 1000.
-#define CANTP_DEFAULT_N_AS_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC(1) /* default N_As timeout. */
-{{/default settings.N_As timeout}}
-#endif /* #ifndef CANTP_DEFAULT_N_AS_TIMEOUT */
-
-#ifndef CANTP_DEFAULT_N_BS_TIMEOUT
-{{#default settings.N_Bs timeout}}
-#define CANTP_DEFAULT_N_BS_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC({{.}}) /* default N_Bs timeout. */
-{{/default settings.N_Bs timeout}}
-{{^default settings.N_Bs timeout}}
-// #warning default N_Bs timeout is not defined, defaulting to 1000.
-#define CANTP_DEFAULT_N_BS_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC(1) /* default N_Bs timeout. */
-{{/default settings.N_Bs timeout}}
-#endif /* #ifndef CANTP_DEFAULT_N_BS_TIMEOUT */
-
-#ifndef CANTP_DEFAULT_N_CS_TIMEOUT
-{{#default settings.N_Cs timeout}}
-#define CANTP_DEFAULT_N_CS_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC({{.}}) /* default N_Cs timeout. */
-{{/default settings.N_Cs timeout}}
-{{^default settings.N_Cs timeout}}
-// #warning default N_Cs timeout is not defined, defaulting to 1000.
-#define CANTP_DEFAULT_N_CS_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC(0.9) /* default N_Cs timeout. */
-{{/default settings.N_Cs timeout}}
-#endif /* #ifndef CANTP_DEFAULT_N_CS_TIMEOUT */
-
-#ifndef CANTP_DEFAULT_N_AR_TIMEOUT
-{{#default settings.N_Ar timeout}}
-#define CANTP_DEFAULT_N_AR_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC({{.}}) /* default N_Ar timeout. */
-{{/default settings.N_Ar timeout}}
-{{^default settings.N_Ar timeout}}
-// #warning default N_Ar timeout is not defined, defaulting to 1000.
-#define CANTP_DEFAULT_N_AR_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC(1) /* default N_Ar timeout. */
-{{/default settings.N_Ar timeout}}
-#endif /* #ifndef CANTP_DEFAULT_N_AR_TIMEOUT */
-
-#ifndef CANTP_DEFAULT_N_BR_TIMEOUT
-{{#default settings.N_Br timeout}}
-#define CANTP_DEFAULT_N_BR_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC({{.}}) /* default N_Br timeout. */
-{{/default settings.N_Br timeout}}
-{{^default settings.N_Br timeout}}
-// #warning default N_Br timeout is not defined, defaulting to 0.9.
-#define CANTP_DEFAULT_N_BR_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC(0.9) /* default N_Br timeout. */
-{{/default settings.N_Br timeout}}
-#endif /* #ifndef CANTP_DEFAULT_N_BR_TIMEOUT */
-
-#ifndef CANTP_DEFAULT_N_CR_TIMEOUT
-{{#default settings.N_Cr timeout}}
-#define CANTP_DEFAULT_N_CR_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC({{.}}) /* default N_Cr timeout. */
-{{/default settings.N_Cr timeout}}
-{{^default settings.N_Cr timeout}}
-// #warning default N_Cr timeout is not defined, defaulting to 1000.
-#define CANTP_DEFAULT_N_CR_TIMEOUT CANTP_CONVERT_SEC_TO_U_SEC(1) /* default N_Cr timeout. */
-{{/default settings.N_Cr timeout}}
-#endif /* #ifndef CANTP_DEFAULT_N_CR_TIMEOUT */
 
 extern const CanTp_ConfigType CanTp_Config[{{num_of_config}}u];
