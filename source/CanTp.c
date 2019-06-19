@@ -56,14 +56,30 @@ extern "C"
 
 #endif /* ifdef __cplusplus */
 
+#ifndef CANIF_H
 #include "CanIf.h"
+#endif /* #ifndef CANIF_H */
+
 #include "CanTp.h"
+
+#ifndef CANTP_CBK_H
 #include "CanTp_Cbk.h"
+#endif /* #ifndef CANTP_CBK_H */
+
+#ifndef COMSTACK_TYPES_H
 #include "ComStack_Types.h"
+#endif /* #ifndef COMSTACK_TYPES_H */
+
+#ifndef PDUR_H
 #include "PduR.h"
+#endif /* #ifndef PDUR_H */
 
 #if (CANTP_DEV_ERROR_DETECT == STD_ON)
+
+#ifndef DET_H
 #include "Det.h"
+#endif /* #ifndef DET_H */
+
 #endif /* #if (CANTP_DEV_ERROR_DETECT == STD_ON) */
 
 /** @} */
