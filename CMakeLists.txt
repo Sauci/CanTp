@@ -35,7 +35,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${can_tp_cfg_out})
 # find a distribution of Python 3. Python is used for:
 # - generation of the static configuration sources (CanTp_Cfg.c and CanTp_Cfg.h)
 # - running the tests
-find_package(PythonInterp 3 REQUIRED)
+find_package(PythonInterp 3.6 REQUIRED)
 
 add_custom_target(can_tp_gen_install
     COMMAND ${PYTHON_EXECUTABLE} setup.py install
