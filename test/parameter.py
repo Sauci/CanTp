@@ -6,6 +6,7 @@ dummy_byte = 0xFF
 default_n_ae = 0xAE
 default_n_sa = 0x5A
 default_n_ta = 0x7A
+default_st_min = 0x00
 
 single_frame_sizes = [pytest.param(fs, id='SF_DL = {}'.format(fs)) for fs in (1, 2, 6)]
 multi_frames_sizes = [pytest.param(fs, id='FF_DL = {}'.format(fs)) for fs in (8, 4095)]
@@ -52,7 +53,7 @@ class DefaultReceiver(Config):
                  n_br=0.9,
                  n_cr=1.0,
                  bs=2,
-                 st_min=2,
+                 st_min=default_st_min,
                  wft_max=1,
                  main_period=1.0 / 1000000.0,
                  com_type='CANTP_PHYSICAL',
@@ -163,7 +164,7 @@ class DefaultFullDuplex(Config):
                  n_br=0.9,
                  n_cr=1.0,
                  bs=2,
-                 st_min=2,
+                 st_min=default_st_min,
                  wft_max=1,
                  main_period=1.0 / 1000000.0,
                  com_type='CANTP_PHYSICAL',
