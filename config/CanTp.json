@@ -1,53 +1,55 @@
 {
-  "default settings": {
-    "block size": 2,
-    "communication type": "CANTP_FUNCTIONAL",
-    "wait for transmission maximum": 1,
-    "minimum separation time": 2,
-    "N_As timeout": 1.0,
-    "N_Bs timeout": 1.0,
-    "N_Cs timeout": 0.9,
-    "N_Ar timeout": 1.0,
-    "N_Br timeout": 0.9,
-    "N_Cr timeout": 1.0
-  },
   "configurations": [
     {
-      "padding byte": 255,
-      "main function period": 1,
+      "padding_byte": 255,
+      "main_function_period": 1,
       "channels": [
         {
-          "channel mode": "CANTP_MODE_FULL_DUPLEX",
+          "channel_mode": "CANTP_MODE_FULL_DUPLEX",
           "receivers": [
             {
-              "network service data unit identifier": 0,
-              "target address": 12,
-              "addressing format": "CANTP_EXTENDED",
-              "network service data unit reference": 0
+              "block_size": 2,
+              "wait_for_transmission_maximum": 1,
+              "minimum_separation_time": 2,
+              "N_Ar_timeout": 1.0,
+              "N_Br_timeout": 0.9,
+              "N_Cr_timeout": 1.0,
+              "network_service_data_unit_identifier": 0,
+              "target_address": 12,
+              "addressing_format": "CANTP_EXTENDED",
+              "network_service_data_unit_reference": 0,
+              "communication_type": "CANTP_PHYSICAL"
             }
           ],
           "transmitters": [
             {
-              "network service data unit identifier": 1,
-              "addressing format": "CANTP_STANDARD",
-              "network service data unit reference": 2132,
-              "communication type": "CANTP_PHYSICAL"
+              "network_service_data_unit_identifier": 1,
+              "N_As_timeout": 1.0,
+              "N_Bs_timeout": 1.0,
+              "N_Cs_timeout": 0.9,
+              "addressing_format": "CANTP_STANDARD",
+              "network_service_data_unit_reference": 2132,
+              "communication_type": "CANTP_PHYSICAL"
             }
           ]
         }
       ]
     },
     {
+      "padding_byte": 255,
+      "main_function_period": 1,
       "channels": [
         {
-          "channel mode": "CANTP_MODE_HALF_DUPLEX",
+          "channel_mode": "CANTP_MODE_HALF_DUPLEX",
           "transmitters": [
             {
-              "network service data unit identifier": 1,
-              "N_Cs timeout": 100,
-              "addressing format": "CANTP_STANDARD",
-              "network service data unit reference": 2132,
-              "communication type": "CANTP_PHYSICAL"
+              "network_service_data_unit_identifier": 1,
+              "N_As_timeout": 1.0,
+              "N_Bs_timeout": 1.0,
+              "N_Cs_timeout": 100,
+              "addressing_format": "CANTP_STANDARD",
+              "network_service_data_unit_reference": 2132,
+              "communication_type": "CANTP_PHYSICAL"
             }
           ]
         }

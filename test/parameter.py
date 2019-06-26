@@ -65,27 +65,27 @@ class DefaultReceiver(Config):
         super(DefaultReceiver, self).__init__({
             "configurations": [
                 {
-                    "padding byte": 255 if padding is None else padding,
-                    "main function period": main_period,
+                    "padding_byte": 255 if padding is None else padding,
+                    "main_function_period": main_period,
                     "channels": [
                         {
-                            "channel mode": ch_mode,
+                            "mode": ch_mode,
                             "receivers": [
                                 {
-                                    "source address": n_sa,
-                                    "target address": n_ta,
-                                    "address extension": n_ae,
-                                    "enable padding": padding is not None,
-                                    "communication type": com_type,
-                                    "network service data unit identifier": 0,
-                                    "addressing format": af,
-                                    "N_Ar timeout": n_ar,
-                                    "N_Br timeout": n_br,
-                                    "N_Cr timeout": n_cr,
-                                    "block size": bs,
-                                    "minimum separation time": st_min,
-                                    "wait for transmission maximum": wft_max,
-                                    "network service data unit reference": 0
+                                    "source_address": n_sa,
+                                    "target_address": n_ta,
+                                    "address_extension": n_ae,
+                                    "enable_padding": padding is not None,
+                                    "communication_type": com_type,
+                                    "network_service_data_unit_identifier": 0,
+                                    "addressing_format": af,
+                                    "N_Ar_timeout": n_ar,
+                                    "N_Br_timeout": n_br,
+                                    "N_Cr_timeout": n_cr,
+                                    "block_size": bs,
+                                    "minimum_separation_time": st_min,
+                                    "wait_for_transmission_maximum": wft_max,
+                                    "network_service_data_unit_reference": 0
                                 }
                             ]
                         }
@@ -96,7 +96,7 @@ class DefaultReceiver(Config):
 
     @property
     def main_period(self):
-        return self['configurations'][0]['main function period']
+        return self['configurations'][0]['main_function_period']
 
     @property
     def receivers(self):
@@ -119,24 +119,24 @@ class DefaultSender(Config):
         super(DefaultSender, self).__init__({
             "configurations": [
                 {
-                    "padding byte": 255 if padding is None else padding,
-                    "main function period": main_period,
+                    "padding_byte": 255 if padding is None else padding,
+                    "main_function_period": main_period,
                     "channels": [
                         {
-                            "channel mode": ch_mode,
+                            "channel_mode": ch_mode,
                             "transmitters": [
                                 {
-                                    "source address": n_sa,
-                                    "target address": n_ta,
-                                    "address extension": n_ae,
-                                    "enable padding": padding is not None,
-                                    "communication type": com_type,
-                                    "network service data unit identifier": 0,
-                                    "addressing format": af,
-                                    "N_As timeout": n_as,
-                                    "N_Bs timeout": n_bs,
-                                    "N_Cs timeout": n_cs,
-                                    "network service data unit reference": 0
+                                    "source_address": n_sa,
+                                    "target_address": n_ta,
+                                    "address_extension": n_ae,
+                                    "enable_padding": padding is not None,
+                                    "communication_type": com_type,
+                                    "network_service_data_unit_identifier": 0,
+                                    "addressing_format": af,
+                                    "N_As_timeout": n_as,
+                                    "N_Bs_timeout": n_bs,
+                                    "N_Cs_timeout": n_cs,
+                                    "network_service_data_unit_reference": 0
                                 }
                             ]
                         }
@@ -147,7 +147,7 @@ class DefaultSender(Config):
 
     @property
     def main_period(self):
-        return self['configurations'][0]['main function period']
+        return self['configurations'][0]['main_function_period']
 
     @property
     def senders(self):
@@ -199,11 +199,11 @@ class DefaultFullDuplex(Config):
                                n_ae=n_ae).senders[0]
         super(DefaultFullDuplex, self).__init__({"configurations": [
             {
-                "padding byte": 255 if padding is None else padding,
-                "main function period": main_period,
+                "padding_byte": 255 if padding is None else padding,
+                "main_function_period": main_period,
                 "channels": [
                     {
-                        "channel mode": 'CANTP_MODE_FULL_DUPLEX',
+                        "channel_mode": 'CANTP_MODE_FULL_DUPLEX',
                         "receivers": [receiver],
                         "transmitters": [sender]
                     }
