@@ -24,7 +24,9 @@ extern "C"
  * @{
  */
 
+#ifndef COMSTACK_TYPES_H
 #include "ComStack_Types.h"
+#endif /* #ifndef COMSTACK_TYPES_H */
 
 /** @} */
 
@@ -277,19 +279,6 @@ typedef struct
     } nSdu;
     const CanTp_ChannelMode channelMode;
 } CanTp_ChannelType; /* CanTpChannel. */
-
-
-//typedef struct
-//{
-//const boolean changeParamApi; /* CanTpChangeParameterApi. */
-//const boolean readParamApi; /* CanTpReadParameterApi. */
-//const boolean getVersionApi; /* CanTpVersionInfoApi. */
-//const boolean errorDetect; /* CanTpDevErrorDetect. */
-//const boolean dynamicId; /* CanTpDynIdSupport. */
-//const boolean flexibleDataRate; /* CanTpFlexibleDataRateSupport. */
-//const boolean genericConnection; /* CanTpGenericConnectionSupport. */
-//const uint8 paddingByte; /* CanTpPaddingByte. */
-//} CanTp_GeneralType;
 
 
 /**

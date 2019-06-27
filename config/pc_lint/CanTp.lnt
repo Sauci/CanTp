@@ -1,0 +1,25 @@
+/* http://www.gimpel.com/html/lintops.htm */
+
+-wlib(1)
+-elib(1)
+-elibsym(1)
+-elibmacro(1)
+
+
+/* output full file path. */
++fff
+
+/* keep output on a single line. */
+-width(0)
+
+/* enable/disable lint message in file scope. */
+-restore_at_end
+
+/* perform 2 passes. */
+-passes(2)
+
+/* output summary report before exit. */
+-summary()
+
+/* treat #include <xxx> as library headers. */
++libclass(angle)

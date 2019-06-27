@@ -2,6 +2,8 @@
 *.pyc
 .idea
 *build*
+config/pc_lint/MISRA*
 debug/*
+external/*
 report/*
 test/ffi/cffi_config.py

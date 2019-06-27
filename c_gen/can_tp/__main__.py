@@ -20,12 +20,12 @@ def main():
     code_generator = CodeGen(data)
 
     if args.source:
-        with open(args.source, 'w') as fp:
-            fp.write(code_generator.source)
+        with open(args.source, 'wb') as fp:
+            fp.write(code_generator.source.encode())
 
     if args.header:
-        with open(args.header, 'w') as fp:
-            fp.write(code_generator.header)
+        with open(args.header, 'wb') as fp:
+            fp.write(code_generator.header.encode())
 
 
 if __name__ == '__main__':
