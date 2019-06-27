@@ -1539,7 +1539,9 @@ CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
             }
             else
             {
-                CanTp_CopyRxPayload(p_n_sdu);
+                /* TODO: check the behavior to adopt if CanTp_CopyRxPayload does not return
+                 *  BUFREQ_OK */
+                (void)CanTp_CopyRxPayload(p_n_sdu);
 
                 PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_OK);
 
@@ -1652,7 +1654,9 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
                     p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_CTS;
                 }
 
-                CanTp_CopyRxPayload(p_n_sdu);
+                /* TODO: check the behavior to adopt if CanTp_CopyRxPayload does not return
+                 *  BUFREQ_OK */
+                (void)CanTp_CopyRxPayload(p_n_sdu);
             }
 
             break;
@@ -1700,7 +1704,9 @@ CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
             p_n_sdu->rx.pdu_r_pdu_info.SduLength = pPduInfo->SduLength - header_size;
             p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr = NULL_PTR;
 
-            CanTp_CopyRxPayload(p_n_sdu);
+            /* TODO: check the behavior to adopt if CanTp_CopyRxPayload does not return
+             *  BUFREQ_OK */
+            (void)CanTp_CopyRxPayload(p_n_sdu);
 
             if (p_n_sdu->rx.buf.size != 0x00u)
             {
@@ -2319,7 +2325,7 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
          * each processing of the MainFunction. */
         p_n_sdu->rx.pdu_r_pdu_info.SduLength = 0x00u;
         p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = NULL_PTR;
-        CanTp_CopyRxPayload(p_n_sdu);
+        (void)CanTp_CopyRxPayload(p_n_sdu);
     }
 
     if (CanTp_NetworkLayerTimeoutExpired(p_n_sdu, CANTP_I_N_BR) == TRUE)
