@@ -869,7 +869,7 @@ class TestSWS00329:
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     def test_first_frame(self, af, data_size):
         config = DefaultReceiver()
-        config['configurations'][0]['channels'][0]['receivers'][0]['addressing format'] = af
+        config['configurations'][0]['channels'][0]['receivers'][0]['addressing_format'] = af
         handle = CanTpTest(config)
         ff, _ = handle.get_receiver_multi_frame((dummy_byte,) * data_size, af=af)
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
@@ -888,7 +888,7 @@ class TestSWS00339:
     @pytest.mark.parametrize('data_size', single_frame_sizes)
     def test_single_frame(self, af, data_size):
         config = DefaultReceiver()
-        config['configurations'][0]['channels'][0]['receivers'][0]['addressing format'] = af
+        config['configurations'][0]['channels'][0]['receivers'][0]['addressing_format'] = af
         handle = CanTpTest(config, rx_buffer_size=data_size - 1)
         sf = handle.get_receiver_single_frame(payload=(dummy_byte,) * data_size, af=af)
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(sf))
@@ -900,7 +900,7 @@ class TestSWS00339:
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     def test_multi_frame(self, af, data_size):
         config = DefaultReceiver()
-        config['configurations'][0]['channels'][0]['receivers'][0]['addressing format'] = af
+        config['configurations'][0]['channels'][0]['receivers'][0]['addressing_format'] = af
         handle = CanTpTest(config, rx_buffer_size=CanTpTest.get_payload_size(af, 'FF') - 1)
         ff, _ = handle.get_receiver_multi_frame(payload=(dummy_byte,) * data_size, af=af)
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))

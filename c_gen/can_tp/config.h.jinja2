@@ -5,8 +5,13 @@
 #include "CanTp_Types.h"
 #endif /* #ifndef CANTP_TYPES_H */
 
+#ifndef CANTP_MAX_NUM_OF_CHANNEL
 #define CANTP_MAX_NUM_OF_CHANNEL (0x00u)
+#endif
+
+#ifndef CANTP_MAX_NUM_OF_N_SDU
 #define CANTP_MAX_NUM_OF_N_SDU (0x00u)
+#endif
 
 {%- for configuration in configurations %}
 #if (CANTP_MAX_NUM_OF_CHANNEL < ({{'0x%02Xu' % configuration.channels|length}}))
