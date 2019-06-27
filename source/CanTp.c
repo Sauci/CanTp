@@ -258,29 +258,35 @@ typedef struct
 
 #endif /* #ifndef CANTP_EXIT_CRITICAL_SECTION */
 
+static inline void CanTp_ReportError(uint8 instanceId, uint8 apiId, uint8 errorId)
+{
 #if (CANTP_DEV_ERROR_DETECT == STD_ON)
 
-#define CANTP_DET_ASSERT_ERROR(condition, instanceId, apiId, errorId, ...) \
-    if(condition) \
-    { \
-        (void)Det_ReportError(CANTP_MODULE_ID, (instanceId), (apiId), (errorId)); \
-        __VA_ARGS__; \
-    }
-
-#define CANTP_DET_ASSERT_RUNTIME_ERROR(condition, instanceId, apiId, errorId, ...) \
-    if(condition) \
-    { \
-        (void)Det_ReportRuntimeError(CANTP_MODULE_ID, (instanceId), (apiId), (errorId)); \
-        __VA_ARGS__; \
-    }
+    (void)Det_ReportError(CANTP_MODULE_ID, instanceId, apiId, errorId);
 
 #else
 
-#define CANTP_DET_ASSERT_ERROR(...)
+    (void)instanceId;
+    (void)apiId;
+    (void)errorId;
 
-#define CANTP_DET_ASSERT_RUNTIME_ERROR(...)
+#endif /* #if (CANTP_DEV_ERROR_DETECT == STD_ON) */
+}
 
-#endif
+static inline void CanTp_ReportRuntimeError(uint8 instanceId, uint8 apiId, uint8 errorId)
+{
+#if (CANTP_DEV_ERROR_DETECT == STD_ON)
+
+    (void)Det_ReportRuntimeError(CANTP_MODULE_ID, instanceId, apiId, errorId);
+
+#else
+
+    (void)instanceId;
+    (void)apiId;
+    (void)errorId;
+
+#endif /* #if (CANTP_DEV_ERROR_DETECT == STD_ON) */
+}
 
 /** @} */
 
@@ -617,12 +623,6 @@ CanTp_StateType CanTp_State = CANTP_OFF;
 
 void CanTp_Init(const CanTp_ConfigType *pConfig)
 {
-    CANTP_DET_ASSERT_ERROR(pConfig == NULL_PTR,
-                           0x00u,
-                           CANTP_INIT_API_ID,
-                           CANTP_E_PARAM_POINTER,
-                           return)
-
     Std_ReturnType result = E_OK;
     uint32_least n_sdu_range;
     uint32_least channel_idx;
@@ -634,103 +634,110 @@ void CanTp_Init(const CanTp_ConfigType *pConfig)
     const CanTp_RxNSduType *p_cfg_rx_sdu;
     const CanTp_TxNSduType *p_cfg_tx_sdu;
 
-    CanTp_ConfigPtr = pConfig;
-
-    uint8 *p_cleared_data = (uint8 *)&CanTp_Rt[0x00u];
-    uint32_least idx;
-
-    for (idx = 0x00u; idx < sizeof(CanTp_Rt); idx++)
+    if (pConfig != NULL_PTR)
     {
-        p_cleared_data[idx] = 0x00u;
-    }
-    /* iterate over all statically defined channels. */
-    for (channel_idx = 0x00u; channel_idx < pConfig->maxChannelCnt; channel_idx++)
-    {
-        p_rt_channel = &CanTp_Rt[channel_idx];
-        p_cfg_channel = &pConfig->pChannel[channel_idx];
+        CanTp_ConfigPtr = pConfig;
 
-        /* make sure the static configuration's PDU count fits into provided
-         * CANTP_MAX_NUM_OF_N_SDU. */
-        n_sdu_range = p_cfg_channel->nSdu.rxNSduCnt + p_cfg_channel->nSdu.txNSduCnt;
+        uint8 *p_cleared_data = (uint8 *)&CanTp_Rt[0x00u];
+        uint32_least idx;
 
-        if (n_sdu_range <= CANTP_MAX_NUM_OF_N_SDU)
+        for (idx = 0x00u; idx < sizeof(CanTp_Rt); idx++)
         {
-            for (rt_sdu_idx = 0x00u; rt_sdu_idx < CANTP_MAX_NUM_OF_N_SDU; rt_sdu_idx++)
+            p_cleared_data[idx] = 0x00u;
+        }
+        /* iterate over all statically defined channels. */
+        for (channel_idx = 0x00u; channel_idx < pConfig->maxChannelCnt; channel_idx++)
+        {
+            p_rt_channel = &CanTp_Rt[channel_idx];
+            p_cfg_channel = &pConfig->pChannel[channel_idx];
+
+            /* make sure the static configuration's PDU count fits into provided
+             * CANTP_MAX_NUM_OF_N_SDU. */
+            n_sdu_range = p_cfg_channel->nSdu.rxNSduCnt + p_cfg_channel->nSdu.txNSduCnt;
+
+            if (n_sdu_range <= CANTP_MAX_NUM_OF_N_SDU)
             {
-                for (cfg_sdu_idx = 0x00u;
-                     cfg_sdu_idx < p_cfg_channel->nSdu.rxNSduCnt; cfg_sdu_idx++)
+                for (rt_sdu_idx = 0x00u; rt_sdu_idx < CANTP_MAX_NUM_OF_N_SDU; rt_sdu_idx++)
                 {
-                    if (p_cfg_channel->nSdu.rx != NULL_PTR)
+                    for (cfg_sdu_idx = 0x00u;
+                         cfg_sdu_idx < p_cfg_channel->nSdu.rxNSduCnt; cfg_sdu_idx++)
                     {
-                        p_cfg_rx_sdu = &p_cfg_channel->nSdu.rx[cfg_sdu_idx];
-
-                        /* make sure the nSduId is in allowed range. */
-                        if (p_cfg_rx_sdu->nSduId < n_sdu_range)
+                        if (p_cfg_channel->nSdu.rx != NULL_PTR)
                         {
-                            if (p_cfg_rx_sdu->nSduId == rt_sdu_idx)
+                            p_cfg_rx_sdu = &p_cfg_channel->nSdu.rx[cfg_sdu_idx];
+
+                            /* make sure the nSduId is in allowed range. */
+                            if (p_cfg_rx_sdu->nSduId < n_sdu_range)
                             {
-                                p_rt_sdu = &p_rt_channel->sdu[p_cfg_rx_sdu->nSduId];
+                                if (p_cfg_rx_sdu->nSduId == rt_sdu_idx)
+                                {
+                                    p_rt_sdu = &p_rt_channel->sdu[p_cfg_rx_sdu->nSduId];
 
-                                p_rt_sdu->dir |= CANTP_DIRECTION_RX;
-                                p_rt_sdu->rx.cfg = p_cfg_rx_sdu;
-                                p_rt_sdu->rx.shared.taskState = CANTP_WAIT;
-                                p_rt_sdu->rx.shared.m_param.st_min = p_cfg_rx_sdu->sTMin;
-                                p_rt_sdu->rx.shared.m_param.bs = p_cfg_rx_sdu->bs;
+                                    p_rt_sdu->dir |= CANTP_DIRECTION_RX;
+                                    p_rt_sdu->rx.cfg = p_cfg_rx_sdu;
+                                    p_rt_sdu->rx.shared.taskState = CANTP_WAIT;
+                                    p_rt_sdu->rx.shared.m_param.st_min = p_cfg_rx_sdu->sTMin;
+                                    p_rt_sdu->rx.shared.m_param.bs = p_cfg_rx_sdu->bs;
+                                }
                             }
-                        }
-                        else
-                        {
-                            result = E_NOT_OK;
+                            else
+                            {
+                                result = E_NOT_OK;
 
-                            break;
+                                break;
+                            }
                         }
                     }
-                }
 
-                for (cfg_sdu_idx = 0x00u;
-                     cfg_sdu_idx < p_cfg_channel->nSdu.txNSduCnt; cfg_sdu_idx++)
-                {
-                    if (p_cfg_channel->nSdu.tx != NULL_PTR)
+                    for (cfg_sdu_idx = 0x00u;
+                         cfg_sdu_idx < p_cfg_channel->nSdu.txNSduCnt; cfg_sdu_idx++)
                     {
-                        p_cfg_tx_sdu = &p_cfg_channel->nSdu.tx[cfg_sdu_idx];
-
-                        /* make sure the nSduId is in allowed range. */
-                        if (p_cfg_tx_sdu->nSduId < n_sdu_range)
+                        if (p_cfg_channel->nSdu.tx != NULL_PTR)
                         {
-                            if (p_cfg_tx_sdu->nSduId == rt_sdu_idx)
+                            p_cfg_tx_sdu = &p_cfg_channel->nSdu.tx[cfg_sdu_idx];
+
+                            /* make sure the nSduId is in allowed range. */
+                            if (p_cfg_tx_sdu->nSduId < n_sdu_range)
                             {
-                                p_rt_sdu = &p_rt_channel->sdu[p_cfg_tx_sdu->nSduId];
+                                if (p_cfg_tx_sdu->nSduId == rt_sdu_idx)
+                                {
+                                    p_rt_sdu = &p_rt_channel->sdu[p_cfg_tx_sdu->nSduId];
 
-                                p_rt_sdu->dir |= CANTP_DIRECTION_TX;
-                                p_rt_sdu->tx.cfg = p_cfg_tx_sdu;
-                                p_rt_sdu->tx.taskState = CANTP_WAIT;
+                                    p_rt_sdu->dir |= CANTP_DIRECTION_TX;
+                                    p_rt_sdu->tx.cfg = p_cfg_tx_sdu;
+                                    p_rt_sdu->tx.taskState = CANTP_WAIT;
+                                }
                             }
-                        }
-                        else
-                        {
-                            result = E_NOT_OK;
+                            else
+                            {
+                                result = E_NOT_OK;
 
-                            break;
+                                break;
+                            }
                         }
                     }
                 }
             }
+            else
+            {
+                result = E_NOT_OK;
+
+                break;
+            }
+        }
+
+        if (result != E_OK)
+        {
+            CanTp_ReportError(0x00u, CANTP_INIT_API_ID, CANTP_E_INIT_FAILED);
         }
         else
         {
-            result = E_NOT_OK;
-
-            break;
+            CanTp_State = CANTP_ON;
         }
-    }
-
-    if (result != E_OK)
-    {
-        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_INIT_API_ID, CANTP_E_INIT_FAILED)
     }
     else
     {
-        CanTp_State = CANTP_ON;
+        CanTp_ReportError(0x00u, CANTP_INIT_API_ID, CANTP_E_PARAM_POINTER);
     }
 }
 
@@ -738,30 +745,33 @@ void CanTp_Init(const CanTp_ConfigType *pConfig)
 
 void CanTp_GetVersionInfo(Std_VersionInfoType *pVersionInfo)
 {
-    CANTP_DET_ASSERT_ERROR(pVersionInfo == NULL_PTR,
-                           0x00u,
-                           CANTP_GET_VERSION_INFO_API_ID,
-                           CANTP_E_PARAM_POINTER,
-                           return)
-
-    pVersionInfo->vendorID = 0x00u;
-    pVersionInfo->moduleID = (uint16)CANTP_MODULE_ID;
-    pVersionInfo->sw_major_version = CANTP_SW_MAJOR_VERSION;
-    pVersionInfo->sw_minor_version = CANTP_SW_MINOR_VERSION;
-    pVersionInfo->sw_patch_version = CANTP_SW_PATCH_VERSION;
+    if (pVersionInfo != NULL_PTR)
+    {
+        pVersionInfo->vendorID = 0x00u;
+        pVersionInfo->moduleID = (uint16)CANTP_MODULE_ID;
+        pVersionInfo->sw_major_version = CANTP_SW_MAJOR_VERSION;
+        pVersionInfo->sw_minor_version = CANTP_SW_MINOR_VERSION;
+        pVersionInfo->sw_patch_version = CANTP_SW_PATCH_VERSION;
+    }
+    else
+    {
+        CanTp_ReportError(0x00u, CANTP_GET_VERSION_INFO_API_ID, CANTP_E_PARAM_POINTER);
+    }
 }
 
 #endif /* #if (CANTP_GET_VERSION_INFO_API == STD_ON) */
 
 void CanTp_Shutdown(void)
 {
-    CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
-                           0x00u,
-                           CANTP_SHUTDOWN_API_ID,
-                           CANTP_E_UNINIT,
-                           return)
+    if (CanTp_State != CANTP_OFF)
+    {
+        CanTp_State = CANTP_OFF;
+    }
+    else
+    {
+        CanTp_ReportError(0x00u, CANTP_SHUTDOWN_API_ID, CANTP_E_UNINIT);
+    }
 
-    CanTp_State = CANTP_OFF;
 }
 
 Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
@@ -769,19 +779,9 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
     CanTp_NSduType *p_n_sdu = NULL_PTR;
     Std_ReturnType tmp_return = E_NOT_OK;
 
-    CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
-                           0x00u,
-                           CANTP_TRANSMIT_API_ID,
-                           CANTP_E_UNINIT,
-                           return E_NOT_OK)
-
-    CANTP_DET_ASSERT_ERROR(pPduInfo == NULL_PTR,
-                           0x00u,
-                           CANTP_TRANSMIT_API_ID,
-                           CANTP_E_PARAM_POINTER,
-                           return E_NOT_OK)
-
-    if (CanTp_GetNSduFromPduId(txPduId, &p_n_sdu) == E_OK)
+    if ((CanTp_State == CANTP_ON) &&
+        (pPduInfo != NULL_PTR) &&
+        (CanTp_GetNSduFromPduId(txPduId, &p_n_sdu) == E_OK))
     {
         /* SWS_CanTp_00206: the function CanTp_Transmit shall reject a request if the CanTp_Transmit
          * service is called for a N-SDU identifier which is being used in a currently running CAN
@@ -814,7 +814,7 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
                      * sender  side) with a handle whose communication type is functional, the CanTp
                      * module shall reject the request and report the runtime error code
                      * CANTP_E_INVALID_TATYPE to the Default Error Tracer. */
-                    CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_INVALID_TATYPE)
+                    CanTp_ReportRuntimeError(0x00u, CANTP_TRANSMIT_API_ID, CANTP_E_INVALID_TATYPE);
                 }
             }
 
@@ -826,7 +826,18 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
     }
     else
     {
-        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_TRANSMIT_API_ID, CANTP_E_INVALID_TX_ID)
+        if (CanTp_State != CANTP_ON)
+        {
+            CanTp_ReportError(0x00u, CANTP_TRANSMIT_API_ID, CANTP_E_UNINIT);
+        }
+        else if (pPduInfo == NULL_PTR)
+        {
+            CanTp_ReportError(0x00u, CANTP_TRANSMIT_API_ID, CANTP_E_PARAM_POINTER);
+        }
+        else
+        {
+            CanTp_ReportError(0x00u, CANTP_TRANSMIT_API_ID, CANTP_E_INVALID_TX_ID);
+        }
     }
 
     return tmp_return;
@@ -837,42 +848,43 @@ Std_ReturnType CanTp_CancelTransmit(PduIdType txPduId)
     CanTp_NSduType *p_n_sdu;
     Std_ReturnType tmp_return = E_NOT_OK;
 
-    CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
-                           0x00u,
-                           CANTP_CANCEL_TRANSMIT_API_ID,
-                           CANTP_E_UNINIT,
-                           return tmp_return)
-
-    if ((CanTp_GetNSduFromPduId(txPduId, &p_n_sdu) == E_OK) &&
-        ((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u))
+    if (CanTp_State == CANTP_ON)
     {
-        if (p_n_sdu->tx.taskState == CANTP_PROCESSING)
+        if ((CanTp_GetNSduFromPduId(txPduId, &p_n_sdu) == E_OK) &&
+            ((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u))
         {
-            p_n_sdu->tx.taskState = CANTP_WAIT;
+            if (p_n_sdu->tx.taskState == CANTP_PROCESSING)
+            {
+                p_n_sdu->tx.taskState = CANTP_WAIT;
 
-            /* SWS_CanTp_00255: If the CanTp_CancelTransmit service has been successfully executed
-             * the CanTp shall call the PduR_CanTpTxConfirmation with notification result E_NOT_OK.
-             */
-            PduR_CanTpTxConfirmation(p_n_sdu->tx.cfg->nSduId, E_NOT_OK);
+                /* SWS_CanTp_00255: If the CanTp_CancelTransmit service has been successfully executed
+                 * the CanTp shall call the PduR_CanTpTxConfirmation with notification result E_NOT_OK.
+                 */
+                PduR_CanTpTxConfirmation(p_n_sdu->tx.cfg->nSduId, E_NOT_OK);
 
-            tmp_return = E_OK;
+                tmp_return = E_OK;
+            }
+            else
+            {
+                /* SWS_CanTp_00254: if development error detection is enabled the function
+                 * CanTp_CancelTransmit shall check the validity of TxPduId parameter. If the parameter
+                 * value is invalid, the CanTp_CancelTransmit function shall raise the development error
+                 * CANTP_E_PARAM_ID and return E_NOT_OK (see SWS_CanTp_00294).
+                 * if the parameter value indicates a cancel transmission request for an N-SDU that it
+                 * is not on transmission process the CanTp module shall report a runtime error code
+                 * CANTP_E_OPER_NOT_SUPPORTED to the Default Error Tracer and the service shall return
+                 * E_NOT_OK. */
+                CanTp_ReportRuntimeError(0x00u, CANTP_CANCEL_TRANSMIT_API_ID, CANTP_E_OPER_NOT_SUPPORTED);
+            }
         }
         else
         {
-            /* SWS_CanTp_00254: if development error detection is enabled the function
-             * CanTp_CancelTransmit shall check the validity of TxPduId parameter. If the parameter
-             * value is invalid, the CanTp_CancelTransmit function shall raise the development error
-             * CANTP_E_PARAM_ID and return E_NOT_OK (see SWS_CanTp_00294).
-             * if the parameter value indicates a cancel transmission request for an N-SDU that it
-             * is not on transmission process the CanTp module shall report a runtime error code
-             * CANTP_E_OPER_NOT_SUPPORTED to the Default Error Tracer and the service shall return
-             * E_NOT_OK. */
-            CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, CANTP_CANCEL_TRANSMIT_API_ID, CANTP_E_OPER_NOT_SUPPORTED)
+            CanTp_ReportError(0x00u, CANTP_CANCEL_TRANSMIT_API_ID, CANTP_E_PARAM_ID);
         }
     }
     else
     {
-        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_CANCEL_TRANSMIT_API_ID, CANTP_E_PARAM_ID)
+        CanTp_ReportError(0x00u, CANTP_CANCEL_TRANSMIT_API_ID, CANTP_E_UNINIT);
     }
 
     return tmp_return;
@@ -885,57 +897,58 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
     PduLengthType n_ae_field_size;
     Std_ReturnType tmp_return = E_NOT_OK;
 
-    CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
-                           0x00u,
-                           CANTP_CANCEL_RECEIVE_API_ID,
-                           CANTP_E_UNINIT,
-                           return tmp_return)
-
-    if ((CanTp_GetNSduFromPduId(rxPduId, &p_n_sdu) == E_OK) &&
-        ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u))
+    if (CanTp_State == CANTP_ON)
     {
-        (void)CanTp_DecodeNAIValue(p_n_sdu->rx.cfg->af, &n_ae_field_size);
-        CANTP_ENTER_CRITICAL_SECTION
-        task_state = p_n_sdu->rx.shared.taskState;
-        CANTP_EXIT_CRITICAL_SECTION
-
-        if (task_state == CANTP_PROCESSING)
+        if ((CanTp_GetNSduFromPduId(rxPduId, &p_n_sdu) == E_OK) &&
+            ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u))
         {
-            /* SWS_CanTp_00262: The CanTp shall reject the request for receive cancellation in case
-             * of a Single Frame reception or if the CanTp is in the process of receiving the last
-             * Consecutive Frame of the N-SDU (i.e. the service is called after N-Cr timeout is
-             * started for the last Consecutive Frame). In this case the CanTp shall return
-             * E_NOT_OK. */
-            if (p_n_sdu->rx.buf.size > (CANTP_CAN_FRAME_SIZE - CANTP_CF_PCI_FIELD_SIZE + n_ae_field_size))
+            (void)CanTp_DecodeNAIValue(p_n_sdu->rx.cfg->af, &n_ae_field_size);
+            CANTP_ENTER_CRITICAL_SECTION
+            task_state = p_n_sdu->rx.shared.taskState;
+            CANTP_EXIT_CRITICAL_SECTION
+
+            if (task_state == CANTP_PROCESSING)
             {
-                CANTP_ENTER_CRITICAL_SECTION
-                p_n_sdu->rx.shared.taskState = CANTP_WAIT;
-                CANTP_EXIT_CRITICAL_SECTION
+                /* SWS_CanTp_00262: The CanTp shall reject the request for receive cancellation in case
+                 * of a Single Frame reception or if the CanTp is in the process of receiving the last
+                 * Consecutive Frame of the N-SDU (i.e. the service is called after N-Cr timeout is
+                 * started for the last Consecutive Frame). In this case the CanTp shall return
+                 * E_NOT_OK. */
+                if (p_n_sdu->rx.buf.size > (CANTP_CAN_FRAME_SIZE - CANTP_CF_PCI_FIELD_SIZE + n_ae_field_size))
+                {
+                    CANTP_ENTER_CRITICAL_SECTION
+                    p_n_sdu->rx.shared.taskState = CANTP_WAIT;
+                    CANTP_EXIT_CRITICAL_SECTION
 
-                /* SWS_CanTp_00263: if the CanTp_CancelReceive service has been successfully
-                 * executed the CanTp shall call the PduR_CanTpRxIndication with notification
-                 * result E_NOT_OK. */
-                PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
+                    /* SWS_CanTp_00263: if the CanTp_CancelReceive service has been successfully
+                     * executed the CanTp shall call the PduR_CanTpRxIndication with notification
+                     * result E_NOT_OK. */
+                    PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
-                tmp_return = E_OK;
+                    tmp_return = E_OK;
+                }
+            }
+            else
+            {
+                /* SWS_CanTp_00260: If the parameter value indicates a cancel reception request for an
+                 * N-SDU that it is not on reception process the CanTp module shall report the runtime
+                 * error code CANTP_E_OPER_NOT_SUPPORTED to the Default Error Tracer and the service
+                 * shall return E_NOT_OK. */
+                CanTp_ReportRuntimeError(0x00u, CANTP_CANCEL_RECEIVE_API_ID, CANTP_E_OPER_NOT_SUPPORTED);
             }
         }
         else
         {
-            /* SWS_CanTp_00260: If the parameter value indicates a cancel reception request for an
-             * N-SDU that it is not on reception process the CanTp module shall report the runtime
-             * error code CANTP_E_OPER_NOT_SUPPORTED to the Default Error Tracer and the service
-             * shall return E_NOT_OK. */
-            CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, CANTP_CANCEL_RECEIVE_API_ID, CANTP_E_OPER_NOT_SUPPORTED)
+            /* SWS_CanTp_00260: if development error detection is enabled the function
+             * CanTp_CancelReceive shall check the validity of RxPduId parameter. if the parameter value
+             * is invalid, the CanTp_CancelReceive function shall raise the development error
+             * CANTP_E_PARAM_ID and return E_NOT_OK (see SWS_CanTp_00294). */
+            CanTp_ReportError(0x00u, CANTP_CANCEL_RECEIVE_API_ID, CANTP_E_PARAM_ID);
         }
     }
     else
     {
-        /* SWS_CanTp_00260: if development error detection is enabled the function
-         * CanTp_CancelReceive shall check the validity of RxPduId parameter. if the parameter value
-         * is invalid, the CanTp_CancelReceive function shall raise the development error
-         * CANTP_E_PARAM_ID and return E_NOT_OK (see SWS_CanTp_00294). */
-        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_CANCEL_RECEIVE_API_ID, CANTP_E_PARAM_ID)
+        CanTp_ReportError(0x00u, CANTP_CANCEL_RECEIVE_API_ID, CANTP_E_UNINIT);
     }
 
     return tmp_return;
@@ -949,49 +962,52 @@ Std_ReturnType CanTp_ChangeParameter(PduIdType pduId, TPParameterType parameter,
     CanTp_TaskStateType task_state;
     Std_ReturnType tmp_return = E_NOT_OK;
 
-    CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
-                           0x00u,
-                           CANTP_CHANGE_PARAMETER_API_ID,
-                           CANTP_E_UNINIT,
-                           return tmp_return)
-
-    if (CanTp_GetNSduFromPduId(pduId, &p_n_sdu) == E_OK)
+    if (CanTp_State == CANTP_ON)
     {
-        CANTP_ENTER_CRITICAL_SECTION
-        task_state = p_n_sdu->rx.shared.taskState;
-        CANTP_EXIT_CRITICAL_SECTION
 
-        if (task_state != CANTP_PROCESSING)
+        if (CanTp_GetNSduFromPduId(pduId, &p_n_sdu) == E_OK)
         {
-            if ((parameter == (uint16)TP_STMIN) &&
-                (value <= 0xFFu) &&
-                ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u))
-            {
-                CANTP_ENTER_CRITICAL_SECTION
-                p_n_sdu->rx.shared.m_param.st_min = (uint32)value;
-                CANTP_EXIT_CRITICAL_SECTION
+            CANTP_ENTER_CRITICAL_SECTION
+            task_state = p_n_sdu->rx.shared.taskState;
+            CANTP_EXIT_CRITICAL_SECTION
 
-                tmp_return = E_OK;
-            }
-            else if ((parameter == (uint16)TP_BS) &&
-                     (value <= 0xFFu) &&
-                     ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u))
+            if (task_state != CANTP_PROCESSING)
             {
-                CANTP_ENTER_CRITICAL_SECTION
-                p_n_sdu->rx.shared.m_param.bs = (uint8)value;
-                CANTP_EXIT_CRITICAL_SECTION
+                if ((parameter == (uint16)TP_STMIN) &&
+                    (value <= 0xFFu) &&
+                    ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u))
+                {
+                    CANTP_ENTER_CRITICAL_SECTION
+                    p_n_sdu->rx.shared.m_param.st_min = (uint32)value;
+                    CANTP_EXIT_CRITICAL_SECTION
 
-                tmp_return = E_OK;
-            }
-            else
-            {
-                CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_CHANGE_PARAMETER_API_ID, CANTP_E_PARAM_ID)
+                    tmp_return = E_OK;
+                }
+                else if ((parameter == (uint16)TP_BS) &&
+                         (value <= 0xFFu) &&
+                         ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u))
+                {
+                    CANTP_ENTER_CRITICAL_SECTION
+                    p_n_sdu->rx.shared.m_param.bs = (uint8)value;
+                    CANTP_EXIT_CRITICAL_SECTION
+
+                    tmp_return = E_OK;
+                }
+                else
+                {
+                    CanTp_ReportError(0x00u, CANTP_CHANGE_PARAMETER_API_ID, CANTP_E_PARAM_ID);
+                }
             }
         }
+        else
+        {
+            CanTp_ReportError(0x00u, CANTP_CHANGE_PARAMETER_API_ID, CANTP_E_PARAM_ID);
+        }
+
     }
     else
     {
-        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_CHANGE_PARAMETER_API_ID, CANTP_E_PARAM_ID)
+        CanTp_ReportError(0x00u, CANTP_CHANGE_PARAMETER_API_ID, CANTP_E_UNINIT);
     }
 
     return tmp_return;
@@ -1007,49 +1023,51 @@ Std_ReturnType CanTp_ReadParameter(PduIdType pduId, TPParameterType parameter, u
     uint16 value;
     Std_ReturnType tmp_return = E_NOT_OK;
 
-    CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
-                           0x00u,
-                           CANTP_READ_PARAMETER_API_ID,
-                           CANTP_E_UNINIT,
-                           return tmp_return)
-
-    CANTP_DET_ASSERT_ERROR(pValue == NULL_PTR,
-                           0x00u,
-                           CANTP_READ_PARAMETER_API_ID,
-                           CANTP_E_PARAM_POINTER,
-                           return tmp_return)
-
-    if (CanTp_GetNSduFromPduId(pduId, &p_n_sdu) == E_OK)
+    if (CanTp_State == CANTP_ON)
     {
-        if ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u)
+        if (pValue != NULL_PTR)
         {
-            if (parameter == (uint16)TP_STMIN)
+            if (CanTp_GetNSduFromPduId(pduId, &p_n_sdu) == E_OK)
             {
-                CANTP_ENTER_CRITICAL_SECTION
-                value = (uint16)p_n_sdu->rx.shared.m_param.st_min;
-                CANTP_EXIT_CRITICAL_SECTION
+                if ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u)
+                {
+                    if (parameter == (uint16)TP_STMIN)
+                    {
+                        CANTP_ENTER_CRITICAL_SECTION
+                        value = (uint16)p_n_sdu->rx.shared.m_param.st_min;
+                        CANTP_EXIT_CRITICAL_SECTION
 
-                *pValue = value;
-                tmp_return = E_OK;
-            }
-            else if (parameter == (uint16)TP_BS)
-            {
-                CANTP_ENTER_CRITICAL_SECTION
-                value = (uint16)p_n_sdu->rx.shared.m_param.bs;
-                CANTP_EXIT_CRITICAL_SECTION
+                        *pValue = value;
+                        tmp_return = E_OK;
+                    }
+                    else if (parameter == (uint16)TP_BS)
+                    {
+                        CANTP_ENTER_CRITICAL_SECTION
+                        value = (uint16)p_n_sdu->rx.shared.m_param.bs;
+                        CANTP_EXIT_CRITICAL_SECTION
 
-                *pValue = value;
-                tmp_return = E_OK;
+                        *pValue = value;
+                        tmp_return = E_OK;
+                    }
+                    else
+                    {
+                        CanTp_ReportError(0x00u, CANTP_READ_PARAMETER_API_ID, CANTP_E_PARAM_ID);
+                    }
+                }
             }
             else
             {
-                CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_READ_PARAMETER_API_ID, CANTP_E_PARAM_ID)
+                CanTp_ReportError(0x00u, CANTP_READ_PARAMETER_API_ID, CANTP_E_PARAM_ID);
             }
+        }
+        else
+        {
+            CanTp_ReportError(0x00u, CANTP_READ_PARAMETER_API_ID, CANTP_E_PARAM_POINTER);
         }
     }
     else
     {
-        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_READ_PARAMETER_API_ID, CANTP_E_PARAM_ID)
+        CanTp_ReportError(0x00u, CANTP_READ_PARAMETER_API_ID, CANTP_E_UNINIT);
     }
 
     return tmp_return;
@@ -1071,11 +1089,6 @@ Std_ReturnType CanTp_ReadParameter(PduIdType pduId, TPParameterType parameter, u
 
 void CanTp_MainFunction(void)
 {
-    CANTP_DET_ASSERT_ERROR(CanTp_State == CANTP_OFF,
-                           0x00u,
-                           CANTP_MAIN_FUNCTION_API_ID,
-                           CANTP_E_UNINIT)
-
     uint32 idx;
     CanTp_NSduType *p_n_sdu;
 
@@ -1115,6 +1128,10 @@ void CanTp_MainFunction(void)
             p_n_sdu->tx.st_min += CanTp_ConfigPtr->mainFunctionPeriod;
             CANTP_EXIT_CRITICAL_SECTION
         }
+    }
+    else
+    {
+        CanTp_ReportError(0x00u, CANTP_MAIN_FUNCTION_API_ID, CANTP_E_UNINIT);
     }
 }
 
@@ -1470,7 +1487,7 @@ CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
          * new reception */
         PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
-        CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, CANTP_I_RX_SF, 0x00u, CANTP_E_UNEXP_PDU)
+        CanTp_ReportRuntimeError(CANTP_I_RX_SF, CANTP_RX_INDICATION_API_ID, CANTP_E_UNEXP_PDU);
     }
     else
     {
@@ -1551,7 +1568,7 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
          * new reception */
         PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
-        CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, CANTP_I_RX_FF, 0x00u, CANTP_E_UNEXP_PDU)
+        CanTp_ReportRuntimeError(CANTP_I_RX_FF, CANTP_RX_INDICATION_API_ID, CANTP_E_UNEXP_PDU);
     }
     else
     {
@@ -1834,79 +1851,80 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
     PduLengthType n_ae_field_size;
     CanTp_NSduType *p_n_sdu;
 
-    CANTP_DET_ASSERT_ERROR(pPduInfo == NULL_PTR,
-                           0x00u,
-                           CANTP_RX_INDICATION_API_ID,
-                           CANTP_E_PARAM_POINTER,
-                           return)
-
-    if (CanTp_GetNSduFromPduId(rxPduId, &p_n_sdu) == E_OK)
+    if (pPduInfo != NULL_PTR)
     {
-        if (((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u) &&
-            CanTp_DecodeNAIValue(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK &&
-            (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
+        if (CanTp_GetNSduFromPduId(rxPduId, &p_n_sdu) == E_OK)
         {
-            /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
-             * frames) are used for a Rx N-SDU and CanTpRxPaddingActivation is equal to CANTP_ON, then
-             * CanTp receives by means of CanTp_RxIndication() call an SF Rx N-PDU belonging to that
-             * N-SDU, with a length smaller than eight bytes (i.e. PduInfoPtr.SduLength < 8), CanTp
-             * shall reject the reception. The runtime error code CANTP_E_PADDING shall be reported to
-             * the Default Error Tracer. */
-            if ((p_n_sdu->rx.cfg->padding == CANTP_ON) && (pPduInfo->SduLength < CANTP_CAN_FRAME_SIZE))
+            if (((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u) &&
+                CanTp_DecodeNAIValue(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK &&
+                (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
             {
-                PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
+                /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
+                 * frames) are used for a Rx N-SDU and CanTpRxPaddingActivation is equal to CANTP_ON, then
+                 * CanTp receives by means of CanTp_RxIndication() call an SF Rx N-PDU belonging to that
+                 * N-SDU, with a length smaller than eight bytes (i.e. PduInfoPtr.SduLength < 8), CanTp
+                 * shall reject the reception. The runtime error code CANTP_E_PADDING shall be reported to
+                 * the Default Error Tracer. */
+                if ((p_n_sdu->rx.cfg->padding == CANTP_ON) && (pPduInfo->SduLength < CANTP_CAN_FRAME_SIZE))
+                {
+                    PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
-                CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_PADDING)
+                    CanTp_ReportRuntimeError(0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_PADDING);
 
-                next_state = CANTP_FRAME_STATE_OK;
-            }
-            /* SWS_CanTp_00093: If a multiple segmented session occurs (on both receiver and sender
-             * side) with a handle whose communication type is functional, the CanTp module shall
-             * reject the request and report the runtime error code CANTP_E_INVALID_TATYPE to the
-             * Default Error Tracer. */
-            else if ((p_n_sdu->rx.cfg->taType == CANTP_FUNCTIONAL) && (pci == CANTP_N_PCI_TYPE_FF))
-            {
-                CANTP_DET_ASSERT_RUNTIME_ERROR(TRUE, 0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_INVALID_TATYPE)
+                    next_state = CANTP_FRAME_STATE_OK;
+                }
+                    /* SWS_CanTp_00093: If a multiple segmented session occurs (on both receiver and sender
+                     * side) with a handle whose communication type is functional, the CanTp module shall
+                     * reject the request and report the runtime error code CANTP_E_INVALID_TATYPE to the
+                     * Default Error Tracer. */
+                else if ((p_n_sdu->rx.cfg->taType == CANTP_FUNCTIONAL) && (pci == CANTP_N_PCI_TYPE_FF))
+                {
+                    CanTp_ReportRuntimeError(0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_INVALID_TATYPE);
 
-                next_state = CANTP_FRAME_STATE_OK;
-            }
-            else if (pci == CANTP_N_PCI_TYPE_SF)
-            {
-                next_state = CanTp_LDataIndRSF(p_n_sdu, pPduInfo, n_ae_field_size);
-            }
-            else if (pci == CANTP_N_PCI_TYPE_FF)
-            {
-                next_state = CanTp_LDataIndRFF(p_n_sdu, pPduInfo, n_ae_field_size);
-            }
-            else if ((pci == CANTP_N_PCI_TYPE_CF) &&
-                     (p_n_sdu->rx.shared.state == CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION))
-            {
-                next_state = CanTp_LDataIndRCF(p_n_sdu, pPduInfo, n_ae_field_size);
-            }
-            else
-            {
-                next_state = CANTP_FRAME_STATE_INVALID;
+                    next_state = CANTP_FRAME_STATE_OK;
+                }
+                else if (pci == CANTP_N_PCI_TYPE_SF)
+                {
+                    next_state = CanTp_LDataIndRSF(p_n_sdu, pPduInfo, n_ae_field_size);
+                }
+                else if (pci == CANTP_N_PCI_TYPE_FF)
+                {
+                    next_state = CanTp_LDataIndRFF(p_n_sdu, pPduInfo, n_ae_field_size);
+                }
+                else if ((pci == CANTP_N_PCI_TYPE_CF) &&
+                         (p_n_sdu->rx.shared.state == CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION))
+                {
+                    next_state = CanTp_LDataIndRCF(p_n_sdu, pPduInfo, n_ae_field_size);
+                }
+                else
+                {
+                    next_state = CANTP_FRAME_STATE_INVALID;
+                }
+
+                if (next_state != CANTP_FRAME_STATE_INVALID)
+                {
+                    p_n_sdu->rx.shared.state = next_state;
+                }
             }
 
-            if (next_state != CANTP_FRAME_STATE_INVALID)
+            if (((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u) &&
+                CanTp_DecodeNAIValue(p_n_sdu->tx.cfg->af, &n_ae_field_size) == E_OK &&
+                (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
             {
-                p_n_sdu->rx.shared.state = next_state;
+                if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION)
+                {
+                    p_n_sdu->tx.shared.state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo);
+                }
             }
         }
-
-        if (((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u) &&
-            CanTp_DecodeNAIValue(p_n_sdu->tx.cfg->af, &n_ae_field_size) == E_OK &&
-            (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
+        else
         {
-            if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION)
-            {
-                p_n_sdu->tx.shared.state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo);
-            }
+            CanTp_ReportError(0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_INVALID_RX_ID);
         }
     }
     else
     {
-        CANTP_DET_ASSERT_ERROR(TRUE, 0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_INVALID_RX_ID)
+        CanTp_ReportError(0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_PARAM_POINTER);
     }
 }
 
@@ -2242,7 +2260,7 @@ static void CanTp_AbortRxSession(CanTp_NSduType *pNSdu, const uint8 instanceId, 
          * CANTP_E_TX_COM (in case of a transmission operation). If the task was aborted due to any
          * other protocol error, the CanTp module shall raise the runtime error code CANTP_E_COM to
          * the Default Error Tracer. */
-        CANTP_DET_ASSERT_ERROR(TRUE, instanceId, 0x00u, CANTP_E_RX_COM)
+        CanTp_ReportError(instanceId, 0x00u, CANTP_E_RX_COM);
     }
 }
 
@@ -2262,7 +2280,7 @@ static void CanTp_AbortTxSession(CanTp_NSduType *pNSdu, const uint8 instanceId, 
          * CANTP_E_TX_COM (in case of a transmission operation). If the task was aborted due to any
          * other protocol error, the CanTp module shall raise the runtime error code CANTP_E_COM to
          * the Default Error Tracer. */
-        CANTP_DET_ASSERT_ERROR(TRUE, instanceId, 0x00u, CANTP_E_TX_COM)
+        CanTp_ReportError(instanceId, 0x00u, CANTP_E_TX_COM);
     }
 }
 
@@ -2302,7 +2320,7 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
 
     if (CanTp_NetworkLayerTimeoutExpired(p_n_sdu, CANTP_I_N_BR) == TRUE)
     {
-        CANTP_DET_ASSERT_ERROR(TRUE, CANTP_I_N_BR, 0x00u, CANTP_E_RX_COM)
+        CanTp_ReportError(CANTP_I_N_BR, 0x00u, CANTP_E_RX_COM);
     }
 
     if (CanTp_NetworkLayerTimeoutExpired(p_n_sdu, CANTP_I_N_AR) == TRUE)
