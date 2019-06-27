@@ -94,6 +94,21 @@ extern "C"
  * @{
  */
 
+
+#define CANTP_N_PCI_TYPE_SF (0x00u)
+
+#define CANTP_N_PCI_TYPE_FF (0x01u)
+
+#define CANTP_N_PCI_TYPE_CF (0x02u)
+
+#define CANTP_N_PCI_TYPE_FC (0x03u)
+
+#define CANTP_FLOW_STATUS_TYPE_CTS (0x00u)
+
+#define CANTP_FLOW_STATUS_TYPE_WT (0x01u)
+
+#define CANTP_FLOW_STATUS_TYPE_OVFLW (0x02u)
+
 #define CANTP_CAN_FRAME_SIZE (0x08u)
 
 #define CANTP_SF_PCI_FIELD_SIZE (0x01u)
@@ -126,20 +141,9 @@ extern "C"
  * @{
  */
 
-typedef enum
-{
-    CANTP_N_PCI_TYPE_SF = 0x00u,
-    CANTP_N_PCI_TYPE_FF = 0x01u,
-    CANTP_N_PCI_TYPE_CF = 0x02u,
-    CANTP_N_PCI_TYPE_FC = 0x03u
-} CanTp_NPciType;
+typedef uint8 CanTp_NPciType;
 
-typedef enum
-{
-    CANTP_FLOW_STATUS_TYPE_CTS = 0x00u,
-    CANTP_FLOW_STATUS_TYPE_WT = 0x01u,
-    CANTP_FLOW_STATUS_TYPE_OVFLW = 0x02u,
-} CanTp_FlowStatusType;
+typedef uint8 CanTp_FlowStatusType;
 
 typedef enum {
     CANTP_FRAME_STATE_INVALID = 0x00u,
@@ -2145,7 +2149,7 @@ static Std_ReturnType CanTp_DecodePCIValue(CanTp_NPciType *pPci, const uint8 *pD
 
     if ((pPci != NULL_PTR) && (pData != NULL_PTR))
     {
-        pci = (CanTp_NPciType)(pData[0x00u] >> 0x04u) & 0x0Fu;
+        pci = (CanTp_NPciType)((uint8)(pData[0x00u] >> 0x04u) & 0x0Fu);
 
         if ((pci == CANTP_N_PCI_TYPE_SF) ||
             (pci == CANTP_N_PCI_TYPE_FF) ||
