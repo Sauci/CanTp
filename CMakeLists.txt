@@ -117,7 +117,7 @@ if (${enable_static_code_analysis})
         ${CMAKE_CURRENT_SOURCE_DIR}/external
         ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint)
 
-    file(DOWNLOAD https://gist.githubusercontent.com/Sauci/39b03e60642a910e358d4dd0871a0b05/raw/a9d015c945f3b99bb3c25bb371f3b75a02d7a6d8/add_pc_lint_target.cmake
+    file(DOWNLOAD https://gist.githubusercontent.com/Sauci/39b03e60642a910e358d4dd0871a0b05/raw/30977018552adef312b7a315c0df4271178899de/add_pc_lint_target.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/external/add_pc_lint_target.cmake)
 
     file(DOWNLOAD https://gimpel.com/html/pub90/au-misra1.lnt
