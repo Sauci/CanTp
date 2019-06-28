@@ -183,7 +183,7 @@ typedef struct
     uint32 st_min;
     uint8 bs;
     uint8 sn;
-    uint8 wft_max;
+    uint16 wft_max;
     uint8 meta_data[0x04u];
     PduInfoType can_if_pdu_info;
     PduInfoType pdu_r_pdu_info;
@@ -197,7 +197,7 @@ typedef struct
          * CanTp_ChangeParameter.
          */
         struct {
-            uint32 st_min;
+            uint16 st_min;
             uint8 bs;
         } m_param;
     } shared;
@@ -984,7 +984,7 @@ Std_ReturnType CanTp_ChangeParameter(PduIdType pduId, TPParameterType parameter,
                         if ((value <= 0xFFu) && ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u))
                         {
                             CANTP_ENTER_CRITICAL_SECTION
-                            p_n_sdu->rx.shared.m_param.st_min = (uint32)value;
+                            p_n_sdu->rx.shared.m_param.st_min = value;
                             CANTP_EXIT_CRITICAL_SECTION
 
                             tmp_return = E_OK;
@@ -1508,7 +1508,7 @@ static CanTp_FrameStateType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
 static CanTp_FrameStateType
 CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize)
 {
-    uint16 dl;
+    PduLengthType dl;
     PduLengthType header_size;
     CanTp_FrameStateType result = CANTP_FRAME_STATE_INVALID;
     CanTp_NSduType *p_n_sdu = pNSdu;
@@ -2262,7 +2262,7 @@ static uint8 CanTp_EncodeSTMinValue(const uint16 value)
 
     if (CANTP_INTERNAL_TO_MS(value) <= 0x7Fu)
     {
-        result = CANTP_INTERNAL_TO_MS(value);
+        result = (uint8)CANTP_INTERNAL_TO_MS(value);
     }
     else if ((value == 100u) ||
              (value == 200u) ||
@@ -2274,7 +2274,7 @@ static uint8 CanTp_EncodeSTMinValue(const uint16 value)
              (value == 800u) ||
              (value == 900u))
     {
-        result = (0xF0u | (value / 100u));
+        result = (uint8)(0x00F0u | (value / 100u));
     }
     else
     {
@@ -2338,7 +2338,7 @@ static void CanTp_TransmitTxCANData(CanTp_NSduType *pNSdu)
 {
     CanTp_StartNetworkLayerTimeout(pNSdu, CANTP_I_N_AS);
 
-    if (CanIf_Transmit(pNSdu->tx.cfg->txNSduRef, &pNSdu->tx.can_if_pdu_info) != E_OK)
+    if (CanIf_Transmit((PduIdType)pNSdu->tx.cfg->txNSduRef, &pNSdu->tx.can_if_pdu_info) != E_OK)
     {
         CanTp_AbortTxSession(pNSdu, CANTP_I_NONE, FALSE);
     }
