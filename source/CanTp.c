@@ -184,7 +184,6 @@ typedef struct
     uint8 bs;
     uint8 sn;
     uint16 wft_max;
-    uint8 meta_data[0x04u];
     PduInfoType can_if_pdu_info;
     PduInfoType pdu_r_pdu_info;
     struct
@@ -226,9 +225,6 @@ typedef struct
     CanTp_RxConnectionType rx;
     CanTp_TxConnectionType tx;
     uint32 n[0x06u];
-    uint8 n_sa;
-    uint8 n_ta;
-    uint8 n_ae;
     uint8_least dir;
     uint32 t_flag;
 } CanTp_NSduType;
