@@ -800,7 +800,7 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
                   (p_n_sdu->tx.cfg->af == CANTP_NORMALFIXED)) && (pPduInfo->SduLength <= 0x07u)) ||
                 (((p_n_sdu->tx.cfg->af == CANTP_EXTENDED) ||
                   (p_n_sdu->tx.cfg->af == CANTP_MIXED) ||
-                  (p_n_sdu->tx.cfg->af == CANTP_MIXED29BIT)) && pPduInfo->SduLength <= 0x06u))
+                  (p_n_sdu->tx.cfg->af == CANTP_MIXED29BIT)) && (pPduInfo->SduLength <= 0x06u)))
             {
                 p_n_sdu->tx.shared.state = CANTP_TX_FRAME_STATE_SF_TX_REQUEST;
                 tmp_return = E_OK;
@@ -1895,7 +1895,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
         if (CanTp_GetNSduFromPduId(rxPduId, &p_n_sdu) == E_OK)
         {
             if (((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u) &&
-                CanTp_DecodeNAIValue(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK &&
+                (CanTp_DecodeNAIValue(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK) &&
                 (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
             {
                 /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
@@ -1948,7 +1948,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
             }
 
             if (((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u) &&
-                CanTp_DecodeNAIValue(p_n_sdu->tx.cfg->af, &n_ae_field_size) == E_OK &&
+                (CanTp_DecodeNAIValue(p_n_sdu->tx.cfg->af, &n_ae_field_size) == E_OK) &&
                 (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
             {
                 if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_FC_RX_INDICATION)
@@ -2539,7 +2539,7 @@ static BufReq_ReturnType CanTp_CopyTxPayload(CanTp_NSduType *pNSdu, PduLengthTyp
     CanTp_NSduType *p_n_sdu = pNSdu;
     tmp_pdu.SduDataPtr = &p_n_sdu->tx.buf.can[ofs];
 
-    if (p_n_sdu->tx.buf.size <= CANTP_CAN_FRAME_SIZE - ofs)
+    if (p_n_sdu->tx.buf.size <= (CANTP_CAN_FRAME_SIZE - ofs))
     {
         tmp_pdu.SduLength = p_n_sdu->tx.buf.size;
     }
