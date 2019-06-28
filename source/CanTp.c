@@ -2203,14 +2203,14 @@ static uint32_least CanTp_DecodeSTMinValue(const uint8 data)
     uint32_least result;
 
     /* ISO15765: the units of STmin in the range 00 hex – 7F hex are absolute milliseconds (ms). */
-    if ((0x00u <= data) && (data <= 0x7Fu))
+    if (data <= 0x7Fu)
     {
         result = CANTP_MS_TO_INTERNAL(data);
     }
     /* ISO15765: the units of STmin in the range F1 hex – F9 hex are even 100 microseconds (μs),
      * where parameter value F1 hex represents 100 μs and parameter value F9 hex represents 900 μs.
      */
-    else if ((0xF1u <= data) && (data <= 0xF9u))
+    else if ((data >= 0xF1u) && (data <= 0xF9u))
     {
         result = CANTP_US_TO_INTERNAL((data & 0x0Fu) * 100u);
     }
@@ -2230,7 +2230,7 @@ static uint8 CanTp_EncodeSTMinValue(const uint16 value)
 {
     uint8 result;
 
-    if ((0x00u <= CANTP_INTERNAL_TO_MS(value)) && (CANTP_INTERNAL_TO_MS(value) <= 0x7Fu))
+    if (CANTP_INTERNAL_TO_MS(value) <= 0x7Fu)
     {
         result = CANTP_INTERNAL_TO_MS(value);
     }
