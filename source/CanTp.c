@@ -1575,6 +1575,9 @@ CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 
             break;
         }
+        case BUFREQ_E_NOT_OK:
+        case BUFREQ_E_BUSY:
+        case BUFREQ_E_OVFL:
         default:
         {
             break;
@@ -1696,6 +1699,7 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 
             break;
         }
+        case BUFREQ_E_BUSY:
         default:
         {
             break;
@@ -2417,6 +2421,17 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
 
                 break;
             }
+            case CANTP_FRAME_STATE_INVALID:
+            case CANTP_RX_FRAME_STATE_FC_TX_CONFIRMATION:
+            case CANTP_RX_FRAME_STATE_FC_OVFLW_TX_CONFIRMATION:
+            case CANTP_RX_FRAME_STATE_CF_RX_INDICATION:
+            case CANTP_TX_FRAME_STATE_SF_TX_REQUEST:
+            case CANTP_TX_FRAME_STATE_SF_TX_CONFIRMATION:
+            case CANTP_TX_FRAME_STATE_FF_TX_REQUEST:
+            case CANTP_TX_FRAME_STATE_FF_TX_CONFIRMATION:
+            case CANTP_TX_FRAME_STATE_CF_TX_REQUEST:
+            case CANTP_TX_FRAME_STATE_CF_TX_CONFIRMATION:
+            case CANTP_TX_FRAME_STATE_FC_RX_INDICATION:
             default:
             {
                 break;
@@ -2499,10 +2514,16 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
 
                 break;
             }
-            case CANTP_TX_FRAME_STATE_FC_RX_INDICATION:
+            case CANTP_FRAME_STATE_INVALID:
+            case CANTP_FRAME_STATE_ABORT:
+            case CANTP_RX_FRAME_STATE_CF_RX_INDICATION:
+            case CANTP_RX_FRAME_STATE_FC_TX_REQUEST:
+            case CANTP_RX_FRAME_STATE_FC_TX_CONFIRMATION:
+            case CANTP_RX_FRAME_STATE_FC_OVFLW_TX_CONFIRMATION:
             case CANTP_TX_FRAME_STATE_SF_TX_CONFIRMATION:
             case CANTP_TX_FRAME_STATE_FF_TX_CONFIRMATION:
-            // case CANTP_TX_FRAME_STATE_CF_TX_CONFIRMATION:
+            case CANTP_TX_FRAME_STATE_FC_RX_INDICATION:
+            case CANTP_TX_FRAME_STATE_CF_TX_CONFIRMATION:
             default:
             {
                 break;
