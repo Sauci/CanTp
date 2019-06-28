@@ -1093,7 +1093,8 @@ Std_ReturnType CanTp_ReadParameter(PduIdType pduId, TPParameterType parameter, u
 
 void CanTp_MainFunction(void)
 {
-    uint32 idx;
+    uint32_least channel_idx;
+    uint32_least n_sdu_idx;
     CanTp_NSduType *p_n_sdu;
 
     CanTp_TaskStateType task_state_rx;
@@ -1101,36 +1102,39 @@ void CanTp_MainFunction(void)
 
     if (CanTp_State == CANTP_ON)
     {
-        for (idx = 0x00u; idx < CANTP_MAX_NUM_OF_N_SDU; idx++)
+        for (channel_idx = 0x00u; channel_idx < CANTP_MAX_NUM_OF_CHANNEL; channel_idx++)
         {
-            p_n_sdu = &CanTp_Rt->sdu[idx];
-
-            CANTP_ENTER_CRITICAL_SECTION
-            task_state_rx = p_n_sdu->rx.shared.taskState;
-            CANTP_EXIT_CRITICAL_SECTION
-
-            task_state_tx = p_n_sdu->tx.taskState;
-
-            if (task_state_rx == CANTP_PROCESSING)
+            for (n_sdu_idx = 0x00u; n_sdu_idx < CANTP_MAX_NUM_OF_N_SDU; n_sdu_idx++)
             {
-                CanTp_PerformStepRx(p_n_sdu);
-            }
+                p_n_sdu = &CanTp_Rt[channel_idx].sdu[n_sdu_idx];
 
-            if (task_state_tx == CANTP_PROCESSING)
-            {
-                CanTp_PerformStepTx(p_n_sdu);
-            }
+                CANTP_ENTER_CRITICAL_SECTION
+                task_state_rx = p_n_sdu->rx.shared.taskState;
+                CANTP_EXIT_CRITICAL_SECTION
 
-            CANTP_ENTER_CRITICAL_SECTION
-            p_n_sdu->n[0x00u] += CanTp_ConfigPtr->mainFunctionPeriod;
-            p_n_sdu->n[0x01u] += CanTp_ConfigPtr->mainFunctionPeriod;
-            p_n_sdu->n[0x02u] += CanTp_ConfigPtr->mainFunctionPeriod;
-            p_n_sdu->n[0x03u] += CanTp_ConfigPtr->mainFunctionPeriod;
-            p_n_sdu->n[0x04u] += CanTp_ConfigPtr->mainFunctionPeriod;
-            p_n_sdu->n[0x05u] += CanTp_ConfigPtr->mainFunctionPeriod;
-            p_n_sdu->rx.st_min += CanTp_ConfigPtr->mainFunctionPeriod;
-            p_n_sdu->tx.st_min += CanTp_ConfigPtr->mainFunctionPeriod;
-            CANTP_EXIT_CRITICAL_SECTION
+                task_state_tx = p_n_sdu->tx.taskState;
+
+                if (task_state_rx == CANTP_PROCESSING)
+                {
+                    CanTp_PerformStepRx(p_n_sdu);
+                }
+
+                if (task_state_tx == CANTP_PROCESSING)
+                {
+                    CanTp_PerformStepTx(p_n_sdu);
+                }
+
+                CANTP_ENTER_CRITICAL_SECTION
+                p_n_sdu->n[0x00u] += CanTp_ConfigPtr->mainFunctionPeriod;
+                p_n_sdu->n[0x01u] += CanTp_ConfigPtr->mainFunctionPeriod;
+                p_n_sdu->n[0x02u] += CanTp_ConfigPtr->mainFunctionPeriod;
+                p_n_sdu->n[0x03u] += CanTp_ConfigPtr->mainFunctionPeriod;
+                p_n_sdu->n[0x04u] += CanTp_ConfigPtr->mainFunctionPeriod;
+                p_n_sdu->n[0x05u] += CanTp_ConfigPtr->mainFunctionPeriod;
+                p_n_sdu->rx.st_min += CanTp_ConfigPtr->mainFunctionPeriod;
+                p_n_sdu->tx.st_min += CanTp_ConfigPtr->mainFunctionPeriod;
+                CANTP_EXIT_CRITICAL_SECTION
+            }
         }
     }
     else
