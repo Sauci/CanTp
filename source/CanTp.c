@@ -147,17 +147,17 @@ typedef uint8 CanTp_FlowStatusType;
 
 typedef enum {
     CANTP_FRAME_STATE_INVALID = 0x00u,
-    CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST,
-    CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION,
-    CANTP_RX_FRAME_STATE_WAIT_FC_OVFLW_TX_CONFIRMATION,
-    CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION,
-    CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST,
-    CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION,
-    CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST,
-    CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION,
-    CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST,
-    CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION,
-    CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION,
+    CANTP_RX_FRAME_STATE_FC_TX_REQUEST,
+    CANTP_RX_FRAME_STATE_FC_TX_CONFIRMATION,
+    CANTP_RX_FRAME_STATE_FC_OVFLW_TX_CONFIRMATION,
+    CANTP_RX_FRAME_STATE_CF_RX_INDICATION,
+    CANTP_TX_FRAME_STATE_SF_TX_REQUEST,
+    CANTP_TX_FRAME_STATE_SF_TX_CONFIRMATION,
+    CANTP_TX_FRAME_STATE_FF_TX_REQUEST,
+    CANTP_TX_FRAME_STATE_FF_TX_CONFIRMATION,
+    CANTP_TX_FRAME_STATE_CF_TX_REQUEST,
+    CANTP_TX_FRAME_STATE_CF_TX_CONFIRMATION,
+    CANTP_TX_FRAME_STATE_FC_RX_INDICATION,
     CANTP_FRAME_STATE_OK,
     CANTP_FRAME_STATE_ABORT
 } CanTp_FrameStateType;
@@ -802,14 +802,14 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
                   (p_n_sdu->tx.cfg->af == CANTP_MIXED) ||
                   (p_n_sdu->tx.cfg->af == CANTP_MIXED29BIT)) && pPduInfo->SduLength <= 0x06u))
             {
-                p_n_sdu->tx.shared.state = CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST;
+                p_n_sdu->tx.shared.state = CANTP_TX_FRAME_STATE_SF_TX_REQUEST;
                 tmp_return = E_OK;
             }
             else
             {
                 if (p_n_sdu->tx.cfg->taType == CANTP_PHYSICAL)
                 {
-                    p_n_sdu->tx.shared.state = CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST;
+                    p_n_sdu->tx.shared.state = CANTP_TX_FRAME_STATE_FF_TX_REQUEST;
                     tmp_return = E_OK;
                 }
                 else
@@ -1291,7 +1291,7 @@ static boolean CanTp_FlowControlExpired(CanTp_NSduType *pNSdu)
 
 static CanTp_FrameStateType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
 {
-    CanTp_FrameStateType tmp_return = CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST;
+    CanTp_FrameStateType tmp_return = CANTP_TX_FRAME_STATE_SF_TX_REQUEST;
     CanTp_NSduType *p_n_sdu = pNSdu;
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
     PduLengthType ofs = 0x00u;
@@ -1309,7 +1309,7 @@ static CanTp_FrameStateType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
 
         if (CanTp_CopyTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
         {
-            tmp_return = CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION;
+            tmp_return = CANTP_TX_FRAME_STATE_SF_TX_CONFIRMATION;
 
             /* SWS_CanTp_00348: if frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
              * frames) are used for a Tx N-SDU and if CanTpTxPaddingActivation is equal to CANTP_ON,
@@ -1331,7 +1331,7 @@ static CanTp_FrameStateType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
 
 static CanTp_FrameStateType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
 {
-    CanTp_FrameStateType tmp_return = CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST;
+    CanTp_FrameStateType tmp_return = CANTP_TX_FRAME_STATE_FF_TX_REQUEST;
     CanTp_NSduType *p_n_sdu = pNSdu;
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
     PduLengthType ofs = 0x00u;
@@ -1353,7 +1353,7 @@ static CanTp_FrameStateType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
 
         if (CanTp_CopyTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
         {
-            tmp_return = CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION;
+            tmp_return = CANTP_TX_FRAME_STATE_FF_TX_CONFIRMATION;
 
             /* SWS_CanTp_00348: if frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
              * frames) are used for a Tx N-SDU and if CanTpTxPaddingActivation is equal to CANTP_ON,
@@ -1375,7 +1375,7 @@ static CanTp_FrameStateType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
 
 static CanTp_FrameStateType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
 {
-    CanTp_FrameStateType tmp_return = CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST;
+    CanTp_FrameStateType tmp_return = CANTP_TX_FRAME_STATE_CF_TX_REQUEST;
     CanTp_NSduType *p_n_sdu = pNSdu;
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
     PduLengthType ofs = 0x00u;
@@ -1393,7 +1393,7 @@ static CanTp_FrameStateType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
 
         if (CanTp_CopyTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
         {
-            tmp_return = CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION;
+            tmp_return = CANTP_TX_FRAME_STATE_CF_TX_CONFIRMATION;
 
             p_n_sdu->tx.sn ++;
 
@@ -1417,7 +1417,7 @@ static CanTp_FrameStateType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
 
 static CanTp_FrameStateType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
 {
-    CanTp_FrameStateType tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
+    CanTp_FrameStateType tmp_return = CANTP_RX_FRAME_STATE_FC_TX_REQUEST;
     CanTp_NSduType *p_n_sdu = pNSdu;
     PduInfoType *p_pdu_info = &p_n_sdu->rx.can_if_pdu_info;
     uint16_least ofs = 0x00u;
@@ -1447,7 +1447,7 @@ static CanTp_FrameStateType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
                         CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
                     }
 
-                    tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION;
+                    tmp_return = CANTP_RX_FRAME_STATE_FC_TX_CONFIRMATION;
                 }
                 else
                 {
@@ -1466,17 +1466,17 @@ static CanTp_FrameStateType CanTp_LDataReqRFC(CanTp_NSduType *pNSdu)
                     CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
                     p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_CTS;
 
-                    tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION;
+                    tmp_return = CANTP_RX_FRAME_STATE_FC_TX_CONFIRMATION;
                 }
             }
         }
         else if (p_n_sdu->rx.fs == CANTP_FLOW_STATUS_TYPE_OVFLW)
         {
-            tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_OVFLW_TX_CONFIRMATION;
+            tmp_return = CANTP_RX_FRAME_STATE_FC_OVFLW_TX_CONFIRMATION;
         }
         else
         {
-            tmp_return = CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION;
+            tmp_return = CANTP_RX_FRAME_STATE_FC_TX_CONFIRMATION;
         }
 
         p_n_sdu->rx.buf.can[ofs] = (0x03u << 0x04u) | (uint8)p_n_sdu->rx.fs;
@@ -1646,7 +1646,7 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
              * PduR_CanTpStartOfReception() returns BUFREQ_E_OVFL to the CanTp module, the CanTp
              * module shall send a Flow Control N-PDU with overflow status (FC(OVFLW)) and abort the
              * N-SDU reception. */
-            result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
+            result = CANTP_RX_FRAME_STATE_FC_TX_REQUEST;
             p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_OVFLW;
 
             break;
@@ -1666,7 +1666,7 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
             }
             else
             {
-                result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
+                result = CANTP_RX_FRAME_STATE_FC_TX_REQUEST;
 
                 if (p_n_sdu->rx.buf.rmng < CanTp_GetRxBlockSize(p_n_sdu))
                 {
@@ -1747,12 +1747,12 @@ CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
                      * module shall start a time-out N_Br before calling PduR_CanTpStartOfReception
                      * or PduR_CanTpCopyRxData. */
                     CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
-                    result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
+                    result = CANTP_RX_FRAME_STATE_FC_TX_REQUEST;
                 }
                 else
                 {
                     CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_CR);
-                    result = CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION;
+                    result = CANTP_RX_FRAME_STATE_CF_RX_INDICATION;
                 }
             }
             else
@@ -1797,7 +1797,7 @@ static CanTp_FrameStateType CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduIn
         p_n_sdu->tx.bs = CANTP_BS_INFINITE;
     }
 
-    return CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST;
+    return CANTP_TX_FRAME_STATE_CF_TX_REQUEST;
 }
 
 static CanTp_FrameStateType CanTp_LDataConTSF(CanTp_NSduType *pNSdu)
@@ -1820,7 +1820,7 @@ static CanTp_FrameStateType CanTp_LDataConTFF(CanTp_NSduType *pNSdu)
      * of FC with FS=WT (i.e. time until reception of the next FC). */
     CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BS);
 
-    return CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION;
+    return CANTP_TX_FRAME_STATE_FC_RX_INDICATION;
 }
 
 static CanTp_FrameStateType CanTp_LDataConTCF(CanTp_NSduType *pNSdu)
@@ -1843,7 +1843,7 @@ static CanTp_FrameStateType CanTp_LDataConTCF(CanTp_NSduType *pNSdu)
 
         if (p_n_sdu->tx.bs != 0x00u)
         {
-            result = CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST;
+            result = CANTP_TX_FRAME_STATE_CF_TX_REQUEST;
         }
         else
         {
@@ -1852,7 +1852,7 @@ static CanTp_FrameStateType CanTp_LDataConTCF(CanTp_NSduType *pNSdu)
              * indication of FC with FS=WT (i.e. time until reception of the next FC). */
             CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BS);
 
-            result = CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION;
+            result = CANTP_TX_FRAME_STATE_FC_RX_INDICATION;
         }
     }
     else
@@ -1873,11 +1873,11 @@ static CanTp_FrameStateType CanTp_LDataConRFC(CanTp_NSduType *pNSdu)
 
     if (CanTp_NetworkLayerIsActive(p_n_sdu, CANTP_I_N_BR) == FALSE)
     {
-        result = CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION;
+        result = CANTP_RX_FRAME_STATE_CF_RX_INDICATION;
     }
     else
     {
-        result = CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST;
+        result = CANTP_RX_FRAME_STATE_FC_TX_REQUEST;
     }
 
     return result;
@@ -1932,7 +1932,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
                     next_state = CanTp_LDataIndRFF(p_n_sdu, pPduInfo, n_ae_field_size);
                 }
                 else if ((pci == CANTP_N_PCI_TYPE_CF) &&
-                         (p_n_sdu->rx.shared.state == CANTP_RX_FRAME_STATE_WAIT_CF_RX_INDICATION))
+                         (p_n_sdu->rx.shared.state == CANTP_RX_FRAME_STATE_CF_RX_INDICATION))
                 {
                     next_state = CanTp_LDataIndRCF(p_n_sdu, pPduInfo, n_ae_field_size);
                 }
@@ -1951,7 +1951,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
                 CanTp_DecodeNAIValue(p_n_sdu->tx.cfg->af, &n_ae_field_size) == E_OK &&
                 (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
             {
-                if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION)
+                if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_FC_RX_INDICATION)
                 {
                     p_n_sdu->tx.shared.state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo);
                 }
@@ -1979,7 +1979,7 @@ void CanTp_TxConfirmation(PduIdType txPduId, Std_ReturnType result)
         {
             if ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u)
             {
-                if (p_n_sdu->rx.shared.state == CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION)
+                if (p_n_sdu->rx.shared.state == CANTP_RX_FRAME_STATE_FC_TX_CONFIRMATION)
                 {
                     next_state = CanTp_LDataConRFC(p_n_sdu);
                 }
@@ -1996,15 +1996,15 @@ void CanTp_TxConfirmation(PduIdType txPduId, Std_ReturnType result)
 
             if ((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u)
             {
-                if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION)
+                if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_SF_TX_CONFIRMATION)
                 {
                     next_state = CanTp_LDataConTSF(p_n_sdu);
                 }
-                else if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION)
+                else if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_FF_TX_CONFIRMATION)
                 {
                     next_state = CanTp_LDataConTFF(p_n_sdu);
                 }
-                else if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION)
+                else if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_CF_TX_CONFIRMATION)
                 {
                     next_state = CanTp_LDataConTCF(p_n_sdu);
                 }
@@ -2375,19 +2375,19 @@ static void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
     {
         switch (p_n_sdu->rx.shared.state)
         {
-            case CANTP_RX_FRAME_STATE_WAIT_FC_TX_REQUEST:
+            case CANTP_RX_FRAME_STATE_FC_TX_REQUEST:
             {
                 p_n_sdu->rx.shared.state = CanTp_LDataReqRFC(p_n_sdu);
 
                 switch (p_n_sdu->rx.shared.state)
                 {
-                    case CANTP_RX_FRAME_STATE_WAIT_FC_TX_CONFIRMATION:
+                    case CANTP_RX_FRAME_STATE_FC_TX_CONFIRMATION:
                     {
                         CanTp_TransmitRxCANData(p_n_sdu);
 
                         break;
                     }
-                    case CANTP_RX_FRAME_STATE_WAIT_FC_OVFLW_TX_CONFIRMATION:
+                    case CANTP_RX_FRAME_STATE_FC_OVFLW_TX_CONFIRMATION:
                     {
                         CanTp_TransmitRxCANData(p_n_sdu);
 
@@ -2455,36 +2455,36 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
     {
         switch (p_n_sdu->tx.shared.state)
         {
-            case CANTP_TX_FRAME_STATE_WAIT_SF_TX_REQUEST:
+            case CANTP_TX_FRAME_STATE_SF_TX_REQUEST:
             {
                 p_n_sdu->tx.shared.state = CanTp_LDataReqTSF(p_n_sdu);
 
-                if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION)
+                if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_SF_TX_CONFIRMATION)
                 {
                     CanTp_TransmitTxCANData(p_n_sdu);
                 }
 
                 break;
             }
-            case CANTP_TX_FRAME_STATE_WAIT_FF_TX_REQUEST:
+            case CANTP_TX_FRAME_STATE_FF_TX_REQUEST:
             {
                 p_n_sdu->tx.shared.state = CanTp_LDataReqTFF(p_n_sdu);
 
-                if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION)
+                if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_FF_TX_CONFIRMATION)
                 {
                     CanTp_TransmitTxCANData(p_n_sdu);
                 }
 
                 break;
             }
-            case CANTP_TX_FRAME_STATE_WAIT_CF_TX_REQUEST:
+            case CANTP_TX_FRAME_STATE_CF_TX_REQUEST:
             {
                 if ((CanTp_FlowControlExpired(p_n_sdu) == TRUE) ||
                     (CanTp_FlowControlActive(p_n_sdu) == FALSE))
                 {
                     p_n_sdu->tx.shared.state = CanTp_LDataReqTCF(p_n_sdu);
 
-                    if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION)
+                    if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_CF_TX_CONFIRMATION)
                     {
                         CanTp_TransmitTxCANData(p_n_sdu);
                     }
@@ -2503,10 +2503,10 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
 
                 break;
             }
-            case CANTP_TX_FRAME_STATE_WAIT_FC_RX_INDICATION:
-            case CANTP_TX_FRAME_STATE_WAIT_SF_TX_CONFIRMATION:
-            case CANTP_TX_FRAME_STATE_WAIT_FF_TX_CONFIRMATION:
-            // case CANTP_TX_FRAME_STATE_WAIT_CF_TX_CONFIRMATION:
+            case CANTP_TX_FRAME_STATE_FC_RX_INDICATION:
+            case CANTP_TX_FRAME_STATE_SF_TX_CONFIRMATION:
+            case CANTP_TX_FRAME_STATE_FF_TX_CONFIRMATION:
+            // case CANTP_TX_FRAME_STATE_CF_TX_CONFIRMATION:
             default:
             {
                 break;
