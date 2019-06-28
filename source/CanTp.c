@@ -914,7 +914,7 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
                  * Consecutive Frame of the N-SDU (i.e. the service is called after N-Cr timeout is
                  * started for the last Consecutive Frame). In this case the CanTp shall return
                  * E_NOT_OK. */
-                if (p_n_sdu->rx.buf.size > (CANTP_CAN_FRAME_SIZE - CANTP_CF_PCI_FIELD_SIZE + n_ae_field_size))
+                if (p_n_sdu->rx.buf.size > ((CANTP_CAN_FRAME_SIZE - CANTP_CF_PCI_FIELD_SIZE) + n_ae_field_size))
                 {
                     CANTP_ENTER_CRITICAL_SECTION
                     p_n_sdu->rx.shared.taskState = CANTP_WAIT;
