@@ -117,7 +117,7 @@ if (${enable_static_code_analysis})
         ${CMAKE_CURRENT_SOURCE_DIR}/external
         ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint)
 
-    file(DOWNLOAD https://gist.githubusercontent.com/Sauci/39b03e60642a910e358d4dd0871a0b05/raw/30977018552adef312b7a315c0df4271178899de/add_pc_lint_target.cmake
+    file(DOWNLOAD https://gist.githubusercontent.com/Sauci/39b03e60642a910e358d4dd0871a0b05/raw/ee303036f237e63dd8c11ae4582ec081d273dc76/add_pc_lint_target.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/external/add_pc_lint_target.cmake)
 
     file(DOWNLOAD https://gimpel.com/html/pub90/au-misra1.lnt
@@ -134,6 +134,8 @@ if (${enable_static_code_analysis})
     add_pc_lint_target(NAME CanTp
         DEPENDENCIES ${can_tp_cfg_out}/CanTp_Cfg.h
         OUTPUT_LOG ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.lnt.log
+        EXCLUDE_DIRECTORIES
+        ${CMAKE_CURRENT_SOURCE_DIR}/stub
         OPTION_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/MISRA${can_tp_misra_c_version}.lnt
         ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/CanTp.lnt)
