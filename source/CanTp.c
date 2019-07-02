@@ -119,12 +119,6 @@ extern "C"
 
 #define CANTP_BS_INFINITE (0x0100u)
 
-#define CANTP_MS_TO_INTERNAL(timeout) ((timeout) * 1000u)
-
-#define CANTP_INTERNAL_TO_MS(timeout) ((timeout) / 1000u)
-
-#define CANTP_US_TO_INTERNAL(timeout) (timeout)
-
 #define CANTP_DIRECTION_RX (0x01u)
 
 #define CANTP_DIRECTION_TX (0x02u)
@@ -257,6 +251,21 @@ typedef struct
 #define CANTP_EXIT_CRITICAL_SECTION
 
 #endif /* #ifndef CANTP_EXIT_CRITICAL_SECTION */
+
+static inline uint32 CanTp_ConvertMsToUs(uint32 timeout)
+{
+    return timeout * 1000u;
+}
+
+static inline uint32 CanTp_ConvertUsToMs(uint32 timeout)
+{
+    return timeout / 1000u;
+}
+
+static inline uint32 CanTp_ConvertUsToUs(uint32 timeout)
+{
+    return timeout;
+}
 
 static inline void CanTp_ReportError(uint8 instanceId, uint8 apiId, uint8 errorId)
 {
@@ -2274,14 +2283,14 @@ static uint32_least CanTp_DecodeSTMinValue(const uint8 data)
     /* ISO15765: the units of STmin in the range 00 hex – 7F hex are absolute milliseconds (ms). */
     if (data <= 0x7Fu)
     {
-        result = CANTP_MS_TO_INTERNAL((uint32_least)data);
+        result = CanTp_ConvertMsToUs((uint32_least)data);
     }
     /* ISO15765: the units of STmin in the range F1 hex – F9 hex are even 100 microseconds (μs),
      * where parameter value F1 hex represents 100 μs and parameter value F9 hex represents 900 μs.
      */
     else if ((data >= 0xF1u) && (data <= 0xF9u))
     {
-        result = CANTP_US_TO_INTERNAL(((uint32_least)data & (uint32_least)0x0Fu) * 100u);
+        result = CanTp_ConvertUsToUs(((uint32_least)data & (uint32_least)0x0Fu) * 100u);
     }
     /* ISO15765: if an FC N_PDU message is received with a reserved ST parameter value, then the
      * sending network entity shall use the longest ST value specified by this part of ISO 15765
@@ -2289,7 +2298,7 @@ static uint32_least CanTp_DecodeSTMinValue(const uint8 data)
      * duration of the ongoing segmented message transmission. */
     else
     {
-        result = CANTP_MS_TO_INTERNAL(0x7Fu);
+        result = CanTp_ConvertMsToUs(0x7Fu);
     }
 
     return result;
@@ -2299,9 +2308,9 @@ static uint8 CanTp_EncodeSTMinValue(const uint16 value)
 {
     uint8 result;
 
-    if (CANTP_INTERNAL_TO_MS(value) <= 0x7Fu)
+    if (CanTp_ConvertUsToMs(value) <= 0x7Fu)
     {
-        result = (uint8)CANTP_INTERNAL_TO_MS(value);
+        result = (uint8)CanTp_ConvertUsToMs(value);
     }
     else if ((value == 100u) ||
              (value == 200u) ||
