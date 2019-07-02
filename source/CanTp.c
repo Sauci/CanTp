@@ -2196,11 +2196,11 @@ static PduLengthType CanTp_DecodeDLValue(const CanTp_NPciType frameType,
 {
     PduLengthType result;
 
-    result = pData[0x00u] & 0x0Fu;
+    result = (PduLengthType)pData[0x00u] & 0x0Fu;
 
     if (frameType == CANTP_N_PCI_TYPE_FF)
     {
-        result = (uint16)(result << 0x08u) | pData[0x01u];
+        result = (PduLengthType)(result << 0x08u) | (PduLengthType)pData[0x01u];
     }
 
     /* SWS_CanTp_00350: The received data link layer data length (RX_DL) shall be
@@ -2225,14 +2225,14 @@ static uint32_least CanTp_DecodeSTMinValue(const uint8 data)
     /* ISO15765: the units of STmin in the range 00 hex – 7F hex are absolute milliseconds (ms). */
     if (data <= 0x7Fu)
     {
-        result = CANTP_MS_TO_INTERNAL(data);
+        result = CANTP_MS_TO_INTERNAL((uint32_least)data);
     }
     /* ISO15765: the units of STmin in the range F1 hex – F9 hex are even 100 microseconds (μs),
      * where parameter value F1 hex represents 100 μs and parameter value F9 hex represents 900 μs.
      */
     else if ((data >= 0xF1u) && (data <= 0xF9u))
     {
-        result = CANTP_US_TO_INTERNAL((data & 0x0Fu) * 100u);
+        result = CANTP_US_TO_INTERNAL(((uint32_least)data & (uint32_least)0x0Fu) * 100u);
     }
     /* ISO15765: if an FC N_PDU message is received with a reserved ST parameter value, then the
      * sending network entity shall use the longest ST value specified by this part of ISO 15765
