@@ -1198,38 +1198,62 @@ static boolean CanTp_NetworkLayerTimeoutExpired(const CanTp_NSduType *pNSdu, con
     {
         case CANTP_I_N_AS:
         {
-            result = (boolean)((pNSdu->n[CANTP_I_N_AS] >= pNSdu->tx.cfg->nas) &&
-                               ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_AS)) != 0x00u));
+            if ((pNSdu->n[CANTP_I_N_AS] >= pNSdu->tx.cfg->nas) &&
+                ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_AS)) != 0x00u))
+            {
+                result = TRUE;
+            }
+
             break;
         }
         case CANTP_I_N_BS:
         {
-            result = (boolean)((pNSdu->n[CANTP_I_N_BS] >= pNSdu->tx.cfg->nbs) &&
-                               ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_BS)) != 0x00u));
+            if ((pNSdu->n[CANTP_I_N_BS] >= pNSdu->tx.cfg->nbs) &&
+                ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_BS)) != 0x00u))
+            {
+                result = TRUE;
+            }
+
             break;
         }
         case CANTP_I_N_CS:
         {
-            result = (boolean)((pNSdu->n[CANTP_I_N_CS] >= pNSdu->tx.cfg->ncs) &&
-                               ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_CS)) != 0x00u));
+            if ((pNSdu->n[CANTP_I_N_CS] >= pNSdu->tx.cfg->ncs) &&
+                ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_CS)) != 0x00u))
+            {
+                result = TRUE;
+            }
+
             break;
         }
         case CANTP_I_N_AR:
         {
-            result = (boolean)((pNSdu->n[CANTP_I_N_AR] >= pNSdu->rx.cfg->nar) &&
-                               ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_AR)) != 0x00u));
+            if ((pNSdu->n[CANTP_I_N_AR] >= pNSdu->rx.cfg->nar) &&
+                ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_AR)) != 0x00u))
+            {
+                result = TRUE;
+            }
+
             break;
         }
         case CANTP_I_N_BR:
         {
-            result = (boolean)((pNSdu->n[CANTP_I_N_BR] >= pNSdu->rx.cfg->nbr) &&
-                               ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_BR)) != 0x00u));
+            if ((pNSdu->n[CANTP_I_N_BR] >= pNSdu->rx.cfg->nbr) &&
+                ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_BR)) != 0x00u))
+            {
+                result = TRUE;
+            }
+
             break;
         }
         case CANTP_I_N_CR:
         {
-            result = (boolean)((pNSdu->n[CANTP_I_N_CR] >= pNSdu->rx.cfg->ncr) &&
-                               ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_CR)) != 0x00u));
+            if ((pNSdu->n[CANTP_I_N_CR] >= pNSdu->rx.cfg->ncr) &&
+                ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_CR)) != 0x00u))
+            {
+                result = TRUE;
+            }
+
             break;
         }
         default:
@@ -1268,7 +1292,14 @@ static void CanTp_StartFlowControlTimeout(CanTp_NSduType *pNSdu)
 
 static boolean CanTp_FlowControlActive(const CanTp_NSduType *pNSdu)
 {
-    return (boolean)((pNSdu->tx.shared.flag & CANTP_I_ST_MIN) != 0x00u);
+    boolean result = FALSE;
+
+    if ((pNSdu->tx.shared.flag & CANTP_I_ST_MIN) != 0x00u)
+    {
+        result = TRUE;
+    }
+
+    return result;
 }
 
 static boolean CanTp_FlowControlExpired(CanTp_NSduType *pNSdu)
