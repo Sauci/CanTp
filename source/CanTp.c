@@ -1212,7 +1212,7 @@ static boolean CanTp_NetworkLayerTimeoutExpired(const CanTp_NSduType *pNSdu, con
         case CANTP_I_N_AS:
         {
             if ((pNSdu->n[CANTP_I_N_AS] >= pNSdu->tx.cfg->nas) &&
-                ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_AS)) != 0x00u))
+                ((pNSdu->t_flag & ((uint32)0x01u /* << CANTP_I_N_AS */)) != 0x00u))
             {
                 result = TRUE;
             }
@@ -1344,7 +1344,9 @@ static CanTp_FrameStateType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
                              &p_pdu_info->SduDataPtr[ofs],
                              &ofs) == E_OK)
     {
-        p_pdu_info->SduDataPtr[ofs] = (uint8)((uint8)CANTP_N_PCI_TYPE_SF << 0x04u) | (uint8)pNSdu->tx.buf.size;
+        /* prevent lint issue by providing zero valued rhs argument to operators '<<' and '|'. */
+        p_pdu_info->SduDataPtr[ofs] = /* (uint8)((uint8)CANTP_N_PCI_TYPE_SF << 0x04u) | */
+            (uint8)pNSdu->tx.buf.size;
         ofs = ofs + 0x01u;
 
         if (CanTp_CopyTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
