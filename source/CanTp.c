@@ -655,9 +655,9 @@ void CanTp_Init(const CanTp_ConfigType *pConfig)
              * CANTP_MAX_NUM_OF_N_SDU. */
             n_sdu_range = p_cfg_channel->nSdu.rxNSduCnt + p_cfg_channel->nSdu.txNSduCnt;
 
-            if (n_sdu_range <= CANTP_MAX_NUM_OF_N_SDU)
+            if (n_sdu_range <= (uint32_least)CANTP_MAX_NUM_OF_N_SDU)
             {
-                for (rt_sdu_idx = 0x00u; rt_sdu_idx < CANTP_MAX_NUM_OF_N_SDU; rt_sdu_idx++)
+                for (rt_sdu_idx = 0x00u; rt_sdu_idx < (uint32_least)CANTP_MAX_NUM_OF_N_SDU; rt_sdu_idx++)
                 {
                     for (cfg_sdu_idx = 0x00u;
                          cfg_sdu_idx < p_cfg_channel->nSdu.rxNSduCnt; cfg_sdu_idx++)
@@ -1127,9 +1127,9 @@ void CanTp_MainFunction(void)
 
     if ((CanTp_StateType)CanTp_State == (CanTp_StateType)CANTP_ON)
     {
-        for (channel_idx = 0x00u; channel_idx < CANTP_MAX_NUM_OF_CHANNEL; channel_idx++)
+        for (channel_idx = 0x00u; channel_idx < (uint32_least)CANTP_MAX_NUM_OF_CHANNEL; channel_idx++)
         {
-            for (n_sdu_idx = 0x00u; n_sdu_idx < CANTP_MAX_NUM_OF_N_SDU; n_sdu_idx++)
+            for (n_sdu_idx = 0x00u; n_sdu_idx < (uint32_least)CANTP_MAX_NUM_OF_N_SDU; n_sdu_idx++)
             {
                 p_n_sdu = &CanTp_Rt[channel_idx].sdu[n_sdu_idx];
 
@@ -2096,7 +2096,7 @@ static Std_ReturnType CanTp_GetNSduFromPduId(PduIdType pduId, CanTp_NSduType **p
     CanTp_ChannelRtType *p_channel_rt;
     uint32_least channel_idx;
 
-    for (channel_idx = 0x00u; channel_idx < CANTP_MAX_NUM_OF_CHANNEL; channel_idx++)
+    for (channel_idx = 0x00u; channel_idx < (uint32_least)CANTP_MAX_NUM_OF_CHANNEL; channel_idx++)
     {
         p_channel_rt = &CanTp_Rt[channel_idx];
 
