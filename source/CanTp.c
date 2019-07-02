@@ -311,7 +311,7 @@ static Std_ReturnType CanTp_GetNSduFromPduId(PduIdType pduId, CanTp_NSduType **p
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-static PduLengthType CanTp_GetRxBlockSize(CanTp_NSduType *pNSdu);
+static PduLengthType CanTp_GetRxBlockSize(const CanTp_NSduType *pNSdu);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -1190,7 +1190,7 @@ static void CanTp_StopNetworkLayerTimeout(CanTp_NSduType *pNSdu, const uint8 ins
     pNSdu->t_flag &= ~(0x01u << instanceId);
 }
 
-static boolean CanTp_NetworkLayerTimeoutExpired(CanTp_NSduType *pNSdu, const uint8 instanceId)
+static boolean CanTp_NetworkLayerTimeoutExpired(const CanTp_NSduType *pNSdu, const uint8 instanceId)
 {
     boolean result = FALSE;
 
@@ -1241,7 +1241,7 @@ static boolean CanTp_NetworkLayerTimeoutExpired(CanTp_NSduType *pNSdu, const uin
     return result;
 }
 
-static boolean CanTp_NetworkLayerIsActive(CanTp_NSduType *pNSdu, const uint8 instanceId)
+static boolean CanTp_NetworkLayerIsActive(const CanTp_NSduType *pNSdu, const uint8 instanceId)
 {
     boolean result;
 
@@ -1266,7 +1266,7 @@ static void CanTp_StartFlowControlTimeout(CanTp_NSduType *pNSdu)
     }
 }
 
-static boolean CanTp_FlowControlActive(CanTp_NSduType *pNSdu)
+static boolean CanTp_FlowControlActive(const CanTp_NSduType *pNSdu)
 {
     return (boolean)((pNSdu->tx.shared.flag & CANTP_I_ST_MIN) != 0x00u);
 }
@@ -2079,7 +2079,7 @@ static Std_ReturnType CanTp_GetNSduFromPduId(PduIdType pduId, CanTp_NSduType **p
     return tmp_return;
 }
 
-static PduLengthType CanTp_GetRxBlockSize(CanTp_NSduType *pNSdu)
+static PduLengthType CanTp_GetRxBlockSize(const CanTp_NSduType *pNSdu)
 {
     PduLengthType result;
     PduLengthType n_ae_field_size;
