@@ -1376,7 +1376,7 @@ static CanTp_FrameStateType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
         p_pdu_info->SduDataPtr[ofs] = (uint8)(CANTP_N_PCI_TYPE_FF << 0x04u) |
             (uint8)((uint8)(pNSdu->tx.buf.size  >> (uint8)0x08u) & (uint8)0x0Fu);
         ofs ++;
-        p_pdu_info->SduDataPtr[ofs] = pNSdu->tx.buf.size & 0xFFu;
+        p_pdu_info->SduDataPtr[ofs] = (uint8)pNSdu->tx.buf.size & 0xFFu;
         ofs ++;
 
         if (CanTp_CopyTxPayload(p_n_sdu, &ofs) == BUFREQ_OK)
