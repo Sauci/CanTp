@@ -1178,16 +1178,16 @@ void CanTp_MainFunction(void)
 
 static void CanTp_StartNetworkLayerTimeout(CanTp_NSduType *pNSdu, const uint8 instanceId)
 {
-    if ((pNSdu->t_flag & (0x01u << instanceId)) == 0x00u)
+    if ((pNSdu->t_flag & ((uint32)0x01u << instanceId)) == 0x00u)
     {
-        pNSdu->t_flag |= (0x01u << instanceId);
+        pNSdu->t_flag |= ((uint32)0x01u << instanceId);
         pNSdu->n[instanceId] = 0x00u;
     }
 }
 
 static void CanTp_StopNetworkLayerTimeout(CanTp_NSduType *pNSdu, const uint8 instanceId)
 {
-    pNSdu->t_flag &= ~(0x01u << instanceId);
+    pNSdu->t_flag &= ~((uint32)0x01u << instanceId);
 }
 
 static boolean CanTp_NetworkLayerTimeoutExpired(const CanTp_NSduType *pNSdu, const uint8 instanceId)
@@ -1199,37 +1199,37 @@ static boolean CanTp_NetworkLayerTimeoutExpired(const CanTp_NSduType *pNSdu, con
         case CANTP_I_N_AS:
         {
             result = (boolean)((pNSdu->n[CANTP_I_N_AS] >= pNSdu->tx.cfg->nas) &&
-                               ((pNSdu->t_flag & (0x01u << CANTP_I_N_AS)) != 0x00u));
+                               ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_AS)) != 0x00u));
             break;
         }
         case CANTP_I_N_BS:
         {
             result = (boolean)((pNSdu->n[CANTP_I_N_BS] >= pNSdu->tx.cfg->nbs) &&
-                               ((pNSdu->t_flag & (0x01u << CANTP_I_N_BS)) != 0x00u));
+                               ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_BS)) != 0x00u));
             break;
         }
         case CANTP_I_N_CS:
         {
             result = (boolean)((pNSdu->n[CANTP_I_N_CS] >= pNSdu->tx.cfg->ncs) &&
-                               ((pNSdu->t_flag & (0x01u << CANTP_I_N_CS)) != 0x00u));
+                               ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_CS)) != 0x00u));
             break;
         }
         case CANTP_I_N_AR:
         {
             result = (boolean)((pNSdu->n[CANTP_I_N_AR] >= pNSdu->rx.cfg->nar) &&
-                               ((pNSdu->t_flag & (0x01u << CANTP_I_N_AR)) != 0x00u));
+                               ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_AR)) != 0x00u));
             break;
         }
         case CANTP_I_N_BR:
         {
             result = (boolean)((pNSdu->n[CANTP_I_N_BR] >= pNSdu->rx.cfg->nbr) &&
-                               ((pNSdu->t_flag & (0x01u << CANTP_I_N_BR)) != 0x00u));
+                               ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_BR)) != 0x00u));
             break;
         }
         case CANTP_I_N_CR:
         {
             result = (boolean)((pNSdu->n[CANTP_I_N_CR] >= pNSdu->rx.cfg->ncr) &&
-                               ((pNSdu->t_flag & (0x01u << CANTP_I_N_CR)) != 0x00u));
+                               ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_CR)) != 0x00u));
             break;
         }
         default:
@@ -1245,7 +1245,7 @@ static boolean CanTp_NetworkLayerIsActive(const CanTp_NSduType *pNSdu, const uin
 {
     boolean result;
 
-    if ((pNSdu->t_flag & (0x01u << instanceId)) == 0x00u)
+    if ((pNSdu->t_flag & ((uint32)0x01u << instanceId)) == 0x00u)
     {
         result = FALSE;
     }
@@ -1342,7 +1342,8 @@ static CanTp_FrameStateType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
     {
         p_n_sdu->tx.sn = 0x00u;
 
-        p_pdu_info->SduDataPtr[ofs] = (uint8)((uint8)CANTP_N_PCI_TYPE_FF << 0x04u) | ((pNSdu->tx.buf.size & 0x0F00u) >> 0x08u);
+        p_pdu_info->SduDataPtr[ofs] = (uint8)(CANTP_N_PCI_TYPE_FF << 0x04u) |
+            (uint8)((uint8)(pNSdu->tx.buf.size  >> (uint8)0x08u) & (uint8)0x0Fu);
         ofs ++;
         p_pdu_info->SduDataPtr[ofs] = pNSdu->tx.buf.size & 0xFFu;
         ofs ++;
