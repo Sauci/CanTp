@@ -779,65 +779,69 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
     CanTp_NSduType *p_n_sdu = NULL_PTR;
     Std_ReturnType tmp_return = E_NOT_OK;
 
-    if (((CanTp_StateType)CanTp_State == (CanTp_StateType)CANTP_ON) &&
-        (pPduInfo != NULL_PTR) &&
-        (CanTp_GetNSduFromPduId(txPduId, &p_n_sdu) == E_OK))
+    if ((CanTp_StateType)CanTp_State == (CanTp_StateType)CANTP_ON)
     {
-        /* SWS_CanTp_00206: the function CanTp_Transmit shall reject a request if the CanTp_Transmit
-         * service is called for a N-SDU identifier which is being used in a currently running CAN
-         * Transport Layer session. */
-        if ((p_n_sdu->tx.taskState != CANTP_PROCESSING) &&
-            (pPduInfo->SduLength > 0x0000u) &&
-            (pPduInfo->SduLength <= 0x0FFFu))
+        if (pPduInfo != NULL_PTR)
         {
-            p_n_sdu->tx.buf.size = pPduInfo->SduLength;
-
-            if ((((p_n_sdu->tx.cfg->af == CANTP_STANDARD) ||
-                  (p_n_sdu->tx.cfg->af == CANTP_NORMALFIXED)) && (pPduInfo->SduLength <= 0x07u)) ||
-                (((p_n_sdu->tx.cfg->af == CANTP_EXTENDED) ||
-                  (p_n_sdu->tx.cfg->af == CANTP_MIXED) ||
-                  (p_n_sdu->tx.cfg->af == CANTP_MIXED29BIT)) && (pPduInfo->SduLength <= 0x06u)))
+            if (CanTp_GetNSduFromPduId(txPduId, &p_n_sdu) == E_OK)
             {
-                p_n_sdu->tx.shared.state = CANTP_TX_FRAME_STATE_SF_TX_REQUEST;
-                tmp_return = E_OK;
+                /* SWS_CanTp_00206: the function CanTp_Transmit shall reject a request if the CanTp_Transmit
+                 * service is called for a N-SDU identifier which is being used in a currently running CAN
+                 * Transport Layer session. */
+                if ((p_n_sdu->tx.taskState != CANTP_PROCESSING) &&
+                    (pPduInfo->SduLength > 0x0000u) &&
+                    (pPduInfo->SduLength <= 0x0FFFu))
+                {
+                    p_n_sdu->tx.buf.size = pPduInfo->SduLength;
+
+                    if ((((p_n_sdu->tx.cfg->af == CANTP_STANDARD) ||
+                          (p_n_sdu->tx.cfg->af == CANTP_NORMALFIXED)) &&
+                         (pPduInfo->SduLength <= 0x07u)) ||
+                        (((p_n_sdu->tx.cfg->af == CANTP_EXTENDED) ||
+                          (p_n_sdu->tx.cfg->af == CANTP_MIXED) ||
+                          (p_n_sdu->tx.cfg->af == CANTP_MIXED29BIT)) &&
+                         (pPduInfo->SduLength <= 0x06u)))
+                    {
+                        p_n_sdu->tx.shared.state = CANTP_TX_FRAME_STATE_SF_TX_REQUEST;
+                        tmp_return = E_OK;
+                    }
+                    else
+                    {
+                        if (p_n_sdu->tx.cfg->taType == CANTP_PHYSICAL)
+                        {
+                            p_n_sdu->tx.shared.state = CANTP_TX_FRAME_STATE_FF_TX_REQUEST;
+                            tmp_return = E_OK;
+                        }
+                        else
+                        {
+                            /* SWS_CanTp_00093: If a multiple segmented session occurs (on both receiver and
+                             * sender  side) with a handle whose communication type is functional, the CanTp
+                             * module shall reject the request and report the runtime error code
+                             * CANTP_E_INVALID_TATYPE to the Default Error Tracer. */
+                            CanTp_ReportRuntimeError(0x00u, CANTP_TRANSMIT_API_ID,
+                                                     CANTP_E_INVALID_TATYPE);
+                        }
+                    }
+
+                    if (tmp_return == E_OK)
+                    {
+                        p_n_sdu->tx.taskState = CANTP_PROCESSING;
+                    }
+                }
             }
             else
             {
-                if (p_n_sdu->tx.cfg->taType == CANTP_PHYSICAL)
-                {
-                    p_n_sdu->tx.shared.state = CANTP_TX_FRAME_STATE_FF_TX_REQUEST;
-                    tmp_return = E_OK;
-                }
-                else
-                {
-                    /* SWS_CanTp_00093: If a multiple segmented session occurs (on both receiver and
-                     * sender  side) with a handle whose communication type is functional, the CanTp
-                     * module shall reject the request and report the runtime error code
-                     * CANTP_E_INVALID_TATYPE to the Default Error Tracer. */
-                    CanTp_ReportRuntimeError(0x00u, CANTP_TRANSMIT_API_ID, CANTP_E_INVALID_TATYPE);
-                }
+                CanTp_ReportError(0x00u, CANTP_TRANSMIT_API_ID, CANTP_E_INVALID_TX_ID);
             }
-
-            if (tmp_return == E_OK)
-            {
-                p_n_sdu->tx.taskState = CANTP_PROCESSING;
-            }
+        }
+        else
+        {
+            CanTp_ReportError(0x00u, CANTP_TRANSMIT_API_ID, CANTP_E_PARAM_POINTER);
         }
     }
     else
     {
-        if ((CanTp_StateType)CanTp_State != (CanTp_StateType)CANTP_ON)
-        {
-            CanTp_ReportError(0x00u, CANTP_TRANSMIT_API_ID, CANTP_E_UNINIT);
-        }
-        else if (pPduInfo == NULL_PTR)
-        {
-            CanTp_ReportError(0x00u, CANTP_TRANSMIT_API_ID, CANTP_E_PARAM_POINTER);
-        }
-        else
-        {
-            CanTp_ReportError(0x00u, CANTP_TRANSMIT_API_ID, CANTP_E_INVALID_TX_ID);
-        }
+        CanTp_ReportError(0x00u, CANTP_TRANSMIT_API_ID, CANTP_E_UNINIT);
     }
 
     return tmp_return;
@@ -1926,66 +1930,79 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
     {
         if (CanTp_GetNSduFromPduId(rxPduId, &p_n_sdu) == E_OK)
         {
-            if (((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u) &&
-                (CanTp_DecodeNAIValue(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK) &&
-                (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
+            if ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u)
             {
-                /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
-                 * frames) are used for a Rx N-SDU and CanTpRxPaddingActivation is equal to CANTP_ON, then
-                 * CanTp receives by means of CanTp_RxIndication() call an SF Rx N-PDU belonging to that
-                 * N-SDU, with a length smaller than eight bytes (i.e. PduInfoPtr.SduLength < 8), CanTp
-                 * shall reject the reception. The runtime error code CANTP_E_PADDING shall be reported to
-                 * the Default Error Tracer. */
-                if (((CanTp_StateType)p_n_sdu->rx.cfg->padding == (CanTp_StateType)CANTP_ON) &&
-                    (pPduInfo->SduLength < CANTP_CAN_FRAME_SIZE))
+                if (CanTp_DecodeNAIValue(p_n_sdu->rx.cfg->af, &n_ae_field_size) == E_OK)
                 {
-                    PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
+                    if (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK)
+                    {
+                        /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD
+                     * frames) are used for a Rx N-SDU and CanTpRxPaddingActivation is equal to CANTP_ON, then
+                     * CanTp receives by means of CanTp_RxIndication() call an SF Rx N-PDU belonging to that
+                     * N-SDU, with a length smaller than eight bytes (i.e. PduInfoPtr.SduLength < 8), CanTp
+                     * shall reject the reception. The runtime error code CANTP_E_PADDING shall be reported to
+                     * the Default Error Tracer. */
+                        if (((CanTp_StateType)p_n_sdu->rx.cfg->padding ==
+                             (CanTp_StateType)CANTP_ON) &&
+                            (pPduInfo->SduLength < CANTP_CAN_FRAME_SIZE))
+                        {
+                            PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
 
-                    CanTp_ReportRuntimeError(0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_PADDING);
+                            CanTp_ReportRuntimeError(0x00u, CANTP_RX_INDICATION_API_ID,
+                                                     CANTP_E_PADDING);
 
-                    next_state = CANTP_FRAME_STATE_OK;
-                }
-                    /* SWS_CanTp_00093: If a multiple segmented session occurs (on both receiver and sender
-                     * side) with a handle whose communication type is functional, the CanTp module shall
-                     * reject the request and report the runtime error code CANTP_E_INVALID_TATYPE to the
-                     * Default Error Tracer. */
-                else if ((p_n_sdu->rx.cfg->taType == CANTP_FUNCTIONAL) && (pci == CANTP_N_PCI_TYPE_FF))
-                {
-                    CanTp_ReportRuntimeError(0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_INVALID_TATYPE);
+                            next_state = CANTP_FRAME_STATE_OK;
+                        }
+                            /* SWS_CanTp_00093: If a multiple segmented session occurs (on both receiver and sender
+                             * side) with a handle whose communication type is functional, the CanTp module shall
+                             * reject the request and report the runtime error code CANTP_E_INVALID_TATYPE to the
+                             * Default Error Tracer. */
+                        else if ((p_n_sdu->rx.cfg->taType == CANTP_FUNCTIONAL) &&
+                                 (pci == CANTP_N_PCI_TYPE_FF))
+                        {
+                            CanTp_ReportRuntimeError(0x00u, CANTP_RX_INDICATION_API_ID,
+                                                     CANTP_E_INVALID_TATYPE);
 
-                    next_state = CANTP_FRAME_STATE_OK;
-                }
-                else if (pci == CANTP_N_PCI_TYPE_SF)
-                {
-                    next_state = CanTp_LDataIndRSF(p_n_sdu, pPduInfo, n_ae_field_size);
-                }
-                else if (pci == CANTP_N_PCI_TYPE_FF)
-                {
-                    next_state = CanTp_LDataIndRFF(p_n_sdu, pPduInfo, n_ae_field_size);
-                }
-                else if ((pci == CANTP_N_PCI_TYPE_CF) &&
-                         (p_n_sdu->rx.shared.state == CANTP_RX_FRAME_STATE_CF_RX_INDICATION))
-                {
-                    next_state = CanTp_LDataIndRCF(p_n_sdu, pPduInfo, n_ae_field_size);
-                }
-                else
-                {
-                    next_state = CANTP_FRAME_STATE_INVALID;
-                }
+                            next_state = CANTP_FRAME_STATE_OK;
+                        }
+                        else if (pci == CANTP_N_PCI_TYPE_SF)
+                        {
+                            next_state = CanTp_LDataIndRSF(p_n_sdu, pPduInfo, n_ae_field_size);
+                        }
+                        else if (pci == CANTP_N_PCI_TYPE_FF)
+                        {
+                            next_state = CanTp_LDataIndRFF(p_n_sdu, pPduInfo, n_ae_field_size);
+                        }
+                        else if ((pci == CANTP_N_PCI_TYPE_CF) &&
+                                 (p_n_sdu->rx.shared.state ==
+                                  CANTP_RX_FRAME_STATE_CF_RX_INDICATION))
+                        {
+                            next_state = CanTp_LDataIndRCF(p_n_sdu, pPduInfo, n_ae_field_size);
+                        }
+                        else
+                        {
+                            next_state = CANTP_FRAME_STATE_INVALID;
+                        }
 
-                if (next_state != CANTP_FRAME_STATE_INVALID)
-                {
-                    p_n_sdu->rx.shared.state = next_state;
+                        if (next_state != CANTP_FRAME_STATE_INVALID)
+                        {
+                            p_n_sdu->rx.shared.state = next_state;
+                        }
+                    }
                 }
             }
 
-            if (((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u) &&
-                (CanTp_DecodeNAIValue(p_n_sdu->tx.cfg->af, &n_ae_field_size) == E_OK) &&
-                (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK))
+            if ((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u)
             {
-                if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_FC_RX_INDICATION)
+                if (CanTp_DecodeNAIValue(p_n_sdu->tx.cfg->af, &n_ae_field_size) == E_OK)
                 {
-                    p_n_sdu->tx.shared.state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo);
+                    if (CanTp_DecodePCIValue(&pci, &pPduInfo->SduDataPtr[n_ae_field_size]) == E_OK)
+                    {
+                        if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_FC_RX_INDICATION)
+                        {
+                            p_n_sdu->tx.shared.state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo);
+                        }
+                    }
                 }
             }
         }
