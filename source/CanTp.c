@@ -2055,23 +2055,13 @@ static Std_ReturnType CanTp_GetNSduFromPduId(PduIdType pduId, CanTp_NSduType **p
         {
             p_n_sdu = &p_channel_rt->sdu[pduId];
 
-            if ((p_n_sdu->rx.cfg != NULL_PTR) && (p_n_sdu->rx.cfg->nSduId == pduId))
+            if (((p_n_sdu->rx.cfg != NULL_PTR) && (p_n_sdu->rx.cfg->nSduId == pduId)) ||
+                ((p_n_sdu->tx.cfg != NULL_PTR) && (p_n_sdu->tx.cfg->nSduId == pduId)))
             {
                 *pNSdu = p_n_sdu;
                 tmp_return = E_OK;
 
                 break;
-            }
-            else if ((p_n_sdu->tx.cfg != NULL_PTR) && (p_n_sdu->tx.cfg->nSduId == pduId))
-            {
-                *pNSdu = p_n_sdu;
-                tmp_return = E_OK;
-
-                break;
-            }
-            else
-            {
-                /* MISRA C, do nothing. */
             }
         }
     }
