@@ -32,7 +32,7 @@ static const CanTp_NTaType CanTp_NTa{{'%02X' % receiver.target_address}} = {
 #define CANTP_N_AE_{{'%02X' % receiver.address_extension}} ({{'0x%02Xu' % receiver.address_extension}})
 
 static const CanTp_NAeType CanTp_NAe{{'%02X' % receiver.address_extension}} = {
-    #define CANTP_N_AE_{{'%02X' % receiver.address_extension}}
+    CANTP_N_AE_{{'%02X' % receiver.address_extension}}
 };
 
 #endif /* #ifndef CANTP_N_AE_{{'%02X' % receiver.address_extension}} */
