@@ -16,6 +16,7 @@ add_custom_target(CanTp_Cfg.h
     COMMENT "generating configuration header")
 
 add_library(CanTp_Cfg STATIC ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_Cfg.c)
+add_dependencies(CanTp_Cfg CanTp_Cfg.h)
 
 target_include_directories(CanTp_Cfg
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
