@@ -19,10 +19,16 @@ option(enable_test "enable/disable tests." ON)
 # by default, static code analysis is disabled.
 option(enable_static_code_analysis "enable/disable static code analysis." OFF)
 
+# can_tp_misra_c_version specifies which MISRA C version should be used when performing static code
+# analysis with PC-Lint.
+# the possible values are 1998, 2004 and 2012
+# by default, the MISRA C version 2012 is used.
+set(can_tp_misra_c_version 2012 CACHE STRING "MISRA standard.")
+
 # can_tp_cfg_in defines the default configuration file used to generate the auto-generated code of
 # the module (CanTp_Cfg.c and CanTp_Cfg.h).
 # by default, it uses the file located at ./config/CanTp.json.
-set(can_tp_cfg_in ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json)
+set(can_tp_cfg_in ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json CACHE FILEPATH "")
 
 # can_tp_cfg_out defines the output folder of all auto-generated files.
 # by default, it is located in the 'generated' folder, in the default CMake's binary directory.
@@ -111,17 +117,26 @@ if (${enable_static_code_analysis})
         ${CMAKE_CURRENT_SOURCE_DIR}/external
         ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint)
 
-    file(DOWNLOAD https://gist.githubusercontent.com/Sauci/39b03e60642a910e358d4dd0871a0b05/raw/794c3adb2c4ef6e909f4dab0d1f5005cb5003801/add_pc_lint_target.cmake
+    file(DOWNLOAD https://gist.githubusercontent.com/Sauci/39b03e60642a910e358d4dd0871a0b05/raw/ee303036f237e63dd8c11ae4582ec081d273dc76/add_pc_lint_target.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/external/add_pc_lint_target.cmake)
 
+    file(DOWNLOAD https://gimpel.com/html/pub90/au-misra1.lnt
+        ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/MISRA1998.lnt)
+
     file(DOWNLOAD https://gimpel.com/html/pub90/au-misra2.lnt
-        ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/MISRA04.lnt)
+        ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/MISRA2004.lnt)
+
+    file(DOWNLOAD https://gimpel.com/html/pub90/au-misra3.lnt
+        ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/MISRA2012.lnt)
 
     include(external/add_pc_lint_target.cmake)
 
     add_pc_lint_target(NAME CanTp
         DEPENDENCIES ${can_tp_cfg_out}/CanTp_Cfg.h
+        OUTPUT_LOG ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.lnt.log
+        EXCLUDE_DIRECTORIES
+        ${CMAKE_CURRENT_SOURCE_DIR}/stub
         OPTION_FILES
-        ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/MISRA04.lnt
+        ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/MISRA${can_tp_misra_c_version}.lnt
         ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/CanTp.lnt)
 endif ()

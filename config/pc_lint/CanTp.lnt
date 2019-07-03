@@ -5,21 +5,71 @@
 -elibsym(1)
 -elibmacro(1)
 
++fff /* output full file path. */
+-width(0) /* keep output on a single line. */
+-restore_at_end /* enable/disable lint message in file scope. */
+-passes(2) /* perform 2 passes. */
+-summary() /* output summary report before exit. */
++libclass(angle) /* treat #include <xxx> as library headers. */
 
-/* output full file path. */
-+fff
+/*------------------------------------------------------------------------------------------------*/
+/* rules related to AUTOSAR standard.                                                             */
+/*------------------------------------------------------------------------------------------------*/
 
-/* keep output on a single line. */
--width(0)
+/**
+ * allow the prefix of preprocessor definitions to be the same, as defined in
+ * https://www.autosar.org/fileadmin/user_upload/standards/classic/4-3/AUTOSAR_SWS_MemoryMapping.pdf
+ *
+ * violated MISRA rules:
+ * - 5.1, required
+ * - 5.2, required
+ * - 5.4, required
+ * - 5.5, required
+ */
+-idlen(63, p)
 
-/* enable/disable lint message in file scope. */
--restore_at_end
+/**
+ * allow multiple inclusions of the same header file without include guards, as defined in
+ * https://www.autosar.org/fileadmin/user_upload/standards/classic/4-3/AUTOSAR_SWS_MemoryMapping.pdf
+ *
+ * violated MISRA rules:
+ * - 4.10, required
+ */
+-efile(451, CanTp_MemMap.h)
 
-/* perform 2 passes. */
--passes(2)
+/**
+ * allow repeated include file, as defined in
+ * https://www.autosar.org/fileadmin/user_upload/standards/classic/4-3/AUTOSAR_SWS_MemoryMapping.pdf
+ */
+-efile(537, CanTp_MemMap.h)
 
-/* output summary report before exit. */
--summary()
+/**
+ * if no specific memory sections are defined (for example when running on x86 arch) the file
+ * CanTp_MemMap.h does not alter the code
+ */
+-efile(766, CanTp_MemMap.h)
 
-/* treat #include <xxx> as library headers. */
-+libclass(angle)
+
+/**
+ * allow declarations before #include directive, as defined in
+ * https://www.autosar.org/fileadmin/user_upload/standards/classic/4-3/AUTOSAR_SWS_MemoryMapping.pdf
+ *
+ * violated MISRA rules:
+ * - 20.1, advisory
+ *
+ * TODO: this violation might be removed by moving 'private' type definitions into a separated
+ *  header
+ */
+-e9019
+
+/**
+ * allow usage of '#undef' directive, as defined in
+ * https://www.autosar.org/fileadmin/user_upload/standards/classic/4-3/AUTOSAR_SWS_MemoryMapping.pdf
+ *
+ * violated MISRA rules:
+ * - 20.5, advisory
+ */
+-e9021
+
+/* violated rules. */
+-e934 /* taking address of near auto variable. */

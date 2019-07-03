@@ -6,36 +6,14 @@
 #endif /* #ifndef CANTP_TYPES_H */
 
 #ifndef CANTP_MAX_NUM_OF_CHANNEL
-#define CANTP_MAX_NUM_OF_CHANNEL (0x00u)
+#define CANTP_MAX_NUM_OF_CHANNEL (0x10u)
 #endif
 
 #ifndef CANTP_MAX_NUM_OF_N_SDU
-#define CANTP_MAX_NUM_OF_N_SDU (0x00u)
+#define CANTP_MAX_NUM_OF_N_SDU (0x10u)
 #endif
-
-{%- for configuration in configurations %}
-#if (CANTP_MAX_NUM_OF_CHANNEL < ({{'0x%02Xu' % configuration.channels|length}}))
-#undef CANTP_MAX_NUM_OF_CHANNEL
-#define CANTP_MAX_NUM_OF_CHANNEL ({{'0x%02Xu' % configuration.channels|length}})
-#endif /* #if (CANTP_MAX_NUM_OF_CHANNEL < ({{'0x%02Xu' % configuration.channels|length}})) */
-    {%- for channel in configuration.channels %}
-
-#if (CANTP_MAX_NUM_OF_N_SDU < (0x00u
-    {%- if channel.receivers is defined %} + {{'0x%02Xu' % channel.receivers|length}}{% endif -%}
-    {%- if channel.transmitters is defined %} + {{'0x%02Xu' % channel.transmitters|length}}{% endif -%}
-))
-#undef CANTP_MAX_NUM_OF_N_SDU
-#define CANTP_MAX_NUM_OF_N_SDU (0x00u
-    {%- if channel.receivers is defined %} + {{'0x%02Xu' % channel.receivers|length}}{% endif -%}
-    {%- if channel.transmitters is defined %} + {{'0x%02Xu' % channel.transmitters|length}}{% endif -%}
-)
-#endif /* #if (CANTP_MAX_NUM_OF_N_SDU < (0x00u
-    {%- if channel.receivers is defined %} + {{'0x%02Xu' % channel.receivers|length}}{% endif -%}
-    {%- if channel.transmitters is defined %} + {{'0x%02Xu' % channel.transmitters|length}}{% endif -%}
-)) */
-    {% endfor %}
-{% endfor -%}
 
 extern const CanTp_ConfigType CanTp_Config[{{'0x%02Xu' % configurations|length}}];
 
 #endif /* #ifndef CANTP_CFG_H */
+
