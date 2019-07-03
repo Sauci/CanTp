@@ -1,9 +1,9 @@
-*.pdf
-*.pyc
 .idea
 *build*
-config/pc_lint/MISRA*
-debug/*
-external/*
+extern/*
+!extern/CMakeLists.txt
+generated/CanTp_Cfg.c
+generated/CanTp_Cfg.h
+generated/script/__pycache__/*
 report/*
 test/ffi/cffi_config.py

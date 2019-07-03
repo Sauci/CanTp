@@ -30,44 +30,12 @@ set(can_tp_misra_c_version 2012 CACHE STRING "MISRA standard.")
 # by default, it uses the file located at ./config/CanTp.json.
 set(can_tp_cfg_in ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json CACHE FILEPATH "")
 
-# can_tp_cfg_out defines the output folder of all auto-generated files.
-# by default, it is located in the 'generated' folder, in the default CMake's binary directory.
-set(can_tp_cfg_out ${CMAKE_BINARY_DIR}/generated)
-
-
-
-execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${can_tp_cfg_out})
-
 # find a distribution of Python 3. Python is used for:
 # - generation of the static configuration sources (CanTp_Cfg.c and CanTp_Cfg.h)
 # - running the tests
 find_package(PythonInterp 3.6 REQUIRED)
 
-add_custom_target(can_tp_gen_install
-    COMMAND ${PYTHON_EXECUTABLE} setup.py install
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/c_gen
-    COMMENT "installing CanTp code generator for python located at ${PYTHON_EXECUTABLE}")
-
-add_custom_command(OUTPUT ${can_tp_cfg_out}/CanTp_Cfg.h
-    DEPENDS can_tp_gen_install
-    DEPENDS ${can_tp_cfg_in}
-    COMMAND ${PYTHON_EXECUTABLE} -m can_tp ${can_tp_cfg_in} -header ${can_tp_cfg_out}/CanTp_Cfg.h
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/c_gen/can_tp
-    COMMENT "generating configuration header")
-
-add_custom_command(OUTPUT ${can_tp_cfg_out}/CanTp_Cfg.c
-    DEPENDS can_tp_gen_install
-    DEPENDS ${can_tp_cfg_out}/CanTp_Cfg.h
-    DEPENDS ${can_tp_cfg_in}
-    COMMAND ${PYTHON_EXECUTABLE} -m can_tp ${can_tp_cfg_in} -source ${can_tp_cfg_out}/CanTp_Cfg.c
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/c_gen/can_tp
-    COMMENT "generating configuration source")
-
-add_library(CanTp_Cfg STATIC ${can_tp_cfg_out}/CanTp_Cfg.c)
-
-target_include_directories(CanTp_Cfg
-    PUBLIC interface
-    PUBLIC $<$<BOOL:${enable_test}>:${CMAKE_CURRENT_SOURCE_DIR}/stub>)
+add_subdirectory(generated)
 
 add_library(${PROJECT_NAME} STATIC source/CanTp.c)
 
@@ -89,7 +57,7 @@ target_compile_definitions(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC interface
-    PUBLIC $<$<BOOL:${enable_test}>:${can_tp_cfg_out}>
+    PUBLIC $<$<BOOL:${enable_test}>:${CMAKE_CURRENT_SOURCE_DIR}/generated>
     PUBLIC $<$<BOOL:${enable_test}>:${CMAKE_CURRENT_SOURCE_DIR}/stub>)
 
 if (${enable_test})
@@ -99,11 +67,10 @@ if (${enable_test})
         PUBLIC CanTp_Cfg)
 
     add_test(NAME CanTp_UnitTest
-        COMMAND ${PYTHON_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test
-        --junitxml=./report/ut.xml
+        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/generated/script
+        ${PYTHON_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test
+        --junitxml=./report/ut.xml --maxfail=1
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-
-    set_tests_properties(CanTp_UnitTest PROPERTIES DEPENDS can_tp_gen_install)
 
     configure_file(config/cffi_config.py.in ${CMAKE_BINARY_DIR}/cffi_config.tmp.py)
 
@@ -113,30 +80,13 @@ if (${enable_test})
 endif ()
 
 if (${enable_static_code_analysis})
-    execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory
-        ${CMAKE_CURRENT_SOURCE_DIR}/external
-        ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint)
-
-    file(DOWNLOAD https://gist.githubusercontent.com/Sauci/39b03e60642a910e358d4dd0871a0b05/raw/ee303036f237e63dd8c11ae4582ec081d273dc76/add_pc_lint_target.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/add_pc_lint_target.cmake)
-
-    file(DOWNLOAD https://gimpel.com/html/pub90/au-misra1.lnt
-        ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/MISRA1998.lnt)
-
-    file(DOWNLOAD https://gimpel.com/html/pub90/au-misra2.lnt
-        ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/MISRA2004.lnt)
-
-    file(DOWNLOAD https://gimpel.com/html/pub90/au-misra3.lnt
-        ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/MISRA2012.lnt)
-
-    include(external/add_pc_lint_target.cmake)
-
+    add_subdirectory(extern)
     add_pc_lint_target(NAME CanTp
-        DEPENDENCIES ${can_tp_cfg_out}/CanTp_Cfg.h
-        OUTPUT_LOG ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.lnt.log
+        DEPENDENCIES ${CMAKE_CURRENT_SOURCE_DIR}/generated/CanTp_Cfg.h
+        OUTPUT_LOG ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.lnt.log
         EXCLUDE_DIRECTORIES
         ${CMAKE_CURRENT_SOURCE_DIR}/stub
         OPTION_FILES
-        ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/MISRA${can_tp_misra_c_version}.lnt
-        ${CMAKE_CURRENT_SOURCE_DIR}/config/pc_lint/CanTp.lnt)
+        ${CMAKE_CURRENT_SOURCE_DIR}/extern/lint/MISRA${can_tp_misra_c_version}.lnt
+        ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.lnt)
 endif ()
