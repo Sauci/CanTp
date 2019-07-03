@@ -1,24 +1,23 @@
-# the bellow targets might be replaced by a custom command (add_custom_command), but it will add
-# extra dependencies (see https://cmake.org/cmake/help/v3.15/command/add_custom_command.html). thus
-# a custom target is created instead.
-add_custom_target(CanTp_Cfg.c
-    DEPENDS ${can_tp_cfg_in}
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/script/config.c.jinja2
-    COMMAND ${PYTHON_EXECUTABLE} can_tp.py ${can_tp_cfg_in}
-    -source ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_Cfg.c
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/script
-    COMMENT "generating configuration source")
-
-add_custom_target(CanTp_Cfg.h
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_Cfg.h
     DEPENDS ${can_tp_cfg_in}
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/script/config.h.jinja2
     COMMAND ${PYTHON_EXECUTABLE} can_tp.py ${can_tp_cfg_in}
     -header ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_Cfg.h
+    #-schema ${CMAKE_SOURCE_DIR}/config/can_tp.schema.json
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/script
     COMMENT "generating configuration header")
 
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_Cfg.c
+    DEPENDS ${can_tp_cfg_in}
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/script/config.c.jinja2
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_Cfg.h
+    COMMAND ${PYTHON_EXECUTABLE} can_tp.py ${can_tp_cfg_in}
+    -source ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_Cfg.c
+    #-schema ${CMAKE_SOURCE_DIR}/config/can_tp.schema.json
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/script
+    COMMENT "generating configuration source")
+
 add_library(CanTp_Cfg STATIC ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_Cfg.c)
-add_dependencies(CanTp_Cfg CanTp_Cfg.h)
 
 target_include_directories(CanTp_Cfg
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
