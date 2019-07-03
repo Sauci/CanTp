@@ -35,6 +35,10 @@ set(can_tp_cfg_in ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json CACHE FILEPATH "
 # - running the tests
 find_package(PythonInterp 3.6 REQUIRED)
 
+if (${enable_static_code_analysis})
+    add_subdirectory(extern)
+endif ()
+
 add_subdirectory(generated)
 
 add_library(${PROJECT_NAME} STATIC source/CanTp.c)
@@ -79,7 +83,6 @@ if (${enable_test})
 endif ()
 
 if (${enable_static_code_analysis})
-    add_subdirectory(extern)
     add_pc_lint_target(NAME CanTp
         DEPENDENCIES ${CMAKE_CURRENT_SOURCE_DIR}/generated/CanTp_Cfg.h
         OUTPUT_LOG ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.lnt.log
