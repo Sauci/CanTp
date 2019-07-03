@@ -1,7 +1,6 @@
 import os
 import sys
 
-from can_tp import CodeGen
 from cffi import FFI
 from cffi.verifier import cleanup_tmpdir
 from importlib import import_module
@@ -20,6 +19,8 @@ from .cffi_config import output as cfg_out, \
     header as cfg_hdr, \
     compile_definitions as cfg_cd, \
     include_directories as cfg_id
+
+from can_tp import CodeGen
 
 
 def convert(name):
