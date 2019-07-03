@@ -104,9 +104,9 @@ static const CanTp_RxNSduType CanTp_RxNSduConfig{{'%02X' % configuration_loop.in
         NULL_PTR,
                 {%- endif %}
         {{'0x%02Xu' % receiver.block_size}},
-        ((uint32)((ieee_float){{'%f' % receiver.N_Ar_timeout}} * (ieee_float)1000000)),
-        ((uint32)((ieee_float){{'%f' % receiver.N_Br_timeout}} * (ieee_float)1000000)),
-        ((uint32)((ieee_float){{'%f' % receiver.N_Cr_timeout}} * (ieee_float)1000000)),
+        (uint32)((ieee_float){{'%f' % receiver.N_Ar_timeout}} * (ieee_float)1000000),
+        (uint32)((ieee_float){{'%f' % receiver.N_Br_timeout}} * (ieee_float)1000000),
+        (uint32)((ieee_float){{'%f' % receiver.N_Cr_timeout}} * (ieee_float)1000000),
         {{'0x%04Xu' % receiver.wait_for_transmission_maximum}},
         {{'0x%04Xu' % receiver.minimum_separation_time}},
         {{receiver.addressing_format}},
@@ -138,9 +138,9 @@ static const CanTp_TxNSduType CanTp_TxNSduConfig{{'%02X' % configuration_loop.in
                 {%- else %}
         NULL_PTR,
                 {%- endif %}
-        ((uint32)((ieee_float){{'%f' % transmitter.N_As_timeout}} * (ieee_float)1000000)),
-        ((uint32)((ieee_float){{'%f' % transmitter.N_Bs_timeout}} * (ieee_float)1000000)),
-        ((uint32)((ieee_float){{'%f' % transmitter.N_Cs_timeout}} * (ieee_float)1000000)),
+        (uint32)((ieee_float){{'%f' % transmitter.N_As_timeout}} * (ieee_float)1000000),
+        (uint32)((ieee_float){{'%f' % transmitter.N_Bs_timeout}} * (ieee_float)1000000),
+        (uint32)((ieee_float){{'%f' % transmitter.N_Cs_timeout}} * (ieee_float)1000000),
         {% if transmitter.enable_transmit_cancellation %}TRUE{% else %}FALSE{% endif %},
         {{transmitter.addressing_format}},
         {% if transmitter.enable_padding %}CANTP_ON{% else %}CANTP_OFF{% endif %},
