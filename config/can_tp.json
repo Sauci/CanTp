@@ -5,7 +5,7 @@
       "main_function_period": 1,
       "channels": [
         {
-          "channel_mode": "CANTP_MODE_FULL_DUPLEX",
+          "mode": "CANTP_MODE_FULL_DUPLEX",
           "receivers": [
             {
               "block_size": 2,
@@ -40,7 +40,7 @@
       "main_function_period": 1,
       "channels": [
         {
-          "channel_mode": "CANTP_MODE_HALF_DUPLEX",
+          "mode": "CANTP_MODE_HALF_DUPLEX",
           "transmitters": [
             {
               "network_service_data_unit_identifier": 1,

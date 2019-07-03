@@ -1,10 +1,8 @@
 *.*
 !interface/*
-!python/*
 !source/*
 !stub/*
 !test/*
 !CMakeLists.txt
 !requirements.txt
 !README.md
-test/unit_test/__pycache__

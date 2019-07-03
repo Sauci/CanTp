@@ -1,2 +1,0 @@
-include can_tp/config.c.jinja2
-include can_tp/config.h.jinja2

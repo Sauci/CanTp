@@ -7,10 +7,10 @@
                 {%- if receiver.source_address is defined %}
 #ifndef CANTP_N_SA_{{'%02X' % receiver.source_address}}
 
-#define CANTP_N_SA_{{'%02X' % receiver.source_address}}
+#define CANTP_N_SA_{{'%02X' % receiver.source_address}} ({{'0x%02Xu' % receiver.source_address}})
 
 static const CanTp_NSaType CanTp_NSa{{'%02X' % receiver.source_address}} = {
-    {{'0x%02Xu' % receiver.source_address}}
+    CANTP_N_SA_{{'%02X' % receiver.source_address}}
 };
 
 #endif /* #ifndef CANTP_N_SA_{{'%02X' % receiver.source_address}} */
@@ -18,10 +18,10 @@ static const CanTp_NSaType CanTp_NSa{{'%02X' % receiver.source_address}} = {
                 {%- if receiver.target_address is defined %}
 #ifndef CANTP_N_TA_{{'%02X' % receiver.target_address}}
 
-#define CANTP_N_TA_{{'%02X' % receiver.target_address}}
+#define CANTP_N_TA_{{'%02X' % receiver.target_address}} ({{'0x%02Xu' % receiver.target_address}})
 
 static const CanTp_NTaType CanTp_NTa{{'%02X' % receiver.target_address}} = {
-    {{'0x%02Xu' % receiver.target_address}}
+    CANTP_N_TA_{{'%02X' % receiver.target_address}}
 };
 
 #endif /* #ifndef CANTP_N_TA_{{'%02X' % receiver.target_address}} */
@@ -29,10 +29,10 @@ static const CanTp_NTaType CanTp_NTa{{'%02X' % receiver.target_address}} = {
                 {%- if receiver.address_extension is defined %}
 #ifndef CANTP_N_AE_{{'%02X' % receiver.address_extension}}
 
-#define CANTP_N_AE_{{'%02X' % receiver.address_extension}}
+#define CANTP_N_AE_{{'%02X' % receiver.address_extension}} ({{'0x%02Xu' % receiver.address_extension}})
 
 static const CanTp_NAeType CanTp_NAe{{'%02X' % receiver.address_extension}} = {
-    {{'0x%02Xu' % receiver.address_extension}}
+    CANTP_N_AE_{{'%02X' % receiver.address_extension}}
 };
 
 #endif /* #ifndef CANTP_N_AE_{{'%02X' % receiver.address_extension}} */
@@ -84,7 +84,7 @@ static const CanTp_NAeType CanTp_NAe{{'%02X' % transmitter.address_extension}} =
     {%- for channel in configuration.channels %}
         {% set channel_loop = loop %}
         {%- if channel.receivers is defined %}
-const CanTp_RxNSduType CanTp_RxNSduConfig{{'%02X' % configuration_loop.index0}}Channel{{'%02X' % channel_loop.index0}}[] = {
+static const CanTp_RxNSduType CanTp_RxNSduConfig{{'%02X' % configuration_loop.index0}}Channel{{'%02X' % channel_loop.index0}}[] = {
             {%- for receiver in channel.receivers %}
     {
         {{'0x%04Xu' % receiver.network_service_data_unit_identifier}},
@@ -104,13 +104,13 @@ const CanTp_RxNSduType CanTp_RxNSduConfig{{'%02X' % configuration_loop.index0}}C
         NULL_PTR,
                 {%- endif %}
         {{'0x%02Xu' % receiver.block_size}},
-        ((uint32)((float){{'%f' % receiver.N_Ar_timeout}} * (float)1000000)),
-        ((uint32)((float){{'%f' % receiver.N_Br_timeout}} * (float)1000000)),
-        ((uint32)((float){{'%f' % receiver.N_Cr_timeout}} * (float)1000000)),
-        {{'%04Xu' % receiver.wait_for_transmission_maximum}},
-        {{'%04Xu' % receiver.minimum_separation_time}},
+        (uint32)((ieee_float){{'%f' % receiver.N_Ar_timeout}} * (ieee_float)1000000),
+        (uint32)((ieee_float){{'%f' % receiver.N_Br_timeout}} * (ieee_float)1000000),
+        (uint32)((ieee_float){{'%f' % receiver.N_Cr_timeout}} * (ieee_float)1000000),
+        {{'0x%04Xu' % receiver.wait_for_transmission_maximum}},
+        {{'0x%04Xu' % receiver.minimum_separation_time}},
         {{receiver.addressing_format}},
-        {% if receiver.enable_padding %}TRUE{% else %}FALSE{% endif %},
+        {% if receiver.enable_padding %}CANTP_ON{% else %}CANTP_OFF{% endif %},
         {{receiver.communication_type}},
         {{'0x%04Xu' % receiver.network_service_data_unit_reference}}
     },
@@ -119,7 +119,7 @@ const CanTp_RxNSduType CanTp_RxNSduConfig{{'%02X' % configuration_loop.index0}}C
         {%- endif %}
 
         {%- if channel.transmitters is defined %}
-const CanTp_TxNSduType CanTp_TxNSduConfig{{'%02X' % configuration_loop.index0}}Channel{{'%02X' % channel_loop.index0}}[] = {
+static const CanTp_TxNSduType CanTp_TxNSduConfig{{'%02X' % configuration_loop.index0}}Channel{{'%02X' % channel_loop.index0}}[] = {
             {%- for transmitter in channel.transmitters %}
     {
         {{'0x%04Xu' % transmitter.network_service_data_unit_identifier}},
@@ -138,12 +138,12 @@ const CanTp_TxNSduType CanTp_TxNSduConfig{{'%02X' % configuration_loop.index0}}C
                 {%- else %}
         NULL_PTR,
                 {%- endif %}
-        ((uint32)((float){{'%f' % transmitter.N_As_timeout}} * (float)1000000)),
-        ((uint32)((float){{'%f' % transmitter.N_Bs_timeout}} * (float)1000000)),
-        ((uint32)((float){{'%f' % transmitter.N_Cs_timeout}} * (float)1000000)),
+        (uint32)((ieee_float){{'%f' % transmitter.N_As_timeout}} * (ieee_float)1000000),
+        (uint32)((ieee_float){{'%f' % transmitter.N_Bs_timeout}} * (ieee_float)1000000),
+        (uint32)((ieee_float){{'%f' % transmitter.N_Cs_timeout}} * (ieee_float)1000000),
         {% if transmitter.enable_transmit_cancellation %}TRUE{% else %}FALSE{% endif %},
         {{transmitter.addressing_format}},
-        {% if transmitter.enable_padding %}TRUE{% else %}FALSE{% endif %},
+        {% if transmitter.enable_padding %}CANTP_ON{% else %}CANTP_OFF{% endif %},
         {{transmitter.communication_type}},
         {{'0x%04Xu' % transmitter.network_service_data_unit_reference}}
     },
@@ -185,10 +185,11 @@ const CanTp_ConfigType CanTp_Config[{{'0x%02Xu' % configurations|length}}] =
 {
 {%- for configuration in configurations %}
     {
-        ((uint32)((float){{configuration.main_function_period}} * (float)1000000)),
+        ((uint32)((ieee_float){{configuration.main_function_period}} * (ieee_float)1000000)),
         sizeof(CanTp_ChannelConfig{{'%02X' % loop.index0}}) / sizeof(CanTp_ChannelConfig{{'%02X' % loop.index0}}[0x00u]),
         &CanTp_ChannelConfig{{'%02X' % loop.index0}}[0x00u],
         {{configuration.padding_byte}},
     },
 {%- endfor %}
 };
+

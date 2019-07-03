@@ -3,7 +3,11 @@ This file is auto-generated, do not edit.
 The purpose of this file is to forward the compiler/linker parameters from cmake to the CFFI builder.
 """
 
-output = "${can_tp_cfg_out}"
+import sys
+
+sys.path.append("${PROJECT_SOURCE_DIR}/generated/script")
+
+output = "${CMAKE_BINARY_DIR}"
 header = "${PROJECT_SOURCE_DIR}/interface/CanTp.h"
 source = "${PROJECT_SOURCE_DIR}/source/CanTp.c"
 compile_definitions = "$<JOIN:$<TARGET_PROPERTY:${PROJECT_NAME},COMPILE_DEFINITIONS>,$<SEMICOLON>>".split(';')
