@@ -67,8 +67,7 @@ if (${enable_test})
         PUBLIC CanTp_Cfg)
 
     add_test(NAME CanTp_UnitTest
-        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/generated/script
-        ${PYTHON_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test
+        COMMAND ${PYTHON_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test
         --junitxml=./report/ut.xml --maxfail=1
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
