@@ -1,4 +1,6 @@
 .idea
+.pytest_cache
+*__pycache__*
 *build*
 extern/*
 !extern/CMakeLists.txt
