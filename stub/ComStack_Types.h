@@ -54,7 +54,7 @@ typedef enum
     TP_CONFPENDING = 0x02u
 } TpDataStateType;
 
-typedef struct PduInfoType
+typedef struct
 {
     uint8 *SduDataPtr;
     uint8 *MetaDataPtr;
