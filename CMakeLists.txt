@@ -72,7 +72,7 @@ if (${enable_test})
 
     add_test(NAME CanTp_UnitTest
         COMMAND ${PYTHON_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test
-        --junitxml=./report/ut.xml --maxfail=1
+        --junitxml=./report/ut.xml
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
     configure_file(config/cffi_config.py.in ${CMAKE_BINARY_DIR}/cffi_config.tmp.py)
