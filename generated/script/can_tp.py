@@ -6,9 +6,6 @@ from json import load
 from jsonschema import validate
 
 
-            # make sure we have at least one configuration.
-
-
 class CodeGen(object):
     def __init__(self, config):
         self._config = config
@@ -33,6 +30,7 @@ def main():
     parser = argparse.ArgumentParser(description='AUTOSAR CAN transport layer code generator')
 
     parser.add_argument('configuration', help='configuration file path')
+    parser.add_argument('-schema', help='schema file path')
     parser.add_argument('-source', help='output source file path')
     parser.add_argument('-header', help='output header file path')
 
@@ -40,6 +38,10 @@ def main():
 
     with open(args.configuration, 'r') as fp:
         data = load(fp)
+
+    if args.schema:
+        with open(args.schema, 'r') as fp:
+            validate(data, load(fp))
 
     code_generator = CodeGen(data)
 
