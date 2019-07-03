@@ -23,12 +23,12 @@ option(enable_static_code_analysis "enable/disable static code analysis." OFF)
 # analysis with PC-Lint.
 # the possible values are 1998, 2004 and 2012
 # by default, the MISRA C version 2012 is used.
-set(can_tp_misra_c_version 2012)
+set(can_tp_misra_c_version 2012 CACHE STRING "MISRA standard.")
 
 # can_tp_cfg_in defines the default configuration file used to generate the auto-generated code of
 # the module (CanTp_Cfg.c and CanTp_Cfg.h).
 # by default, it uses the file located at ./config/CanTp.json.
-set(can_tp_cfg_in ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json)
+set(can_tp_cfg_in ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json CACHE FILEPATH "")
 
 # can_tp_cfg_out defines the output folder of all auto-generated files.
 # by default, it is located in the 'generated' folder, in the default CMake's binary directory.
