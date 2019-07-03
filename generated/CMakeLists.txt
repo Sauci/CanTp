@@ -4,14 +4,16 @@
 add_custom_target(CanTp_Cfg.c
     DEPENDS ${can_tp_cfg_in}
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/script/config.c.jinja2
-    COMMAND ${PYTHON_EXECUTABLE} can_tp.py ${can_tp_cfg_in} -source ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_Cfg.c
+    COMMAND ${PYTHON_EXECUTABLE} can_tp.py ${can_tp_cfg_in}
+    -source ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_Cfg.c
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/script
     COMMENT "generating configuration source")
 
 add_custom_target(CanTp_Cfg.h
     DEPENDS ${can_tp_cfg_in}
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/script/config.h.jinja2
-    COMMAND ${PYTHON_EXECUTABLE} can_tp.py ${can_tp_cfg_in} -header ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_Cfg.h
+    COMMAND ${PYTHON_EXECUTABLE} can_tp.py ${can_tp_cfg_in}
+    -header ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_Cfg.h
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/script
     COMMENT "generating configuration header")
 

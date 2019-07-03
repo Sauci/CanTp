@@ -27,8 +27,8 @@ set(can_tp_misra_c_version 2012 CACHE STRING "MISRA standard.")
 
 # can_tp_cfg_in defines the default configuration file used to generate the auto-generated code of
 # the module (CanTp_Cfg.c and CanTp_Cfg.h).
-# by default, it uses the file located at ./config/CanTp.json.
-set(can_tp_cfg_in ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.json CACHE FILEPATH "")
+# by default, it uses the file located at ./config/can_tp.json.
+set(can_tp_cfg_in ${CMAKE_CURRENT_SOURCE_DIR}/config/can_tp.json CACHE FILEPATH "")
 
 # find a distribution of Python 3. Python is used for:
 # - generation of the static configuration sources (CanTp_Cfg.c and CanTp_Cfg.h)
