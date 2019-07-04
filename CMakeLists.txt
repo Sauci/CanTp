@@ -5,13 +5,19 @@ project(CanTp VERSION 0.1.0 LANGUAGES C)
 option(ENABLE_DET "enable/disable developement error detection feature." ON)
 option(ENABLE_TEST "enable/disable tests." ON)
 option(ENABLE_SCA "enable/disable static code analysis." OFF)
+option(ENABLE_DOC "enable/disable documentation generation." OFF)
 set(MISRA_C_VERSION 2012 CACHE STRING "MISRA standard.")
 set(CANTP_CONFIG_FILEPATH ${CMAKE_CURRENT_SOURCE_DIR}/config/can_tp.json CACHE FILEPATH "")
 
-# find a distribution of Python 3. Python is used for:
-# - generation of the static configuration sources (CanTp_Cfg.c and CanTp_Cfg.h)
-# - running the tests
 find_package(PythonInterp 3.6 REQUIRED)
+
+if (${ENABLE_DOC})
+    find_package(Doxygen REQUIRED dot)
+
+    set(DOXYGEN_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/doc)
+
+    doxygen_add_docs(${PROJECT_NAME}.doc source interface COMMENT "generating CanTp documentation")
+endif()
 
 if (${ENABLE_SCA})
     add_subdirectory(extern)
