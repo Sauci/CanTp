@@ -121,17 +121,6 @@ class MockGen(FFI):
             lib_path = self.compile(tmpdir=tmpdir)
             sys.path.append(os.path.dirname(lib_path))
             self.ffi_module = import_module(name)
-        self.can_if_transmit = MagicMock()
-        self.det_report_error = MagicMock()
-        self.det_report_runtime_error = MagicMock()
-        self.det_report_transient_fault = MagicMock()
-        self.pdu_r_can_tp_copy_rx_data = MagicMock()
-        self.pdu_r_can_tp_copy_tx_data = MagicMock()
-        self.pdu_r_can_tp_rx_indication = MagicMock()
-        self.pdu_r_can_tp_start_of_reception = MagicMock()
-        self.pdu_r_can_tp_tx_confirmation = MagicMock()
-        for func in self.mocked:
-            self.ffi.def_extern(func)(getattr(self, convert(func)))
 
     @property
     def mocked(self):
@@ -175,28 +164,40 @@ class CanTpTest(object):
             self.code.lib.CanTp_Init(self.code.ffi.cast('const CanTp_ConfigType *', self.code.lib.CanTp_Config))
             if self.code.lib.CanTp_State != self.code.lib.CANTP_ON:
                 raise ValueError('CanTp module not initialized correctly...')
-        self.code.can_if_transmit.return_value = self.define('E_OK')
-        self.code.det_report_error.return_value = self.define('E_OK')
-        self.code.det_report_runtime_error.return_value = self.define('E_OK')
-        self.code.det_report_transient_fault.return_value = self.define('E_OK')
-        self.code.pdu_r_can_tp_rx_indication.return_value = None
-        self.code.pdu_r_can_tp_tx_confirmation.return_value = None
-        self.code.pdu_r_can_tp_start_of_reception.return_value = self.code.lib.BUFREQ_OK
-        self.code.pdu_r_can_tp_copy_rx_data.return_value = self.code.lib.BUFREQ_OK
-        self.code.pdu_r_can_tp_copy_tx_data.return_value = self.code.lib.BUFREQ_OK
-        self.code.pdu_r_can_tp_start_of_reception.side_effect = self._pdu_r_can_tp_start_of_reception
-        self.code.pdu_r_can_tp_copy_rx_data.side_effect = self._pdu_r_can_tp_copy_rx_data
+
+        self.can_if_transmit = MagicMock()
+        self.det_report_error = MagicMock()
+        self.det_report_runtime_error = MagicMock()
+        self.det_report_transient_fault = MagicMock()
+        self.pdu_r_can_tp_copy_rx_data = MagicMock()
+        self.pdu_r_can_tp_copy_tx_data = MagicMock()
+        self.pdu_r_can_tp_rx_indication = MagicMock()
+        self.pdu_r_can_tp_start_of_reception = MagicMock()
+        self.pdu_r_can_tp_tx_confirmation = MagicMock()
+        for func in self.code.mocked:
+            self.ffi.def_extern(func)(getattr(self, convert(func)))
+        self.can_if_transmit.return_value = self.define('E_OK')
+        self.det_report_error.return_value = self.define('E_OK')
+        self.det_report_runtime_error.return_value = self.define('E_OK')
+        self.det_report_transient_fault.return_value = self.define('E_OK')
+        self.pdu_r_can_tp_rx_indication.return_value = None
+        self.pdu_r_can_tp_tx_confirmation.return_value = None
+        self.pdu_r_can_tp_start_of_reception.return_value = self.code.lib.BUFREQ_OK
+        self.pdu_r_can_tp_copy_rx_data.return_value = self.code.lib.BUFREQ_OK
+        self.pdu_r_can_tp_copy_tx_data.return_value = self.code.lib.BUFREQ_OK
+        self.pdu_r_can_tp_start_of_reception.side_effect = self._pdu_r_can_tp_start_of_reception
+        self.pdu_r_can_tp_copy_rx_data.side_effect = self._pdu_r_can_tp_copy_rx_data
 
     def _pdu_r_can_tp_start_of_reception(self, _i_pdu_id, _pdu_info, _tp_sdu_length, buffer_size):
         buffer_size[0] = self.available_rx_buffer
-        return self.code.pdu_r_can_tp_start_of_reception.return_value
+        return self.pdu_r_can_tp_start_of_reception.return_value
 
     def _pdu_r_can_tp_copy_rx_data(self, _rx_pdu_id, pdu_info, buffer_size):
         if pdu_info.SduDataPtr != self.code.ffi.NULL and pdu_info.SduLength != 0:
             for idx in range(pdu_info.SduLength):
                 self.can_tp_rx_data.append(pdu_info.SduDataPtr[idx])
         buffer_size[0] = self.available_rx_buffer
-        return self.code.pdu_r_can_tp_copy_rx_data.return_value
+        return self.pdu_r_can_tp_copy_rx_data.return_value
 
     def _pdu_r_can_tp_copy_tx_data(self, tx_pdu_id, pdu_info, _retry_info, _available_data):
         if tx_pdu_id in self.code.can_tp_transmit_args.keys():
@@ -207,7 +208,7 @@ class CanTpTest(object):
                         pdu_info.SduDataPtr[idx] = args.sdu_data.pop(0)
                     except IndexError:
                         pass
-        return self.code.pdu_r_can_tp_copy_tx_data.return_value
+        return self.pdu_r_can_tp_copy_tx_data.return_value
 
     def get_pdu_info(self, payload, overridden_size=None, meta_data=None):
         if isinstance(payload, str):
@@ -335,38 +336,6 @@ class CanTpTest(object):
     @property
     def ffi(self):
         return self.code.ffi
-
-    @property
-    def det_report_error(self):
-        return self.code.det_report_error
-
-    @property
-    def det_report_runtime_error(self):
-        return self.code.det_report_runtime_error
-
-    @property
-    def pdu_r_can_tp_copy_rx_data(self):
-        return self.code.pdu_r_can_tp_copy_rx_data
-
-    @property
-    def pdu_r_can_tp_copy_tx_data(self):
-        return self.code.pdu_r_can_tp_copy_tx_data
-
-    @property
-    def can_if_transmit(self):
-        return self.code.can_if_transmit
-
-    @property
-    def pdu_r_can_tp_start_of_reception(self):
-        return self.code.pdu_r_can_tp_start_of_reception
-
-    @property
-    def pdu_r_can_tp_rx_indication(self):
-        return self.code.pdu_r_can_tp_rx_indication
-
-    @property
-    def pdu_r_can_tp_tx_confirmation(self):
-        return self.code.pdu_r_can_tp_tx_confirmation
 
     @property
     def available_rx_buffer(self):
