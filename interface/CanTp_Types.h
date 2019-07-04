@@ -283,7 +283,6 @@ typedef struct
 
 /**
  * @brief data structure type for the post-build configuration parameters.
- * @satisfy{@req{SWS_CanTp_00340}}
  */
 typedef struct
 {
