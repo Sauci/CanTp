@@ -157,8 +157,8 @@ class CanTpTest(MockGen):
         self.can_tp_rx_data = list()
         cleanup_tmpdir(tmpdir=cfg_out)
         code_gen = CodeGen(config)
-        for file_path, content in ((os.path.join(cfg_out, 'CanTp_Cfg.c'), code_gen.source),
-                                   (os.path.join(cfg_out, 'CanTp_Cfg.h'), code_gen.header)):
+        for file_path, content in ((os.path.join(cfg_out, 'CanTp_PBcfg.c'), code_gen.source),
+                                   (os.path.join(cfg_out, 'CanTp_PBcfg.h'), code_gen.header)):
             with open(file_path, 'w') as fp:
                 fp.write(content)
         with open(cfg_src, 'r') as fp:
@@ -168,7 +168,7 @@ class CanTpTest(MockGen):
         super(CanTpTest, self).__init__('{}_{}'.format(name, config.get_id),
                                         source,
                                         header,
-                                        sources=(os.path.join(cfg_out, 'CanTp_Cfg.c'),),
+                                        sources=(os.path.join(cfg_out, 'CanTp_PBcfg.c'),),
                                         define_macros=cfg_cd,
                                         include_dirs=cfg_id + [cfg_out])
         if initialize:

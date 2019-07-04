@@ -52,7 +52,7 @@ if (${ENABLE_TEST})
     ENABLE_TESTing()
 
     target_link_libraries(${PROJECT_NAME}
-        PUBLIC CanTp_Cfg)
+        PUBLIC CanTp_PBcfg)
 
     add_test(NAME CanTp_UnitTest
         COMMAND ${PYTHON_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test
@@ -68,7 +68,7 @@ endif ()
 
 if (${ENABLE_SCA})
     add_pc_lint_target(NAME CanTp
-        DEPENDENCIES ${CMAKE_CURRENT_SOURCE_DIR}/generated/CanTp_Cfg.h
+        DEPENDENCIES ${CMAKE_CURRENT_SOURCE_DIR}/generated/CanTp_PBcfg.h
         OUTPUT_LOG ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.lnt.log
         EXCLUDE_DIRECTORIES
         ${CMAKE_CURRENT_SOURCE_DIR}/test/stub
