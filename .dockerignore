@@ -1,7 +1,6 @@
 *.*
 !interface/*
 !source/*
-!stub/*
 !test/*
 !CMakeLists.txt
 !requirements.txt

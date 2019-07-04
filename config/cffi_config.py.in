@@ -5,7 +5,7 @@ The purpose of this file is to forward the compiler/linker parameters from cmake
 
 import sys
 
-sys.path.append("${PROJECT_SOURCE_DIR}/generated/script")
+sys.path.append("${PROJECT_SOURCE_DIR}/script")
 
 output = "${CMAKE_BINARY_DIR}"
 header = "${PROJECT_SOURCE_DIR}/interface/CanTp.h"

@@ -13,7 +13,9 @@ ENV BUILD_DIR=$PROJECT_DIR/docker_build
 RUN apk update && apk add \
     build-base \
     cmake \
+    doxygen \
     git \
+    graphviz \
     libffi-dev \
     python3-dev
 

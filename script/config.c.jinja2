@@ -9,9 +9,15 @@
 
 #define CANTP_N_SA_{{'%02X' % receiver.source_address}} ({{'0x%02Xu' % receiver.source_address}})
 
+#define CanTp_START_SEC_CONST_8
+#include "CanTp_MemMap.h"
+
 static const CanTp_NSaType CanTp_NSa{{'%02X' % receiver.source_address}} = {
     CANTP_N_SA_{{'%02X' % receiver.source_address}}
 };
+
+#define CanTp_STOP_SEC_CONST_8
+#include "CanTp_MemMap.h"
 
 #endif /* #ifndef CANTP_N_SA_{{'%02X' % receiver.source_address}} */
                 {% endif %}
@@ -20,9 +26,15 @@ static const CanTp_NSaType CanTp_NSa{{'%02X' % receiver.source_address}} = {
 
 #define CANTP_N_TA_{{'%02X' % receiver.target_address}} ({{'0x%02Xu' % receiver.target_address}})
 
+#define CanTp_START_SEC_CONST_8
+#include "CanTp_MemMap.h"
+
 static const CanTp_NTaType CanTp_NTa{{'%02X' % receiver.target_address}} = {
     CANTP_N_TA_{{'%02X' % receiver.target_address}}
 };
+
+#define CanTp_STOP_SEC_CONST_8
+#include "CanTp_MemMap.h"
 
 #endif /* #ifndef CANTP_N_TA_{{'%02X' % receiver.target_address}} */
                 {% endif %}
@@ -31,9 +43,15 @@ static const CanTp_NTaType CanTp_NTa{{'%02X' % receiver.target_address}} = {
 
 #define CANTP_N_AE_{{'%02X' % receiver.address_extension}} ({{'0x%02Xu' % receiver.address_extension}})
 
+#define CanTp_START_SEC_CONST_8
+#include "CanTp_MemMap.h"
+
 static const CanTp_NAeType CanTp_NAe{{'%02X' % receiver.address_extension}} = {
     CANTP_N_AE_{{'%02X' % receiver.address_extension}}
 };
+
+#define CanTp_STOP_SEC_CONST_8
+#include "CanTp_MemMap.h"
 
 #endif /* #ifndef CANTP_N_AE_{{'%02X' % receiver.address_extension}} */
                 {% endif -%}
@@ -46,9 +64,15 @@ static const CanTp_NAeType CanTp_NAe{{'%02X' % receiver.address_extension}} = {
 
 #define CANTP_N_SA_{{'%02X' % transmitter.source_address}}
 
+#define CanTp_START_SEC_CONST_8
+#include "CanTp_MemMap.h"
+
 static const CanTp_NSaType CanTp_NSa{{'%02X' % transmitter.source_address}} = {
    {{'0x%02Xu' % transmitter.source_address}}
 };
+
+#define CanTp_STOP_SEC_CONST_8
+#include "CanTp_MemMap.h"
 
 #endif /* #ifndef CANTP_N_SA_{{'%02X' % transmitter.source_address}} */
                {% endif %}
@@ -57,9 +81,15 @@ static const CanTp_NSaType CanTp_NSa{{'%02X' % transmitter.source_address}} = {
 
 #define CANTP_N_TA_{{'%02X' % transmitter.target_address}}
 
+#define CanTp_START_SEC_CONST_8
+#include "CanTp_MemMap.h"
+
 static const CanTp_NTaType CanTp_NTa{{'%02X' % transmitter.target_address}} = {
    {{'0x%02Xu' % transmitter.target_address}}
 };
+
+#define CanTp_STOP_SEC_CONST_8
+#include "CanTp_MemMap.h"
 
 #endif /* #ifndef CANTP_N_TA_{{'%02X' % transmitter.target_address}} */
                {% endif %}
@@ -68,9 +98,15 @@ static const CanTp_NTaType CanTp_NTa{{'%02X' % transmitter.target_address}} = {
 
 #define CANTP_N_AE_{{'%02X' % transmitter.address_extension}}
 
+#define CanTp_START_SEC_CONST_8
+#include "CanTp_MemMap.h"
+
 static const CanTp_NAeType CanTp_NAe{{'%02X' % transmitter.address_extension}} = {
    {{'0x%02Xu' % transmitter.address_extension}}
 };
+
+#define CanTp_STOP_SEC_CONST_8
+#include "CanTp_MemMap.h"
 
 #endif /* #ifndef CANTP_N_AE_{{'%02X' % transmitter.address_extension}} */
                {% endif -%}
@@ -84,6 +120,9 @@ static const CanTp_NAeType CanTp_NAe{{'%02X' % transmitter.address_extension}} =
     {%- for channel in configuration.channels %}
         {% set channel_loop = loop %}
         {%- if channel.receivers is defined %}
+#define CanTp_START_SEC_CONST_UNSPECIFIED
+#include "CanTp_MemMap.h"
+
 static const CanTp_RxNSduType CanTp_RxNSduConfig{{'%02X' % configuration_loop.index0}}Channel{{'%02X' % channel_loop.index0}}[] = {
             {%- for receiver in channel.receivers %}
     {
@@ -116,9 +155,15 @@ static const CanTp_RxNSduType CanTp_RxNSduConfig{{'%02X' % configuration_loop.in
     },
             {%- endfor %}
 };
+
+#define CanTp_STOP_SEC_CONST_UNSPECIFIED
+#include "CanTp_MemMap.h"
         {%- endif %}
 
         {%- if channel.transmitters is defined %}
+#define CanTp_START_SEC_CONST_UNSPECIFIED
+#include "CanTp_MemMap.h"
+
 static const CanTp_TxNSduType CanTp_TxNSduConfig{{'%02X' % configuration_loop.index0}}Channel{{'%02X' % channel_loop.index0}}[] = {
             {%- for transmitter in channel.transmitters %}
     {
@@ -149,12 +194,18 @@ static const CanTp_TxNSduType CanTp_TxNSduConfig{{'%02X' % configuration_loop.in
     },
             {%- endfor %}
 };
+
+#define CanTp_STOP_SEC_CONST_UNSPECIFIED
+#include "CanTp_MemMap.h"
         {%- endif %}
     {%- endfor %}
 {%- endfor %}
 
 {% for configuration in configurations %}
 {% set configuration_loop = loop %}
+#define CanTp_START_SEC_CONST_UNSPECIFIED
+#include "CanTp_MemMap.h"
+
 static const CanTp_ChannelType CanTp_ChannelConfig{{'%02X' % configuration_loop.index0}}[] = {
     {%- for channel in configuration.channels %}
     {%- set channel_loop = loop %}
@@ -179,6 +230,9 @@ static const CanTp_ChannelType CanTp_ChannelConfig{{'%02X' % configuration_loop.
     },
     {%- endfor %}
 };
+
+#define CanTp_STOP_SEC_CONST_UNSPECIFIED
+#include "CanTp_MemMap.h"
 {%- endfor %}
 
 const CanTp_ConfigType CanTp_Config[{{'0x%02Xu' % configurations|length}}] =
