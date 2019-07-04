@@ -5,10 +5,13 @@ The purpose of this file is to forward the compiler/linker parameters from cmake
 
 import sys
 
-sys.path.append("${PROJECT_SOURCE_DIR}/script")
-
-output = "${PROJECT_SOURCE_DIR}/generated"
+build_directory = "${CMAKE_BINARY_DIR}"
 header = "${PROJECT_SOURCE_DIR}/interface/CanTp.h"
 source = "${PROJECT_SOURCE_DIR}/source/CanTp.c"
 compile_definitions = "$<JOIN:$<TARGET_PROPERTY:${PROJECT_NAME},COMPILE_DEFINITIONS>,$<SEMICOLON>>".split(';')
 include_directories = "$<JOIN:$<TARGET_PROPERTY:${PROJECT_NAME},INCLUDE_DIRECTORIES>,$<SEMICOLON>>".split(';')
+
+sys.path.append("${PROJECT_SOURCE_DIR}/script")
+sys.path.append(build_directory)
+
+from can_tp import CodeGen

@@ -14,13 +14,12 @@ from pycparser.c_generator import CGenerator as Generator
 from pycparser.c_parser import CParser
 from pcpp.preprocessor import Preprocessor as Pp
 
-from .cffi_config import output as cfg_out, \
+from .cffi_config import build_directory, \
     source as cfg_src, \
     header as cfg_hdr, \
     compile_definitions as cfg_cd, \
-    include_directories as cfg_id
-
-from can_tp import CodeGen
+    include_directories as cfg_id, \
+    CodeGen
 
 
 def convert(name):
@@ -95,8 +94,7 @@ class MockGen(FFI):
                  header,
                  sources=tuple(),
                  include_dirs=tuple(),
-                 define_macros=tuple(),
-                 tmpdir=os.getcwd()):
+                 define_macros=tuple()):
         super(MockGen, self).__init__()
         self.pp = Preprocessor()
         for include_directory in include_dirs:
@@ -115,10 +113,9 @@ class MockGen(FFI):
                         include_dirs=include_dirs,
                         define_macros=list(tuple(d.split('=')) for d in define_macros))
         try:
-            sys.path.append(tmpdir)
             self.ffi_module = import_module(name)
         except ModuleNotFoundError:
-            lib_path = self.compile(tmpdir=tmpdir)
+            lib_path = self.compile(tmpdir=build_directory)
             sys.path.append(os.path.dirname(lib_path))
             self.ffi_module = import_module(name)
 
@@ -144,10 +141,10 @@ class CanTpTest(object):
         self.available_rx_buffer = rx_buffer_size
         self.can_if_tx_data = list()
         self.can_tp_rx_data = list()
-        cleanup_tmpdir(tmpdir=cfg_out)
+        cleanup_tmpdir(tmpdir=build_directory)
         code_gen = CodeGen(config)
-        for file_path, content in ((os.path.join(cfg_out, 'CanTp_PBcfg.c'), code_gen.source),
-                                   (os.path.join(cfg_out, 'CanTp_PBcfg.h'), code_gen.header)):
+        for file_path, content in ((os.path.join(build_directory, 'CanTp_PBcfg.c'), code_gen.source),
+                                   (os.path.join(build_directory, 'CanTp_PBcfg.h'), code_gen.header)):
             with open(file_path, 'w') as fp:
                 fp.write(content)
         with open(cfg_src, 'r') as fp:
@@ -157,9 +154,9 @@ class CanTpTest(object):
         self.code = MockGen('{}_{}'.format(name, config.get_id),
                             source,
                             header,
-                            sources=(os.path.join(cfg_out, 'CanTp_PBcfg.c'),),
+                            sources=(os.path.join(build_directory, 'CanTp_PBcfg.c'),),
                             define_macros=cfg_cd,
-                            include_dirs=cfg_id + [cfg_out])
+                            include_dirs=cfg_id + [build_directory])
         if initialize:
             self.code.lib.CanTp_Init(self.code.ffi.cast('const CanTp_ConfigType *', self.code.lib.CanTp_Config))
             if self.code.lib.CanTp_State != self.code.lib.CANTP_ON:
