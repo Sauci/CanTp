@@ -13,7 +13,13 @@
 #define CANTP_MAX_NUM_OF_N_SDU (0x10u)
 #endif
 
+#define CanTp_START_SEC_CONST_UNSPECIFIED
+#include "CanTp_MemMap.h"
+
 extern const CanTp_ConfigType CanTp_Config[{{'0x%02Xu' % configurations|length}}];
+
+#define CanTp_STOP_SEC_CONST_UNSPECIFIED
+#include "CanTp_MemMap.h"
 
 #endif /* #ifndef CANTP_CFG_H */
 
