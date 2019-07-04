@@ -41,14 +41,6 @@
  * @{
  */
 
-#ifndef CANTP_MAX_NUM_OF_CHANNEL
-#error CANTP_MAX_NUM_OF_CHANNEL must be defined by the build system.
-#endif /* #ifndef CANTP_MAX_NUM_OF_CHANNEL */
-
-#ifndef CANTP_MAX_NUM_OF_N_SDU
-#error CANTP_MAX_NUM_OF_N_SDU must be defined by the build system.
-#endif /* #ifndef CANTP_MAX_NUM_OF_N_SDU */
-
 #ifdef __cplusplus
 
 extern "C"
@@ -61,6 +53,8 @@ extern "C"
 #endif /* #ifndef CANIF_H */
 
 #include "CanTp.h"
+
+#include "CanTp_Cfg.h"
 
 #ifndef CANTP_CBK_H
 #include "CanTp_Cbk.h"
