@@ -22,7 +22,7 @@ add_library(CanTp_Cfg STATIC ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_Cfg.c)
 target_include_directories(CanTp_Cfg
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
     PRIVATE ${CMAKE_SOURCE_DIR}/interface
-    PRIVATE $<$<BOOL:${ENABLE_TEST}>:${CMAKE_SOURCE_DIR}/stub>)
+    PRIVATE $<$<BOOL:${ENABLE_TEST}>:${CMAKE_SOURCE_DIR}/test/stub>)
 
 if (${ENABLE_SCA})
     add_pc_lint_target(NAME CanTp_Cfg
@@ -30,7 +30,7 @@ if (${ENABLE_SCA})
         OUTPUT_LOG ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}_Cfg.lnt.log
         EXCLUDE_DIRECTORIES
         ${CMAKE_SOURCE_DIR}/interface
-        ${CMAKE_SOURCE_DIR}/stub
+        ${CMAKE_SOURCE_DIR}/test/stub
         OPTION_FILES
         ${CMAKE_SOURCE_DIR}/extern/lint/MISRA${MISRA_C_VERSION}.lnt
         ${CMAKE_SOURCE_DIR}/config/CanTp.lnt)

@@ -40,7 +40,7 @@ target_compile_definitions(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME}
     PUBLIC interface
     PUBLIC $<$<BOOL:${ENABLE_TEST}>:${CMAKE_CURRENT_SOURCE_DIR}/generated>
-    PUBLIC $<$<BOOL:${ENABLE_TEST}>:${CMAKE_CURRENT_SOURCE_DIR}/stub>)
+    PUBLIC $<$<BOOL:${ENABLE_TEST}>:${CMAKE_CURRENT_SOURCE_DIR}/test/stub>)
 
 if (${ENABLE_TEST})
     ENABLE_TESTing()
@@ -65,7 +65,7 @@ if (${ENABLE_SCA})
         DEPENDENCIES ${CMAKE_CURRENT_SOURCE_DIR}/generated/CanTp_Cfg.h
         OUTPUT_LOG ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.lnt.log
         EXCLUDE_DIRECTORIES
-        ${CMAKE_CURRENT_SOURCE_DIR}/stub
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/stub
         OPTION_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/extern/lint/MISRA${MISRA_C_VERSION}.lnt
         ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.lnt)
