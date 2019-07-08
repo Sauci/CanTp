@@ -93,7 +93,9 @@ class MockGen(FFI):
                  source,
                  header,
                  include_dirs=tuple(),
-                 define_macros=tuple()):
+                 define_macros=tuple(),
+                 compile_flags=tuple(),
+                 link_flags=tuple()):
         super(MockGen, self).__init__()
         self.pp = Preprocessor()
         for include_directory in include_dirs:
@@ -112,7 +114,9 @@ class MockGen(FFI):
             self.cdef(str(CFFIHeader(self.header, func_decl.locals, func_decl.extern)))
             self.set_source(name, source,
                             include_dirs=include_dirs,
-                            define_macros=list(tuple(d.split('=')) for d in define_macros))
+                            define_macros=list(tuple(d.split('=')) for d in define_macros),
+                            extra_compile_args=list(compile_flags),
+                            extra_link_args=list(link_flags))
             lib_path = self.compile(tmpdir=build_directory)
             sys.path.append(os.path.dirname(lib_path))
             self.ffi_module = import_module(name)
@@ -156,7 +160,8 @@ class CanTpTest(object):
                             header,
                             define_macros=cfg_cd,
                             include_dirs=cfg_id + [build_directory],
-                            )
+                            compile_flags=('-g', '-O0', '-fprofile-arcs', '-ftest-coverage'),
+                            link_flags=('-g', '-O0', '-fprofile-arcs', '-ftest-coverage'))
         if initialize:
             self.code.lib.CanTp_Init(self.code.ffi.cast('const CanTp_ConfigType *', self.config.lib.CanTp_Config))
             if self.code.lib.CanTp_State != self.code.lib.CANTP_ON:
