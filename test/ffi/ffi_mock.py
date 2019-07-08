@@ -196,17 +196,6 @@ class CanTpTest(object):
         buffer_size[0] = self.available_rx_buffer
         return self.pdu_r_can_tp_copy_rx_data.return_value
 
-    def _pdu_r_can_tp_copy_tx_data(self, tx_pdu_id, pdu_info, _retry_info, _available_data):
-        if tx_pdu_id in self.code.can_tp_transmit_args.keys():
-            args = self.code.can_tp_transmit_args[tx_pdu_id]
-            if args is not None and pdu_info.SduDataPtr != self.code.ffi.NULL:
-                for idx in range(pdu_info.SduLength):
-                    try:
-                        pdu_info.SduDataPtr[idx] = args.sdu_data.pop(0)
-                    except IndexError:
-                        pass
-        return self.pdu_r_can_tp_copy_tx_data.return_value
-
     def get_pdu_info(self, payload, overridden_size=None, meta_data=None):
         if isinstance(payload, str):
             payload = [ord(c) for c in payload]
