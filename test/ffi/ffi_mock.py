@@ -142,7 +142,7 @@ class CanTpTest(object):
         self.available_rx_buffer = rx_buffer_size
         self.can_if_tx_data = list()
         self.can_tp_rx_data = list()
-        cleanup_tmpdir(tmpdir=build_directory)
+        #cleanup_tmpdir(tmpdir=build_directory)
         code_gen = CodeGen(config)
         with open(os.path.join(build_directory, 'CanTp_PBcfg.h'), 'w') as fp:
             fp.write(code_gen.header)
