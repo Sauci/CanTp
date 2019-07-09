@@ -6,8 +6,7 @@ before_install:
   - docker build -t sauci/cantp .
 
 script:
-  - mkdir docker_build
-  - docker run -v $(pwd):/usr/project sauci/cantp /bin/sh -c "cd docker_build;cmake ..;make all;ctest -V"
+  - docker run -v $(pwd):/usr/project sauci/cantp /bin/sh -c "mkdir build;cd build;cmake ..;make all;ctest -V;make gcov.info"
 
 after_success:
-  - bash <(curl -s https://codecov.io/bash -s docker_build)
+  - bash <(curl -s https://codecov.io/bash) -s build

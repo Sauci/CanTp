@@ -60,9 +60,8 @@ if (${ENABLE_TEST})
         --junitxml=./report/ut.xml -k TestSWS00031
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
-    add_custom_target(coverage
-        COMMAND gcovr -r . -o can_tp.html --html-details --branches
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+    add_custom_target(gcov.info
+        COMMAND gcov -a -b -c --object-directory ${CMAKE_BINARY_DIR} _cffi_can_tp.gcda)
 
     configure_file(config/cffi_config.py.in ${CMAKE_BINARY_DIR}/cffi_config.tmp.py)
 

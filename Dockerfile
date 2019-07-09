@@ -1,4 +1,4 @@
-FROM alpine:3.9
+FROM alpine:3.10
 
 LABEL maintainer="Guillaume Sottas"
 
@@ -9,6 +9,7 @@ ENV PROJECT_DIR=/usr/project
 RUN apk update && apk add \
     build-base \
     cmake \
+    curl \
     doxygen \
     git \
     graphviz \
