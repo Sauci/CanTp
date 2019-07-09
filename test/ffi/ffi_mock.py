@@ -108,9 +108,9 @@ class MockGen(FFI):
         self.header = handle.getvalue()
         func_decl = FunctionDecl(self.header)
         self.ffi_header = CFFIHeader(self.header, func_decl.locals, func_decl.extern)
-        try:
-            self.ffi_module = import_module(name)
-        except ModuleNotFoundError:
+        if name in sys.modules:
+            self.ffi_module = sys.modules[name]
+        else:
             self.cdef(str(CFFIHeader(self.header, func_decl.locals, func_decl.extern)))
             self.set_source(name, source,
                             include_dirs=include_dirs,
