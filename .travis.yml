@@ -3,7 +3,11 @@ language: generic
 services: docker
 
 before_install:
-  - docker build --build-arg branch=$TRAVIS_BRANCH -t sauci/cantp .
+  - docker build -t sauci/cantp .
 
 script:
-  - docker run sauci/cantp /bin/sh -c "cd docker_build;make all;ctest -V;make coverage"
+  - mkdir docker_build
+  - docker run -v $(pwd):/usr/project sauci/cantp /bin/sh -c "cd docker_build;cmake ..;make all;ctest -V"
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash -s docker_build)
