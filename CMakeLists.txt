@@ -57,7 +57,7 @@ if (${ENABLE_TEST})
 
     add_test(NAME CanTp_UnitTest
         COMMAND ${PYTHON_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test
-        --junitxml=./report/ut.xml -k TestSWS00031
+        --junitxml=./report/ut.xml
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
     add_custom_target(gcov.info
