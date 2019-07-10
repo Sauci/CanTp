@@ -14,7 +14,14 @@ RUN apk update && apk add \
     git \
     graphviz \
     libffi-dev \
-    python3-dev
+    openssl-dev \
+    zlib-dev
+
+# build python from sources.
+RUN curl -s -O https://www.python.org/ftp/python/3.6.9/Python-3.6.9.tar.xz && \
+    tar xf Python-3.6.9.tar.xz && \
+    cd Python-3.6.9 && \
+    ./configure && make -j 8 && make install
 
 # install python requirements.
 COPY ./requirements.txt requirements.txt
