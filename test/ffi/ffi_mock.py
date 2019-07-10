@@ -95,7 +95,8 @@ class MockGen(FFI):
                  include_dirs=tuple(),
                  define_macros=tuple(),
                  compile_flags=tuple(),
-                 link_flags=tuple()):
+                 link_flags=tuple(),
+                 build_dir=''):
         super(MockGen, self).__init__()
         self.pp = Preprocessor()
         for include_directory in include_dirs:
@@ -117,7 +118,7 @@ class MockGen(FFI):
                             define_macros=list(tuple(d.split('=')) for d in define_macros),
                             extra_compile_args=list(compile_flags),
                             extra_link_args=list(link_flags))
-            lib_path = self.compile(tmpdir=build_directory)
+            lib_path = self.compile(tmpdir=build_dir)
             sys.path.append(os.path.dirname(lib_path))
             self.ffi_module = import_module(name)
 
@@ -154,14 +155,16 @@ class CanTpTest(object):
                               code_gen.source,
                               code_gen.header,
                               define_macros=cfg_cd,
-                              include_dirs=cfg_id + [build_directory])
+                              include_dirs=cfg_id + [build_directory],
+                              build_dir=build_directory)
         self.code = MockGen('_cffi_can_tp',
                             source,
                             header,
                             define_macros=cfg_cd,
                             include_dirs=cfg_id + [build_directory],
                             compile_flags=('-g', '-O0', '-fprofile-arcs', '-ftest-coverage'),
-                            link_flags=('-g', '-O0', '-fprofile-arcs', '-ftest-coverage'))
+                            link_flags=('-g', '-O0', '-fprofile-arcs', '-ftest-coverage'),
+                            build_dir=os.path.dirname(__file__))
         if initialize:
             self.code.lib.CanTp_Init(self.code.ffi.cast('const CanTp_ConfigType *', self.config.lib.CanTp_Config))
             if self.code.lib.CanTp_State != self.code.lib.CANTP_ON:
