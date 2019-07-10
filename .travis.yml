@@ -6,7 +6,7 @@ before_install:
   - docker build -t sauci/cantp .
 
 script:
-  - docker run -v $(pwd):/usr/project sauci/cantp /bin/sh -c "mkdir build;cd build;cmake ..;make all;ctest -V;make gcov.info"
-
-after_success:
-  - bash <(curl -s https://codecov.io/bash) -s build
+  - cc_token=747e22d1-1df9-4aed-8789-aa418df8e9c0
+  - ci_env=`bash <(curl -s https://codecov.io/env)`
+  - ci_post_cov="bash <(curl -s https://codecov.io/bash) -s . -t $cc_token"
+  - docker run -v $(pwd):/usr/project sauci/cantp /bin/bash -c "$ci_env && mkdir build;cd build;cmake ..;make all;ctest -V;$ci_post_cov"

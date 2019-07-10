@@ -7,21 +7,16 @@ ENV PROJECT_DIR=/usr/project
 
 # install required binaries.
 RUN apk update && apk add \
+    bash \
     build-base \
     cmake \
     curl \
     doxygen \
+    findutils \
     git \
     graphviz \
     libffi-dev \
-    openssl-dev \
-    zlib-dev
-
-# build python from sources.
-RUN curl -s -O https://www.python.org/ftp/python/3.6.9/Python-3.6.9.tar.xz && \
-    tar xf Python-3.6.9.tar.xz && \
-    cd Python-3.6.9 && \
-    ./configure && make -j 8 && make install
+    python3-dev
 
 # install python requirements.
 COPY ./requirements.txt requirements.txt
