@@ -3,10 +3,11 @@ language: generic
 services: docker
 
 before_install:
-  - docker build -t sauci/cantp .
+  - sudo apt-get update
+  - docker build -t test .
 
 script:
   - cc_token=747e22d1-1df9-4aed-8789-aa418df8e9c0
-  - ci_env="bash <(curl -s https://codecov.io/env)"
-  - ci_post_cov="bash <(curl -s https://codecov.io/bash) -s /usr/project/test/ffi -t $cc_token"
-  - docker run -v $(pwd):/usr/project sauci/cantp /bin/bash -c "$ci_env && mkdir build;cd build;cmake ..;make all;ctest -V;$ci_post_cov"
+  - cc_post="bash <(curl -s https://codecov.io/bash) -s /usr/project/test/ffi -t $cc_token"
+  - docker run -v $(pwd):/usr/project $(bash <(curl -s https://codecov.io/env)) test /bin/bash -c "mkdir build && cd build;cmake ..;make all;ctest -V;$cc_post"
+
