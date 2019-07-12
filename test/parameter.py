@@ -20,8 +20,8 @@ addressing_formats = [pytest.param('CANTP_EXTENDED', id='extended addressing for
                       pytest.param('CANTP_NORMALFIXED', id='fixed addressing format'),
                       pytest.param('CANTP_STANDARD', id='standard addressing format')]
 
-change_parameter_api = [pytest.param('TP_STMIN', id='separation time minimum'),
-                        pytest.param('TP_BS', id='block size')]
+modifiable_parameter_api = [pytest.param('TP_STMIN', id='separation time minimum'),
+                            pytest.param('TP_BS', id='block size')]
 
 n_xx_timeouts = [1.0 / 1000000.0 * n for n in (10, 100, 0xFF)]
 
