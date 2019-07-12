@@ -739,7 +739,7 @@ class TestSWS00293:
         handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_INVALID_TX_ID'))
 
 
-@pytest.mark.parametrize('parameter', change_parameter_api)
+@pytest.mark.parametrize('parameter', modifiable_parameter_api)
 def test_sws_00304(parameter):
     """
     If the change of a parameter is requested for an N-SDU that is on reception process the service
@@ -765,7 +765,7 @@ class TestSWS00305:
     CanTp_ChangeParameter function shall raise the development error CANTP_E_PARAM_ID and return E_NOT_OK
     """
 
-    @pytest.mark.parametrize('parameter', change_parameter_api)
+    @pytest.mark.parametrize('parameter', modifiable_parameter_api)
     def test_invalid_pdu_id(self, parameter):
         handle = CanTpTest(DefaultReceiver())
         assert handle.lib.CanTp_ChangeParameter(1, getattr(handle.lib, parameter), 0) == handle.define('E_NOT_OK')
@@ -776,11 +776,17 @@ class TestSWS00305:
         assert handle.lib.CanTp_ChangeParameter(0, handle.lib.TP_STMIN + handle.lib.TP_BS + 1, 0) == handle.define('E_NOT_OK')
         handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PARAM_ID'))
 
-    @pytest.mark.parametrize('parameter', change_parameter_api)
+    @pytest.mark.parametrize('parameter', modifiable_parameter_api)
     def test_invalid_value(self, parameter):
         handle = CanTpTest(DefaultReceiver())
         assert handle.lib.CanTp_ChangeParameter(0, getattr(handle.lib, parameter), 0xFF + 1) == handle.define('E_NOT_OK')
         handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PARAM_ID'))
+
+    @pytest.mark.parametrize('parameter', modifiable_parameter_api)
+    def test_valid_parameters(self, parameter):
+        handle = CanTpTest(DefaultReceiver())
+        assert handle.lib.CanTp_ChangeParameter(0, getattr(handle.lib, parameter), 0xFF) == handle.define('E_OK')
+        handle.det_report_error.assert_not_called()
 
 
 def test_sws_00318():
@@ -800,14 +806,22 @@ def test_sws_00318():
     handle.can_if_transmit.assert_called_once()
 
 
-def test_sws_00319():
+class TestSWS00319:
     """
     If DET is enabled the function CanTp_GetVersionInfo shall rise CANTP_E_PARAM_POINTER error if the argument is a NULL
     pointer and return without any action.
     """
-    handle = CanTpTest(DefaultSender())
-    handle.lib.CanTp_GetVersionInfo(handle.ffi.NULL)
-    handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PARAM_POINTER'))
+
+    def test_null_parameter(self):
+        handle = CanTpTest(DefaultSender())
+        handle.lib.CanTp_GetVersionInfo(handle.ffi.NULL)
+        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PARAM_POINTER'))
+
+    def test_non_null_parameter(self):
+        handle = CanTpTest(DefaultSender())
+        version_info = handle.ffi.new('Std_VersionInfoType *')
+        handle.lib.CanTp_GetVersionInfo(version_info)
+        handle.det_report_error.assert_not_called()
 
 
 def test_sws_00321():
@@ -837,17 +851,33 @@ class TestSWS00324:
     raise the development error CANTP_E_PARAM_ID and return E_NOT_OK (see SWS_CanTp_00294).
     """
 
-    def test_invalid_pdu_id(self):
+    @pytest.mark.parametrize('parameter', modifiable_parameter_api)
+    def test_invalid_pdu_id(self, parameter):
         handle = CanTpTest(DefaultReceiver())
-        parameter = handle.ffi.new('uint16 *', 0)
-        assert handle.lib.CanTp_ReadParameter(1, handle.lib.TP_STMIN, parameter) == handle.define('E_NOT_OK')
+        output = handle.ffi.new('uint16 *', 0)
+        assert handle.lib.CanTp_ReadParameter(1, getattr(handle.lib, parameter), output) == handle.define('E_NOT_OK')
         handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PARAM_ID'))
 
     def test_invalid_parameter(self):
         handle = CanTpTest(DefaultReceiver())
-        parameter = handle.ffi.new('uint16 *', 0)
-        assert handle.lib.CanTp_ReadParameter(0, handle.lib.TP_STMIN + handle.lib.TP_BS + 1, parameter) == handle.define('E_NOT_OK')
+        output = handle.ffi.new('uint16 *', 0)
+        assert handle.lib.CanTp_ReadParameter(0, handle.lib.TP_STMIN + handle.lib.TP_BS + 1, output) == handle.define('E_NOT_OK')
         handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PARAM_ID'))
+
+    @pytest.mark.parametrize('parameter', modifiable_parameter_api)
+    def test_invalid_output(self, parameter):
+        # NOTE: this is not specified in AUTOSAR specification.
+        handle = CanTpTest(DefaultReceiver())
+        output = handle.ffi.NULL
+        assert handle.lib.CanTp_ReadParameter(1, getattr(handle.lib, parameter), output) == handle.define('E_NOT_OK')
+        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PARAM_POINTER'))
+
+    @pytest.mark.parametrize('parameter', modifiable_parameter_api)
+    def test_valid_parameters(self, parameter):
+        handle = CanTpTest(DefaultReceiver())
+        output = handle.ffi.new('uint16 *', 0)
+        assert handle.lib.CanTp_ReadParameter(0, getattr(handle.lib, parameter), output) == handle.define('E_OK')
+        handle.det_report_error.assert_not_called()
 
 
 class TestSWS00329:

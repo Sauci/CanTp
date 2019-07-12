@@ -28,12 +28,13 @@ add_subdirectory(generated)
 add_library(${PROJECT_NAME} STATIC source/CanTp.c)
 
 target_compile_definitions(${PROJECT_NAME}
-    PRIVATE CANTP_MAX_NUM_OF_CHANNEL=16
-    PRIVATE CANTP_MAX_NUM_OF_N_SDU=16
     PRIVATE CANTP_DEV_ERROR_DETECT=$<IF:$<BOOL:${ENABLE_DET}>,STD_ON,STD_OFF>
     PRIVATE CANTP_SW_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
     PRIVATE CANTP_SW_VERSION_MINOR=${PROJECT_VERSION_MINOR}
     PRIVATE CANTP_SW_VERSION_PATCH=${PROJECT_VERSION_PATCH}
+    # SWS_BSW_00059
+    PUBLIC CANTP_AR_RELEASE_MAJOR_VERSION=4
+    PUBLIC CANTP_AR_RELEASE_MINOR_VERSION=4
     PUBLIC CANTP_API=STD_ON
     # ECUC_CanTp_00283
     PUBLIC CANTP_GET_VERSION_INFO_API=STD_ON
@@ -52,12 +53,15 @@ if (${ENABLE_TEST})
     ENABLE_TESTing()
 
     target_link_libraries(${PROJECT_NAME}
-        PUBLIC CanTp_Cfg)
+        PUBLIC CanTp_PBcfg)
 
     add_test(NAME CanTp_UnitTest
         COMMAND ${PYTHON_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test
         --junitxml=./report/ut.xml
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+    add_custom_target(gcov.info
+        COMMAND gcov -a -b -c --object-directory ${CMAKE_BINARY_DIR} _cffi_can_tp.gcda)
 
     configure_file(config/cffi_config.py.in ${CMAKE_BINARY_DIR}/cffi_config.tmp.py)
 
@@ -68,7 +72,7 @@ endif ()
 
 if (${ENABLE_SCA})
     add_pc_lint_target(NAME CanTp
-        DEPENDENCIES ${CMAKE_CURRENT_SOURCE_DIR}/generated/CanTp_Cfg.h
+        DEPENDENCIES ${CMAKE_CURRENT_SOURCE_DIR}/generated/CanTp_PBcfg.h
         OUTPUT_LOG ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.lnt.log
         EXCLUDE_DIRECTORIES
         ${CMAKE_CURRENT_SOURCE_DIR}/test/stub
