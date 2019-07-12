@@ -14,13 +14,12 @@ from pycparser.c_generator import CGenerator as Generator
 from pycparser.c_parser import CParser
 from pcpp.preprocessor import Preprocessor as Pp
 
-from .cffi_config import output as cfg_out, \
+from .cffi_config import build_directory, \
     source as cfg_src, \
     header as cfg_hdr, \
     compile_definitions as cfg_cd, \
-    include_directories as cfg_id
-
-from can_tp import CodeGen
+    include_directories as cfg_id, \
+    CodeGen
 
 
 def convert(name):
@@ -93,10 +92,11 @@ class MockGen(FFI):
                  name,
                  source,
                  header,
-                 sources=tuple(),
                  include_dirs=tuple(),
                  define_macros=tuple(),
-                 tmpdir=os.getcwd()):
+                 compile_flags=tuple(),
+                 link_flags=tuple(),
+                 build_dir=''):
         super(MockGen, self).__init__()
         self.pp = Preprocessor()
         for include_directory in include_dirs:
@@ -109,29 +109,18 @@ class MockGen(FFI):
         self.header = handle.getvalue()
         func_decl = FunctionDecl(self.header)
         self.ffi_header = CFFIHeader(self.header, func_decl.locals, func_decl.extern)
-        self.cdef(str(CFFIHeader(self.header, func_decl.locals, func_decl.extern)))
-        self.set_source(name, source,
-                        sources=sources,
-                        include_dirs=include_dirs,
-                        define_macros=list(tuple(d.split('=')) for d in define_macros))
-        try:
-            sys.path.append(tmpdir)
-            self.ffi_module = import_module(name)
-        except ModuleNotFoundError:
-            lib_path = self.compile(tmpdir=tmpdir)
+        if name in sys.modules:
+            self.ffi_module = sys.modules[name]
+        else:
+            self.cdef(str(CFFIHeader(self.header, func_decl.locals, func_decl.extern)))
+            self.set_source(name, source,
+                            include_dirs=include_dirs,
+                            define_macros=list(tuple(d.split('=')) for d in define_macros),
+                            extra_compile_args=list(compile_flags),
+                            extra_link_args=list(link_flags))
+            lib_path = self.compile(tmpdir=build_dir)
             sys.path.append(os.path.dirname(lib_path))
             self.ffi_module = import_module(name)
-        self.can_if_transmit = MagicMock()
-        self.det_report_error = MagicMock()
-        self.det_report_runtime_error = MagicMock()
-        self.det_report_transient_fault = MagicMock()
-        self.pdu_r_can_tp_copy_rx_data = MagicMock()
-        self.pdu_r_can_tp_copy_tx_data = MagicMock()
-        self.pdu_r_can_tp_rx_indication = MagicMock()
-        self.pdu_r_can_tp_start_of_reception = MagicMock()
-        self.pdu_r_can_tp_tx_confirmation = MagicMock()
-        for func in self.mocked:
-            self.ffi.def_extern(func)(getattr(self, convert(func)))
 
     @property
     def mocked(self):
@@ -146,44 +135,61 @@ class MockGen(FFI):
         return self.ffi_module.lib
 
 
-class CanTpTest(MockGen):
+class CanTpTest(object):
     def __init__(self,
                  config,
-                 name='_cffi_can_tp',
                  initialize=True,
                  rx_buffer_size=0x0FFF):
         self.available_rx_buffer = rx_buffer_size
         self.can_if_tx_data = list()
         self.can_tp_rx_data = list()
-        cleanup_tmpdir(tmpdir=cfg_out)
+        #cleanup_tmpdir(tmpdir=build_directory)
         code_gen = CodeGen(config)
-        for file_path, content in ((os.path.join(cfg_out, 'CanTp_PBcfg.c'), code_gen.source),
-                                   (os.path.join(cfg_out, 'CanTp_PBcfg.h'), code_gen.header)):
-            with open(file_path, 'w') as fp:
-                fp.write(content)
+        with open(os.path.join(build_directory, 'CanTp_PBcfg.h'), 'w') as fp:
+            fp.write(code_gen.header)
         with open(cfg_src, 'r') as fp:
             source = fp.read()
         with open(cfg_hdr, 'r') as fp:
             header = fp.read()
-        super(CanTpTest, self).__init__('{}_{}'.format(name, config.get_id),
-                                        source,
-                                        header,
-                                        sources=(os.path.join(cfg_out, 'CanTp_PBcfg.c'),),
-                                        define_macros=cfg_cd,
-                                        include_dirs=cfg_id + [cfg_out])
+        self.config = MockGen('_cffi_can_tp_pbcfg_{}'.format(config.get_id),
+                              code_gen.source,
+                              code_gen.header,
+                              define_macros=cfg_cd,
+                              include_dirs=cfg_id + [build_directory],
+                              build_dir=build_directory)
+        self.code = MockGen('_cffi_can_tp',
+                            source,
+                            header,
+                            define_macros=cfg_cd,
+                            include_dirs=cfg_id + [build_directory],
+                            compile_flags=('-g', '-O0', '-fprofile-arcs', '-ftest-coverage'),
+                            link_flags=('-g', '-O0', '-fprofile-arcs', '-ftest-coverage'),
+                            build_dir=os.path.dirname(__file__))
         if initialize:
-            self.lib.CanTp_Init(self.ffi.cast('const CanTp_ConfigType *', self.lib.CanTp_Config))
-            if self.lib.CanTp_State != self.lib.CANTP_ON:
+            self.code.lib.CanTp_Init(self.code.ffi.cast('const CanTp_ConfigType *', self.config.lib.CanTp_Config))
+            if self.code.lib.CanTp_State != self.code.lib.CANTP_ON:
                 raise ValueError('CanTp module not initialized correctly...')
+
+        self.can_if_transmit = MagicMock()
+        self.det_report_error = MagicMock()
+        self.det_report_runtime_error = MagicMock()
+        self.det_report_transient_fault = MagicMock()
+        self.pdu_r_can_tp_copy_rx_data = MagicMock()
+        self.pdu_r_can_tp_copy_tx_data = MagicMock()
+        self.pdu_r_can_tp_rx_indication = MagicMock()
+        self.pdu_r_can_tp_start_of_reception = MagicMock()
+        self.pdu_r_can_tp_tx_confirmation = MagicMock()
+        for func in self.code.mocked:
+            self.ffi.def_extern(func)(getattr(self, convert(func)))
         self.can_if_transmit.return_value = self.define('E_OK')
         self.det_report_error.return_value = self.define('E_OK')
         self.det_report_runtime_error.return_value = self.define('E_OK')
         self.det_report_transient_fault.return_value = self.define('E_OK')
         self.pdu_r_can_tp_rx_indication.return_value = None
         self.pdu_r_can_tp_tx_confirmation.return_value = None
-        self.pdu_r_can_tp_start_of_reception.return_value = self.lib.BUFREQ_OK
-        self.pdu_r_can_tp_copy_rx_data.return_value = self.lib.BUFREQ_OK
-        self.pdu_r_can_tp_copy_tx_data.return_value = self.lib.BUFREQ_OK
+        self.pdu_r_can_tp_start_of_reception.return_value = self.code.lib.BUFREQ_OK
+        self.pdu_r_can_tp_copy_rx_data.return_value = self.code.lib.BUFREQ_OK
+        self.pdu_r_can_tp_copy_tx_data.return_value = self.code.lib.BUFREQ_OK
         self.pdu_r_can_tp_start_of_reception.side_effect = self._pdu_r_can_tp_start_of_reception
         self.pdu_r_can_tp_copy_rx_data.side_effect = self._pdu_r_can_tp_copy_rx_data
 
@@ -192,38 +198,27 @@ class CanTpTest(MockGen):
         return self.pdu_r_can_tp_start_of_reception.return_value
 
     def _pdu_r_can_tp_copy_rx_data(self, _rx_pdu_id, pdu_info, buffer_size):
-        if pdu_info.SduDataPtr != self.ffi.NULL and pdu_info.SduLength != 0:
+        if pdu_info.SduDataPtr != self.code.ffi.NULL and pdu_info.SduLength != 0:
             for idx in range(pdu_info.SduLength):
                 self.can_tp_rx_data.append(pdu_info.SduDataPtr[idx])
         buffer_size[0] = self.available_rx_buffer
         return self.pdu_r_can_tp_copy_rx_data.return_value
 
-    def _pdu_r_can_tp_copy_tx_data(self, tx_pdu_id, pdu_info, _retry_info, _available_data):
-        if tx_pdu_id in self.can_tp_transmit_args.keys():
-            args = self.can_tp_transmit_args[tx_pdu_id]
-            if args is not None and pdu_info.SduDataPtr != self.ffi.NULL:
-                for idx in range(pdu_info.SduLength):
-                    try:
-                        pdu_info.SduDataPtr[idx] = args.sdu_data.pop(0)
-                    except IndexError:
-                        pass
-        return self.pdu_r_can_tp_copy_tx_data.return_value
-
     def get_pdu_info(self, payload, overridden_size=None, meta_data=None):
         if isinstance(payload, str):
             payload = [ord(c) for c in payload]
-        sdu_data = self.ffi.new('uint8 []', list(payload))
+        sdu_data = self.code.ffi.new('uint8 []', list(payload))
         if overridden_size is not None:
             sdu_length = overridden_size
         else:
             sdu_length = len(payload)
-        pdu_info = self.ffi.new('PduInfoType *')
+        pdu_info = self.code.ffi.new('PduInfoType *')
         pdu_info.SduDataPtr = sdu_data
         pdu_info.SduLength = sdu_length
         if meta_data:
             raise NotImplementedError
         else:
-            pdu_info.MetaDataPtr = self.ffi.NULL
+            pdu_info.MetaDataPtr = self.code.ffi.NULL
         return pdu_info
 
     def get_receiver_single_frame(self,
@@ -326,7 +321,15 @@ class CanTpTest(MockGen):
         return ff, cf
 
     def define(self, name):
-        return self.pp.defines[name]
+        return self.code.pp.defines[name]
+
+    @property
+    def lib(self):
+        return self.code.lib
+
+    @property
+    def ffi(self):
+        return self.code.ffi
 
     @property
     def available_rx_buffer(self):

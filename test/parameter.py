@@ -43,7 +43,7 @@ class Config(dict):
 
     @property
     def get_id(self):
-        return hashlib.sha224(json.dumps(self, sort_keys=True, indent=0).encode('utf-8')).hexdigest()
+        return hashlib.sha224(json.dumps(self, sort_keys=True, indent=0).encode('utf-8')).hexdigest()[0:8]
 
 
 class DefaultReceiver(Config):
