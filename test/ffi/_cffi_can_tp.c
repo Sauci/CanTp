@@ -841,7 +841,7 @@ static Std_ReturnType CanTp_EncodeNAIValue(const CanTp_AddressingFormatType af,
  * @note see section 6.5.5.5 of ISO 15765-2.
  *
  * @param data [in]: the raw minimum separation time (8 bits STmin value)
- * @return decoded minimum separation time value [μs]
+ * @return decoded minimum separation time value [us]
  */
 static uint32_least CanTp_DecodeSTMinValue(const uint8 data);
 
@@ -857,7 +857,7 @@ static uint32_least CanTp_DecodeSTMinValue(const uint8 data);
  *
  * @note see section 6.5.5.5 of ISO 15765-2.
  *
- * @param value [in]: the minimum separation time [μs]
+ * @param value [in]: the minimum separation time [us]
  * @return encoded minimum separation time value (8 bits STmin value)
  */
 static uint8 CanTp_EncodeSTMinValue(uint16 value);
@@ -2767,13 +2767,13 @@ static uint32_least CanTp_DecodeSTMinValue(const uint8 data)
 {
     uint32_least result;
 
-    /* ISO15765: the units of STmin in the range 00 hex – 7F hex are absolute milliseconds (ms). */
+    /* ISO15765: the units of STmin in the range 00 hex - 7F hex are absolute milliseconds (ms). */
     if (data <= 0x7Fu)
     {
         result = CanTp_ConvertMsToUs((uint32_least)data);
     }
-    /* ISO15765: the units of STmin in the range F1 hex – F9 hex are even 100 microseconds (μs),
-     * where parameter value F1 hex represents 100 μs and parameter value F9 hex represents 900 μs.
+    /* ISO15765: the units of STmin in the range F1 hex - F9 hex are even 100 microseconds (us),
+     * where parameter value F1 hex represents 100 us and parameter value F9 hex represents 900 us.
      */
     else if ((data >= 0xF1u) && (data <= 0xF9u))
     {
@@ -2781,7 +2781,7 @@ static uint32_least CanTp_DecodeSTMinValue(const uint8 data)
     }
     /* ISO15765: if an FC N_PDU message is received with a reserved ST parameter value, then the
      * sending network entity shall use the longest ST value specified by this part of ISO 15765
-     * (7F hex – 127 ms) instead of the value received from the receiving network entity for the
+     * (7F hex - 127 ms) instead of the value received from the receiving network entity for the
      * duration of the ongoing segmented message transmission. */
     else
     {
@@ -3103,7 +3103,7 @@ static BufReq_ReturnType CanTp_CopyTxPayload(CanTp_NSduType *pNSdu, PduLengthTyp
     CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_CS);
 
     /* SWS_CanTp_00272: the API PduR_CanTpCopyTxData() contains a parameter used for the recovery
-     * mechanism – ‘retry’. Because ISO 15765-2 does not support such a mechanism, the CAN Transport
+     * mechanism - 'retry'. Because ISO 15765-2 does not support such a mechanism, the CAN Transport
      * Layer does not implement any kind of recovery. Thus, the parameter is always set to NULL
      * pointer. */
     result = PduR_CanTpCopyTxData(pNSdu->tx.cfg->nSduId, &tmp_pdu, NULL_PTR, &pNSdu->tx.buf.rmng);
