@@ -9,6 +9,16 @@ from .parameter import *
 from .ffi import CanTpTest
 
 
+def assert_rx_session_aborted():
+    # TODO: find a way how to evaluate this statement.
+    assert True
+
+
+def assert_tx_session_aborted():
+    # TODO: find a way how to evaluate this statement.
+    assert True
+
+
 class TestSWS00031:
     """
     If development error detection for the CanTp module is enabled the CanTp module shall raise an error (CANTP_E_UNINIT
@@ -1099,6 +1109,28 @@ def test_sws_00353():
     handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_single_frame()))
     handle.lib.CanTp_MainFunction()
     handle.can_if_transmit.assert_not_called()
+
+
+class TestSWS00355:
+    """
+    CanTp shall abort the corresponding session, when CanTp_TxConfirmation() is called with the result E_NOT_OK.
+    """
+
+    def test_sender_side(self):
+        handle = CanTpTest(DefaultSender())
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * 8))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_NOT_OK'))
+        handle.lib.CanTp_MainFunction()
+        assert_tx_session_aborted()
+
+    def test_receiver_side(self):
+        handle = CanTpTest(DefaultReceiver())
+        ff, cfs = handle.get_receiver_multi_frame((0xFF,) * 8)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_NOT_OK'))
+        assert_rx_session_aborted()
 
 
 @pytest.mark.parametrize('st_min, call_count', [
