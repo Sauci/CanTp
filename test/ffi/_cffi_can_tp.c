@@ -2300,36 +2300,55 @@ CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 
 static CanTp_FrameStateType CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo)
 {
+    CanTp_FrameStateType result;
     CanTp_NSduType *p_n_sdu = pNSdu;
 
     CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BS);
 
-    p_n_sdu->tx.fs = (CanTp_FlowStatusType)pPduInfo->SduDataPtr[0x00u] & 0x0Fu;
-    p_n_sdu->tx.bs = pPduInfo->SduDataPtr[0x01u];
-    p_n_sdu->tx.target_st_min = CanTp_DecodeSTMinValue(pPduInfo->SduDataPtr[0x02u]);
-
-    /* SWS_CanTp_00315: the CanTp module shall start a timeout observation for N_Bs time at
-     * confirmation of the FF transmission, last CF of a block transmission and at each
-     * indication of FC with FS=WT (i.e. time until reception of the next FC). */
-    if (p_n_sdu->tx.fs == CANTP_FLOW_STATUS_TYPE_WT)
+    /* SWS_CanTp_00349: if CanTpTxPaddingActivation is equal to CANTP_ON for a Tx N-SDU, and if a FC
+     * N-PDU is received for that Tx N-SDU on a ongoing transmission, by means of
+     * CanTp_RxIndication() call, and the length of this FC is smaller than eight bytes (i.e.
+     * PduInfoPtr.SduLength <8) the CanTp module shall abort the transmission session by calling
+     * PduR_CanTpTxConfirmation() with the result E_NOT_OK. The runtime error code CANTP_E_PADDING
+     * shall be reported to the Default Error Tracer. */
+    if (!((pNSdu->tx.cfg->padding == CANTP_ON) && (pPduInfo->SduLength < CANTP_CAN_FRAME_SIZE)))
     {
-        CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BS);
+        p_n_sdu->tx.fs = (CanTp_FlowStatusType)pPduInfo->SduDataPtr[0x00u] & 0x0Fu;
+        p_n_sdu->tx.bs = pPduInfo->SduDataPtr[0x01u];
+        p_n_sdu->tx.target_st_min = CanTp_DecodeSTMinValue(pPduInfo->SduDataPtr[0x02u]);
+
+        /* SWS_CanTp_00315: the CanTp module shall start a timeout observation for N_Bs time at
+         * confirmation of the FF transmission, last CF of a block transmission and at each
+         * indication of FC with FS=WT (i.e. time until reception of the next FC). */
+        if (p_n_sdu->tx.fs == CANTP_FLOW_STATUS_TYPE_WT)
+        {
+            CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BS);
+        }
+
+        /* ISO15765:
+         * 00: The BS parameter value zero (0) shall be used to indicate to the sender that no more
+         * FC frames shall be sent during the transmission of the segmented message. The sending
+         * network layer entity shall send all remaining consecutive frames without any stop for
+         * further FC frames from the receiving network layer entity.
+         * 01-FF: This range of BS parameter values shall be used to indicate to the sender the
+         * maximum number of consecutive frames that can be received without an intermediate FC
+         * frame from the receiving network entity.*/
+        if (p_n_sdu->tx.bs == 0x00u)
+        {
+            p_n_sdu->tx.bs = CANTP_BS_INFINITE;
+        }
+
+        result = CANTP_TX_FRAME_STATE_CF_TX_REQUEST;
+    }
+    else
+    {
+        PduR_CanTpTxConfirmation(p_n_sdu->tx.cfg->nSduId, E_NOT_OK);
+        CanTp_ReportRuntimeError(0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_PADDING);
+
+        result = CANTP_FRAME_STATE_ABORT;
     }
 
-    /* ISO15765:
-     * 00: The BS parameter value zero (0) shall be used to indicate to the sender that no more
-     * FC frames shall be sent during the transmission of the segmented message. The sending
-     * network layer entity shall send all remaining consecutive frames without any stop for
-     * further FC frames from the receiving network layer entity.
-     * 01-FF: This range of BS parameter values shall be used to indicate to the sender the
-     * maximum number of consecutive frames that can be received without an intermediate FC
-     * frame from the receiving network entity.*/
-    if (p_n_sdu->tx.bs == 0x00u)
-    {
-        p_n_sdu->tx.bs = CANTP_BS_INFINITE;
-    }
-
-    return CANTP_TX_FRAME_STATE_CF_TX_REQUEST;
+    return result;
 }
 
 static CanTp_FrameStateType CanTp_LDataConTSF(CanTp_NSduType *pNSdu)
@@ -2496,7 +2515,16 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
                     {
                         if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_FC_RX_INDICATION)
                         {
-                            p_n_sdu->tx.shared.state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo);
+                            next_state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo);
+                        }
+                        else
+                        {
+                            next_state = CANTP_FRAME_STATE_INVALID;
+                        }
+
+                        if (next_state != CANTP_FRAME_STATE_INVALID)
+                        {
+                            p_n_sdu->tx.shared.state = next_state;
                         }
                     }
                 }
@@ -3038,6 +3066,12 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
 
                 break;
             }
+            case CANTP_FRAME_STATE_ABORT:
+            {
+                CanTp_AbortTxSession(p_n_sdu, CANTP_I_NONE, FALSE);
+
+                break;
+            }
             case CANTP_FRAME_STATE_OK:
             {
                 /* SWS_CanTp_00090: when the transport transmission session is successfully
@@ -3050,7 +3084,6 @@ static void CanTp_PerformStepTx(CanTp_NSduType *pNSdu)
                 break;
             }
             case CANTP_FRAME_STATE_INVALID:
-            case CANTP_FRAME_STATE_ABORT:
             case CANTP_RX_FRAME_STATE_CF_RX_INDICATION:
             case CANTP_RX_FRAME_STATE_FC_TX_REQUEST:
             case CANTP_RX_FRAME_STATE_FC_TX_CONFIRMATION:
