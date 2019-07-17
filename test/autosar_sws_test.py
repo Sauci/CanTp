@@ -743,6 +743,11 @@ class TestSWS00293:
     def test_e_init_failed(self):
         pass
 
+    def test_e_param_pointer(self):
+        handle = CanTpTest(DefaultReceiver(), initialize=False)
+        handle.lib.CanTp_Init(handle.ffi.NULL)
+        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PARAM_POINTER'))
+
     def test_e_invalid_rx_id(self):
         handle = CanTpTest(DefaultReceiver())
         sf = handle.get_receiver_single_frame()
