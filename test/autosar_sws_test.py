@@ -1,4 +1,10 @@
-from unittest.mock import ANY
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+try:
+    from unittest.mock import ANY
+except ImportError:
+    from mock import ANY
 from .parameter import *
 from .ffi import CanTpTest
 
@@ -671,11 +677,11 @@ class TestSWS00281:
     def test_consecutive_frame(self, af):
         handle = CanTpTest(DefaultSender(af=af))
         tx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)
-        cf = handle.get_receiver_flow_control(af=af)
+        fc = handle.get_receiver_flow_control(af=af)
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
-        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cf))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(fc))
         handle.lib.CanTp_MainFunction()
         assert handle.can_if_transmit.call_count == 2
         if af in ('CANTP_EXTENDED',):
@@ -1003,6 +1009,36 @@ class TestSWS00346:
         handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PADDING'))
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
         handle.lib.CanTp_MainFunction()
+
+
+class TestSWS00348:
+    """
+    If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD frames) are used for a Tx N-SDU and if
+    CanTpTxPaddingActivation is equal to CANTP_ON, CanTp shall transmit by means of CanIf_Transmit() call, SF Tx N-PDU
+    or last CF Tx N-PDU that belongs to that Tx N-SDU with the length of eight bytes(i.e. PduInfoPtr.SduLength = 8).
+    Unused bytes in N-PDU shall be updated with CANTP_PADDING_BYTE (see ECUC_CanTp_00298).
+    """
+
+    @pytest.mark.parametrize('af', addressing_formats)
+    def test_single_frame(self, af):
+        handle = CanTpTest(DefaultSender(af=af, padding=0xAA))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * 1))
+        handle.lib.CanTp_MainFunction()
+        for i in range(1 + 8 - handle.get_payload_size(af, 'SF'), 8):
+            assert handle.can_if_transmit.call_args[0][1].SduDataPtr[i] == 0xAA
+
+    @pytest.mark.parametrize('af', addressing_formats)
+    def test_last_consecutive_frame(self, af):
+        handle = CanTpTest(DefaultSender(af=af, padding=0xAA))
+        tx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)
+        fc = handle.get_receiver_flow_control(af=af)
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(fc))
+        handle.lib.CanTp_MainFunction()
+        for i in range(1 + 8 - handle.get_payload_size(af, 'FF'), 8):
+            assert handle.can_if_transmit.call_args[0][1].SduDataPtr[i] == 0xAA
 
 
 @pytest.mark.skip(reason='I don\'t understand this statement...')
