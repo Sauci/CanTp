@@ -2215,7 +2215,7 @@ static Std_ReturnType CanTp_EncodeNAIValue(const CanTp_AddressingFormatType af,
                                            uint8 *pBuffer,
                                            PduLengthType *pOfs)
 {
-    Std_ReturnType result;
+    Std_ReturnType result = E_NOT_OK;
     PduLengthType ofs = *pOfs;
 
     /* SWS_CanTp_00281: if the message is configured to use an extended or a mixed addressing
@@ -2242,7 +2242,7 @@ static Std_ReturnType CanTp_EncodeNAIValue(const CanTp_AddressingFormatType af,
     }
     else
     {
-        result = E_NOT_OK;
+        /* MISRA C, do nothing. */
     }
 
     *pOfs = ofs;
