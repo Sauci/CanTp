@@ -147,8 +147,6 @@ class CanTpTest(object):
         code_gen = CodeGen(config)
         with open(os.path.join(build_directory, 'CanTp_PBcfg.h'), 'w') as fp:
             fp.write(code_gen.header)
-        with open(cfg_src, 'r') as fp:
-            source = fp.read()
         with open(cfg_hdr, 'r') as fp:
             header = fp.read()
         self.config = MockGen('_cffi_can_tp_pbcfg_{}'.format(config.get_id),
@@ -158,7 +156,7 @@ class CanTpTest(object):
                               include_dirs=cfg_id + [build_directory],
                               build_dir=build_directory)
         self.code = MockGen('_cffi_can_tp',
-                            source,
+                            '#include "{}"'.format(cfg_src),
                             header,
                             define_macros=cfg_cd,
                             include_dirs=cfg_id + [build_directory],
