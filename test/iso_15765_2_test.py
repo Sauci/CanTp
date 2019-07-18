@@ -1,5 +1,73 @@
 from math import ceil
 from .parameter import *
+from .ffi import CanTpTest
+
+
+@pytest.mark.parametrize('st_min, call_count', [
+    pytest.param(v,
+                 lambda st_min: st_min * 1000,
+                 id='STmin = {} [ms]'.format(v)) for v in range(0x7F + 0x01)] + [
+                             pytest.param(v,
+                                          lambda st_min: 0x7F * 1000,
+                                          id='STmin = reserved (0x{:02X})'.format(v)) for v in
+                             (i + 0x80 for i in range(0xF0 - 0x80 + 0x01))] + [
+                             pytest.param(0xF1 + v,
+                                          lambda st_min: (st_min & 0x0F) * 100,
+                                          id='STmin = {} [us]'.format(100 + v * 100)) for v in range(9)] + [
+                             pytest.param(v,
+                                          lambda st_min: 0x7F * 1000,
+                                          id='STmin = reserved (0x{:02X})'.format(v)) for v in
+                             (i + 0xFA for i in range(0xFF - 0xFA + 0x01))])
+def test_separation_time_minimum_value(st_min, call_count):
+    """
+    6.5.5.5 Definition of SeparationTime (STmin) parameter
+    The STmin parameter shall be encoded in byte #3 of the FC N_PCI.
+    This time is specified by the receiving entity and shall be kept by the sending network entity for the duration of a
+    segmented message transmission.
+    The STmin parameter value specifies the minimum time gap allowed between the transmission of consecutive frame
+    network protocol data units.
+
+    Hex value | Description
+    ----------+---------------------------------------------------------------------------------------------------------
+    00 - 7F   | SeparationTime (STmin) range: 0 ms – 127 ms
+              | The units of STmin in the range 00 hex – 7F hex are absolute milliseconds (ms).
+    ----------+---------------------------------------------------------------------------------------------------------
+    80 – F0   | Reserved
+              | This range of values is reserved by this part of ISO 15765.
+    ----------+---------------------------------------------------------------------------------------------------------
+    F1 – F9   | SeparationTime (STmin) range: 100 μs – 900 μs
+              | The units of STmin in the range F1 hex – F9 hex are even 100 microseconds (μs), where parameter value F1
+              | hex represents 100 μs and parameter value F9 hex represents 900 μs.
+    ----------+---------------------------------------------------------------------------------------------------------
+    FA – FF   | Reserved
+              | This range of values is reserved by this part of ISO 15765.
+    ----------+---------------------------------------------------------------------------------------------------------
+
+    The measurement of the STmin starts after completion of transmission of a ConsecutiveFrame (CF) and ends at the
+    request for the transmission of the next CF.
+
+    If an FC N_PDU message is received with a reserved ST parameter value, then the sending network entity shall use the
+    longest ST value specified by this part of ISO 15765 (7F hex – 127 ms) instead of the value received from the
+    receiving network entity for the duration of the ongoing segmented message transmission.
+    """
+
+    handle = CanTpTest(DefaultSender(padding=0xFF))
+    fc_frame = handle.get_receiver_flow_control(padding=0xFF, bs=0, st_min=st_min)
+    handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * 100))
+    handle.lib.CanTp_MainFunction()
+    assert handle.can_if_transmit.call_count == 1  # sent FF
+    handle.can_if_transmit.assert_called_once()
+    handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+    handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(fc_frame))
+    handle.lib.CanTp_MainFunction()
+    assert handle.can_if_transmit.call_count == 2  # sent first CF
+    handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+    for _ in range(call_count(st_min)):
+        handle.lib.CanTp_MainFunction()
+    assert handle.can_if_transmit.call_count == 2  # wait for timeout
+    handle.lib.CanTp_MainFunction()
+    assert handle.can_if_transmit.call_count == 3  # sent next CF after timeout
+
 
 
 @pytest.mark.skip('non-deterministic fails, should be investigated...')
