@@ -3,22 +3,7 @@ from .parameter import *
 from .ffi import CanTpTest
 
 
-@pytest.mark.parametrize('st_min, call_count', [
-    pytest.param(v,
-                 lambda st_min: st_min * 1000,
-                 id='STmin = {} [ms]'.format(v)) for v in range(0x7F + 0x01)] + [
-                             pytest.param(v,
-                                          lambda st_min: 0x7F * 1000,
-                                          id='STmin = reserved (0x{:02X})'.format(v)) for v in
-                             (i + 0x80 for i in range(0xF0 - 0x80 + 0x01))] + [
-                             pytest.param(0xF1 + v,
-                                          lambda st_min: (st_min & 0x0F) * 100,
-                                          id='STmin = {} [us]'.format(100 + v * 100)) for v in range(9)] + [
-                             pytest.param(v,
-                                          lambda st_min: 0x7F * 1000,
-                                          id='STmin = reserved (0x{:02X})'.format(v)) for v in
-                             (i + 0xFA for i in range(0xFF - 0xFA + 0x01))])
-def test_separation_time_minimum_value(st_min, call_count):
+class TestSTMinValue:
     """
     6.5.5.5 Definition of SeparationTime (STmin) parameter
     The STmin parameter shall be encoded in byte #3 of the FC N_PCI.
@@ -51,14 +36,30 @@ def test_separation_time_minimum_value(st_min, call_count):
     receiving network entity for the duration of the ongoing segmented message transmission.
     """
 
+    @pytest.mark.parametrize('st_min, call_count', [
+        pytest.param(v,
+                     lambda st_min: st_min * 1000,
+                     id='STmin = {} [ms]'.format(v)) for v in range(0x00, 0x7F)] + [
+                                 pytest.param(v,
+                                              lambda st_min: 0x7F * 1000,
+                                              id='STmin = reserved (0x{:02X})'.format(v)) for v in
+                                 (i + 0x80 for i in range(0xF0 - 0x80 + 0x01))] + [
+                                 pytest.param(0xF1 + v,
+                                              lambda st_min: (st_min & 0x0F) * 100,
+                                              id='STmin = {} [us]'.format(100 + v * 100)) for v in range(9)] + [
+                                 pytest.param(v,
+                                              lambda st_min: 0x7F * 1000,
+                                              id='STmin = reserved (0x{:02X})'.format(v)) for v in
+                                 (i + 0xFA for i in range(0xFF - 0xFA + 0x01))])
+    def test_sender_side(self, st_min, call_count):
     handle = CanTpTest(DefaultSender(padding=0xFF))
-    fc_frame = handle.get_receiver_flow_control(padding=0xFF, bs=0, st_min=st_min)
+        fc = handle.get_receiver_flow_control(padding=0xFF, bs=0, st_min=st_min)
     handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * 100))
     handle.lib.CanTp_MainFunction()
     assert handle.can_if_transmit.call_count == 1  # sent FF
     handle.can_if_transmit.assert_called_once()
     handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
-    handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(fc_frame))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(fc))
     handle.lib.CanTp_MainFunction()
     assert handle.can_if_transmit.call_count == 2  # sent first CF
     handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
