@@ -160,7 +160,7 @@ class CanTpTest(object):
                             include_dirs=cfg_id + [build_directory],
                             compile_flags=('-g', '-O0', '-fprofile-arcs', '-ftest-coverage'),
                             link_flags=('-g', '-O0', '-fprofile-arcs', '-ftest-coverage'),
-                            build_dir=os.path.dirname(__file__))
+                            build_dir=build_directory)
         if initialize:
             self.code.lib.CanTp_Init(self.code.ffi.cast('const CanTp_ConfigType *', self.config.lib.CanTp_Config))
             if self.code.lib.CanTp_State != self.code.lib.CANTP_ON:
