@@ -2,7 +2,6 @@ import os
 import sys
 
 from cffi import FFI
-from cffi.verifier import cleanup_tmpdir
 from importlib import import_module
 from io import StringIO
 from math import ceil
@@ -143,12 +142,9 @@ class CanTpTest(object):
         self.available_rx_buffer = rx_buffer_size
         self.can_if_tx_data = list()
         self.can_tp_rx_data = list()
-        #cleanup_tmpdir(tmpdir=build_directory)
         code_gen = CodeGen(config)
         with open(os.path.join(build_directory, 'CanTp_PBcfg.h'), 'w') as fp:
             fp.write(code_gen.header)
-        with open(cfg_src, 'r') as fp:
-            source = fp.read()
         with open(cfg_hdr, 'r') as fp:
             header = fp.read()
         self.config = MockGen('_cffi_can_tp_pbcfg_{}'.format(config.get_id),
@@ -158,13 +154,13 @@ class CanTpTest(object):
                               include_dirs=cfg_id + [build_directory],
                               build_dir=build_directory)
         self.code = MockGen('_cffi_can_tp',
-                            source,
+                            '#include "{}"'.format(cfg_src),
                             header,
                             define_macros=cfg_cd,
                             include_dirs=cfg_id + [build_directory],
                             compile_flags=('-g', '-O0', '-fprofile-arcs', '-ftest-coverage'),
                             link_flags=('-g', '-O0', '-fprofile-arcs', '-ftest-coverage'),
-                            build_dir=os.path.dirname(__file__))
+                            build_dir=build_directory)
         if initialize:
             self.code.lib.CanTp_Init(self.code.ffi.cast('const CanTp_ConfigType *', self.config.lib.CanTp_Config))
             if self.code.lib.CanTp_State != self.code.lib.CANTP_ON:

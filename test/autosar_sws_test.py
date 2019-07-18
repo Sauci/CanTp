@@ -1,6 +1,22 @@
-from unittest.mock import ANY
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+try:
+    from unittest.mock import ANY
+except ImportError:
+    from mock import ANY
 from .parameter import *
 from .ffi import CanTpTest
+
+
+def assert_rx_session_aborted():
+    # TODO: find a way how to evaluate this statement.
+    assert True
+
+
+def assert_tx_session_aborted():
+    # TODO: find a way how to evaluate this statement.
+    assert True
 
 
 class TestSWS00031:
@@ -671,11 +687,11 @@ class TestSWS00281:
     def test_consecutive_frame(self, af):
         handle = CanTpTest(DefaultSender(af=af))
         tx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)
-        cf = handle.get_receiver_flow_control(af=af)
+        fc = handle.get_receiver_flow_control(af=af)
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
-        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cf))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(fc))
         handle.lib.CanTp_MainFunction()
         assert handle.can_if_transmit.call_count == 2
         if af in ('CANTP_EXTENDED',):
@@ -726,6 +742,11 @@ class TestSWS00293:
     @pytest.mark.skip(reason='not implemented')
     def test_e_init_failed(self):
         pass
+
+    def test_e_param_pointer(self):
+        handle = CanTpTest(DefaultReceiver(), initialize=False)
+        handle.lib.CanTp_Init(handle.ffi.NULL)
+        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PARAM_POINTER'))
 
     def test_e_invalid_rx_id(self):
         handle = CanTpTest(DefaultReceiver())
@@ -1005,6 +1026,57 @@ class TestSWS00346:
         handle.lib.CanTp_MainFunction()
 
 
+class TestSWS00348:
+    """
+    If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD frames) are used for a Tx N-SDU and if
+    CanTpTxPaddingActivation is equal to CANTP_ON, CanTp shall transmit by means of CanIf_Transmit() call, SF Tx N-PDU
+    or last CF Tx N-PDU that belongs to that Tx N-SDU with the length of eight bytes(i.e. PduInfoPtr.SduLength = 8).
+    Unused bytes in N-PDU shall be updated with CANTP_PADDING_BYTE (see ECUC_CanTp_00298).
+    """
+
+    @pytest.mark.parametrize('af', addressing_formats)
+    def test_single_frame(self, af):
+        handle = CanTpTest(DefaultSender(af=af, padding=0xAA))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * 1))
+        handle.lib.CanTp_MainFunction()
+        for i in range(1 + 8 - handle.get_payload_size(af, 'SF'), 8):
+            assert handle.can_if_transmit.call_args[0][1].SduDataPtr[i] == 0xAA
+
+    @pytest.mark.parametrize('af', addressing_formats)
+    def test_last_consecutive_frame(self, af):
+        handle = CanTpTest(DefaultSender(af=af, padding=0xAA))
+        tx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)
+        fc = handle.get_receiver_flow_control(af=af, padding=0xAA)
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(fc))
+        handle.lib.CanTp_MainFunction()
+        for i in range(1 + 8 - handle.get_payload_size(af, 'FF'), 8):
+            assert handle.can_if_transmit.call_args[0][1].SduDataPtr[i] == 0xAA
+
+
+@pytest.mark.parametrize('af', addressing_formats)
+def test_sws_00349(af):
+    """
+    If CanTpTxPaddingActivation is equal to CANTP_ON for a Tx N-SDU, and if a FC N-PDU is received for that Tx N-SDU on
+    a ongoing transmission, by means of CanTp_RxIndication() call, and the length of this FC is smaller than eight bytes
+    (i.e. PduInfoPtr.SduLength <8) the CanTp module shall abort the transmission session by calling
+    PduR_CanTpTxConfirmation() with the result E_NOT_OK. The runtime error code CANTP_E_PADDING shall be reported to the
+    Default Error Tracer.
+    """
+    handle = CanTpTest(DefaultSender(af=af, padding=0xAA))
+    tx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)
+    fc = handle.get_receiver_flow_control(af=af)
+    handle.lib.CanTp_Transmit(0, handle.get_pdu_info(tx_data))
+    handle.lib.CanTp_MainFunction()
+    handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+    handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(fc))
+    handle.lib.CanTp_MainFunction()
+    handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+    handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PADDING'))
+
+
 @pytest.mark.skip(reason='I don\'t understand this statement...')
 class TestSWS00350:
     """
@@ -1042,6 +1114,28 @@ def test_sws_00353():
     handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_single_frame()))
     handle.lib.CanTp_MainFunction()
     handle.can_if_transmit.assert_not_called()
+
+
+class TestSWS00355:
+    """
+    CanTp shall abort the corresponding session, when CanTp_TxConfirmation() is called with the result E_NOT_OK.
+    """
+
+    def test_sender_side(self):
+        handle = CanTpTest(DefaultSender())
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * 8))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_NOT_OK'))
+        handle.lib.CanTp_MainFunction()
+        assert_tx_session_aborted()
+
+    def test_receiver_side(self):
+        handle = CanTpTest(DefaultReceiver())
+        ff, cfs = handle.get_receiver_multi_frame((0xFF,) * 8)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_NOT_OK'))
+        assert_rx_session_aborted()
 
 
 @pytest.mark.parametrize('st_min, call_count', [

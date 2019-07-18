@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8.0)
 
 project(CanTp VERSION 0.1.0 LANGUAGES C)
 
-option(ENABLE_DET "enable/disable developement error detection feature." ON)
+option(ENABLE_DET "enable/disable development error detection." ON)
 option(ENABLE_TEST "enable/disable tests." ON)
 option(ENABLE_SCA "enable/disable static code analysis." OFF)
 option(ENABLE_DOC "enable/disable documentation generation." OFF)
