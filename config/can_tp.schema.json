@@ -264,8 +264,9 @@
       "minimum": 0
     },
     "minimum_separation_time": {
-      "type": "integer",
-      "minimum": 0
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 0.127
     },
     "wait_for_transmission_maximum": {
       "type": "integer",
