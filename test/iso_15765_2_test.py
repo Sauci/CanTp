@@ -52,22 +52,22 @@ class TestSTMinValue:
                                               id='STmin = reserved (0x{:02X})'.format(v)) for v in
                                  (i + 0xFA for i in range(0xFF - 0xFA + 0x01))])
     def test_sender_side(self, st_min, call_count):
-    handle = CanTpTest(DefaultSender(padding=0xFF))
+        handle = CanTpTest(DefaultSender(padding=0xFF))
         fc = handle.get_receiver_flow_control(padding=0xFF, bs=0, st_min=st_min)
-    handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * 100))
-    handle.lib.CanTp_MainFunction()
-    assert handle.can_if_transmit.call_count == 1  # sent FF
-    handle.can_if_transmit.assert_called_once()
-    handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
-        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(fc))
-    handle.lib.CanTp_MainFunction()
-    assert handle.can_if_transmit.call_count == 2  # sent first CF
-    handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
-    for _ in range(call_count(st_min)):
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * 100))
         handle.lib.CanTp_MainFunction()
-    assert handle.can_if_transmit.call_count == 2  # wait for timeout
-    handle.lib.CanTp_MainFunction()
-    assert handle.can_if_transmit.call_count == 3  # sent next CF after timeout
+        assert handle.can_if_transmit.call_count == 1  # sent FF
+        handle.can_if_transmit.assert_called_once()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(fc))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_count == 2  # sent first CF
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        for _ in range(call_count(st_min)):
+            handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_count == 2  # wait for timeout
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_count == 3  # sent next CF after timeout
 
 
 
