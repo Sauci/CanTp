@@ -990,6 +990,21 @@ class TestSWS00339:
         handle.can_if_transmit.assert_not_called()
 
 
+def test_sws_00342():
+    """
+    CanTp shall terminate the current reception connection when CanIf_Transmit()returns E_NOT_OK when transmitting an
+    FC.
+    """
+
+    handle = CanTpTest(DefaultReceiver())
+    handle.can_if_transmit.return_value = handle.define('E_NOT_OK')
+    ff, cfs = handle.get_receiver_multi_frame((0xFF,) * 80, bs=0)
+    handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+    handle.lib.CanTp_MainFunction()
+    handle.can_if_transmit.assert_called_once()
+    assert_rx_session_aborted()
+
+
 @pytest.mark.parametrize('af', addressing_formats)
 def test_sws_00345(af):
     """

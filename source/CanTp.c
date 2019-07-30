@@ -2408,6 +2408,8 @@ STATIC void CanTp_TransmitRxCANData(CanTp_NSduType *pNSdu)
 
     if (CanIf_Transmit(pNSdu->rx.cfg->rxNSduRef, &pNSdu->rx.can_if_pdu_info) != E_OK)
     {
+        /* SWS_CanTp_00342 CanTp shall terminate the current reception connection when
+         * CanIf_Transmit() returns E_NOT_OK when transmitting an FC. */
         CanTp_AbortRxSession(pNSdu, CANTP_I_NONE, FALSE);
     }
 }
