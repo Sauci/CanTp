@@ -632,8 +632,6 @@ CanTp_StateType CanTp_State = CANTP_OFF;
 
 void CanTp_Init(const CanTp_ConfigType *pConfig)
 {
-    Std_ReturnType result = E_OK;
-    uint32_least n_sdu_range;
     uint32_least channel_idx;
     uint32_least rt_sdu_idx;
     uint32_least cfg_sdu_idx;
@@ -660,89 +658,49 @@ void CanTp_Init(const CanTp_ConfigType *pConfig)
             p_rt_channel = &CanTp_Rt[channel_idx];
             p_cfg_channel = &pConfig->pChannel[channel_idx];
 
-            /* make sure the static configuration's PDU count fits into provided
-             * CANTP_MAX_NUM_OF_N_SDU. */
-            n_sdu_range = p_cfg_channel->nSdu.rxNSduCnt + p_cfg_channel->nSdu.txNSduCnt;
-
-            if (n_sdu_range <= (uint32_least)CANTP_MAX_NUM_OF_N_SDU)
+            for (rt_sdu_idx = 0x00u; rt_sdu_idx < (uint32_least)CANTP_MAX_NUM_OF_N_SDU; rt_sdu_idx++)
             {
-                for (rt_sdu_idx = 0x00u; rt_sdu_idx < (uint32_least)CANTP_MAX_NUM_OF_N_SDU; rt_sdu_idx++)
+                for (cfg_sdu_idx = 0x00u;
+                     cfg_sdu_idx < p_cfg_channel->nSdu.rxNSduCnt; cfg_sdu_idx++)
                 {
-                    for (cfg_sdu_idx = 0x00u;
-                         cfg_sdu_idx < p_cfg_channel->nSdu.rxNSduCnt; cfg_sdu_idx++)
+                    if (p_cfg_channel->nSdu.rx != NULL_PTR)
                     {
-                        if (p_cfg_channel->nSdu.rx != NULL_PTR)
+                        p_cfg_rx_sdu = &p_cfg_channel->nSdu.rx[cfg_sdu_idx];
+
+                        if (p_cfg_rx_sdu->nSduId == rt_sdu_idx)
                         {
-                            p_cfg_rx_sdu = &p_cfg_channel->nSdu.rx[cfg_sdu_idx];
+                            p_rt_sdu = &p_rt_channel->sdu[p_cfg_rx_sdu->nSduId];
 
-                            /* make sure the nSduId is in allowed range. */
-                            if (p_cfg_rx_sdu->nSduId < n_sdu_range)
-                            {
-                                if (p_cfg_rx_sdu->nSduId == rt_sdu_idx)
-                                {
-                                    p_rt_sdu = &p_rt_channel->sdu[p_cfg_rx_sdu->nSduId];
-
-                                    p_rt_sdu->dir |= CANTP_DIRECTION_RX;
-                                    p_rt_sdu->rx.cfg = p_cfg_rx_sdu;
-                                    p_rt_sdu->rx.shared.taskState = CANTP_WAIT;
-                                    p_rt_sdu->rx.shared.m_param.st_min = p_cfg_rx_sdu->sTMin;
-                                    p_rt_sdu->rx.shared.m_param.bs = p_cfg_rx_sdu->bs;
-                                }
-                            }
-                            else
-                            {
-                                result = E_NOT_OK;
-
-                                break;
-                            }
+                            p_rt_sdu->dir |= CANTP_DIRECTION_RX;
+                            p_rt_sdu->rx.cfg = p_cfg_rx_sdu;
+                            p_rt_sdu->rx.shared.taskState = CANTP_WAIT;
+                            p_rt_sdu->rx.shared.m_param.st_min = p_cfg_rx_sdu->sTMin;
+                            p_rt_sdu->rx.shared.m_param.bs = p_cfg_rx_sdu->bs;
                         }
                     }
+                }
 
-                    for (cfg_sdu_idx = 0x00u;
-                         cfg_sdu_idx < p_cfg_channel->nSdu.txNSduCnt; cfg_sdu_idx++)
+                for (cfg_sdu_idx = 0x00u;
+                     cfg_sdu_idx < p_cfg_channel->nSdu.txNSduCnt; cfg_sdu_idx++)
+                {
+                    if (p_cfg_channel->nSdu.tx != NULL_PTR)
                     {
-                        if (p_cfg_channel->nSdu.tx != NULL_PTR)
+                        p_cfg_tx_sdu = &p_cfg_channel->nSdu.tx[cfg_sdu_idx];
+
+                        if (p_cfg_tx_sdu->nSduId == rt_sdu_idx)
                         {
-                            p_cfg_tx_sdu = &p_cfg_channel->nSdu.tx[cfg_sdu_idx];
+                            p_rt_sdu = &p_rt_channel->sdu[p_cfg_tx_sdu->nSduId];
 
-                            /* make sure the nSduId is in allowed range. */
-                            if (p_cfg_tx_sdu->nSduId < n_sdu_range)
-                            {
-                                if (p_cfg_tx_sdu->nSduId == rt_sdu_idx)
-                                {
-                                    p_rt_sdu = &p_rt_channel->sdu[p_cfg_tx_sdu->nSduId];
-
-                                    p_rt_sdu->dir |= CANTP_DIRECTION_TX;
-                                    p_rt_sdu->tx.cfg = p_cfg_tx_sdu;
-                                    p_rt_sdu->tx.taskState = CANTP_WAIT;
-                                }
-                            }
-                            else
-                            {
-                                result = E_NOT_OK;
-
-                                break;
-                            }
+                            p_rt_sdu->dir |= CANTP_DIRECTION_TX;
+                            p_rt_sdu->tx.cfg = p_cfg_tx_sdu;
+                            p_rt_sdu->tx.taskState = CANTP_WAIT;
                         }
                     }
                 }
             }
-            else
-            {
-                result = E_NOT_OK;
-
-                break;
-            }
         }
 
-        if (result != E_OK)
-        {
-            CanTp_ReportError(0x00u, CANTP_INIT_API_ID, CANTP_E_INIT_FAILED);
-        }
-        else
-        {
-            CanTp_State = CANTP_ON;
-        }
+        CanTp_State = CANTP_ON;
     }
     else
     {
