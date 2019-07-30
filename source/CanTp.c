@@ -2420,6 +2420,8 @@ STATIC void CanTp_TransmitTxCANData(CanTp_NSduType *pNSdu)
 
     if (CanIf_Transmit((PduIdType)pNSdu->tx.cfg->txNSduRef, &pNSdu->tx.can_if_pdu_info) != E_OK)
     {
+        /* SWS_CanTp_00343 CanTp shall terminate the current transmission connection when
+         * CanIf_Transmit() returns E_NOT_OK when transmitting an SF, FF, of CF. */
         CanTp_AbortTxSession(pNSdu, CANTP_I_NONE, FALSE);
     }
 }

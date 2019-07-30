@@ -1005,6 +1005,44 @@ def test_sws_00342():
     assert_rx_session_aborted()
 
 
+class TestSWS00343:
+    """
+    CanTp shall terminate the current transmission connection when CanIf_Transmit() returns E_NOT_OK when transmitting
+    an SF, FF, of CF.
+    """
+
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    def test_single_frame(self, data_size):
+        handle = CanTpTest(DefaultSender())
+        handle.can_if_transmit.return_value = handle.define('E_NOT_OK')
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size))
+        handle.lib.CanTp_MainFunction()
+        handle.can_if_transmit.assert_called_once()
+        assert_tx_session_aborted()
+
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    def test_first_frame(self, data_size):
+        handle = CanTpTest(DefaultSender())
+        handle.can_if_transmit.return_value = handle.define('E_NOT_OK')
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size))
+        handle.lib.CanTp_MainFunction()
+        handle.can_if_transmit.assert_called_once()
+        assert_tx_session_aborted()
+
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    def test_consecutive_frame(self, data_size):
+        handle = CanTpTest(DefaultSender())
+        fc = handle.get_receiver_flow_control()
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(fc))
+        handle.can_if_transmit.return_value = handle.define('E_NOT_OK')
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_count == 2
+        assert_tx_session_aborted()
+
+
 @pytest.mark.parametrize('af', addressing_formats)
 def test_sws_00345(af):
     """
