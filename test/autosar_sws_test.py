@@ -26,39 +26,17 @@ class TestSWS00031:
     CanTp_Init has been called.
     """
 
-    def test_shutdown(self):
+    @pytest.mark.parametrize('function, parameters', [
+        pytest.param('CanTp_Shutdown', tuple(), id='shutdown'),
+        pytest.param('CanTp_Transmit', (lambda h: 0, lambda h: h.ffi.NULL), id='transmit'),
+        pytest.param('CanTp_CancelTransmit', (lambda h: 0,), id='cancel_transmit'),
+        pytest.param('CanTp_CancelReceive', (lambda h: 0,), id='cancel_receive'),
+        pytest.param('CanTp_ChangeParameter', (lambda h: 0, lambda h: 0, lambda h: 0), id='change_parameter'),
+        pytest.param('CanTp_ReadParameter', (lambda h: 0, lambda h: 0, lambda h: h.ffi.NULL), id='read_parameter'),
+        pytest.param('CanTp_MainFunction', tuple(), id='main_function')])
+    def test_uninit_error_raised(self, function, parameters):
         handle = CanTpTest(DefaultReceiver(), initialize=False)
-        handle.lib.CanTp_Shutdown()
-        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_UNINIT'))
-
-    def test_transmit(self):
-        handle = CanTpTest(DefaultReceiver(), initialize=False)
-        handle.lib.CanTp_Transmit(0, handle.ffi.NULL)
-        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_UNINIT'))
-
-    def test_cancel_transmit(self):
-        handle = CanTpTest(DefaultReceiver(), initialize=False)
-        handle.lib.CanTp_CancelTransmit(0)
-        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_UNINIT'))
-
-    def test_cancel_receive(self):
-        handle = CanTpTest(DefaultReceiver(), initialize=False)
-        handle.lib.CanTp_CancelReceive(0)
-        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_UNINIT'))
-
-    def test_change_parameter(self):
-        handle = CanTpTest(DefaultReceiver(), initialize=False)
-        handle.lib.CanTp_ChangeParameter(0, 0, 0)
-        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_UNINIT'))
-
-    def test_read_parameter(self):
-        handle = CanTpTest(DefaultReceiver(), initialize=False)
-        handle.lib.CanTp_ReadParameter(0, 0, handle.ffi.NULL)
-        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_UNINIT'))
-
-    def test_main_function(self):
-        handle = CanTpTest(DefaultReceiver(), initialize=False)
-        handle.lib.CanTp_MainFunction()
+        getattr(handle.lib, function)(*[l(handle) for l in parameters])
         handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_UNINIT'))
 
 
