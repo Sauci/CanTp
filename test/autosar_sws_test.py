@@ -435,7 +435,7 @@ class TestSWS00229:
 
     @pytest.mark.parametrize('data_size', single_frame_sizes + multi_frames_sizes)
     @pytest.mark.parametrize('n_as', n_as_timeouts)
-    def test_as_timeout(self, data_size, n_as):
+    def test_as_timeout_not_confirmed(self, data_size, n_as):
         config = DefaultSender(n_as=n_as)
         handle = CanTpTest(config)
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * data_size))
@@ -444,6 +444,19 @@ class TestSWS00229:
         handle.det_report_error.assert_not_called()
         handle.lib.CanTp_MainFunction()
         handle.det_report_error.assert_called_once_with(ANY, handle.define('CANTP_I_N_AS'), ANY, handle.define('CANTP_E_TX_COM'))
+
+    @pytest.mark.parametrize('data_size', single_frame_sizes + multi_frames_sizes)
+    @pytest.mark.parametrize('n_as', n_as_timeouts)
+    def test_as_timeout_confirmed(self, data_size, n_as):
+        config = DefaultSender(n_as=n_as)
+        handle = CanTpTest(config)
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * data_size))
+        for _ in range(int(n_as / config.main_period)):
+            handle.lib.CanTp_MainFunction()
+        handle.det_report_error.assert_not_called()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_MainFunction()
+        handle.det_report_error.assert_not_called()
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     @pytest.mark.parametrize('n_bs', n_bs_timeouts)
