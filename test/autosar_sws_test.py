@@ -39,6 +39,20 @@ class TestSWS00031:
         getattr(handle.lib, function)(*[l(handle) for l in parameters])
         handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_UNINIT'))
 
+    @pytest.mark.parametrize('function, parameters', [
+        pytest.param('CanTp_Shutdown', tuple(), id='shutdown'),
+        pytest.param('CanTp_Transmit', (lambda h: 0, lambda h: h.ffi.NULL), id='transmit'),
+        pytest.param('CanTp_CancelTransmit', (lambda h: 0,), id='cancel_transmit'),
+        pytest.param('CanTp_CancelReceive', (lambda h: 0,), id='cancel_receive'),
+        pytest.param('CanTp_ChangeParameter', (lambda h: 0, lambda h: 0, lambda h: 0), id='change_parameter'),
+        pytest.param('CanTp_ReadParameter', (lambda h: 0, lambda h: 0, lambda h: h.ffi.NULL), id='read_parameter'),
+        pytest.param('CanTp_MainFunction', tuple(), id='main_function')])
+    def test_uninit_error_not_raised(self, function, parameters):
+        handle = CanTpTest(DefaultReceiver(), initialize=True)
+        getattr(handle.lib, function)(*[l(handle) for l in parameters])
+        if handle.det_report_error.call_count:
+            assert handle.det_report_error.call_args[0][3] != handle.define('CANTP_E_UNINIT')
+
 
 class TestSWS00057:
     """
