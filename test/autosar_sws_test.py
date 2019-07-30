@@ -674,6 +674,41 @@ def test_sws_00263():
     handle.pdu_r_can_tp_rx_indication.called_once_with(ANY, handle.define('E_NOT_OK'))
 
 
+class TestSWS00271:
+    """
+    If the PduR_CanTpCopyRxData() returns BUFREQ_E_NOT_OK after reception of a Consecutive Frame in a block the CanTp
+    shall abort the reception of N-SDU and notify the PduR module by calling the PduR_CanTpRxIndication() with the
+    result E_NOT_OK.
+    """
+
+    def test_single_frame(self):
+        handle = CanTpTest(DefaultReceiver())
+        handle.pdu_r_can_tp_copy_rx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
+        sf = handle.get_receiver_single_frame()
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(sf))
+        handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        assert_rx_session_aborted()
+
+    def test_first_frame(self):
+        handle = CanTpTest(DefaultReceiver())
+        handle.pdu_r_can_tp_copy_rx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
+        ff, _ = handle.get_receiver_multi_frame()
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+        handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        assert_rx_session_aborted()
+
+    def test_consecutive_frame(self):
+        handle = CanTpTest(DefaultReceiver())
+        ff, cfs = handle.get_receiver_multi_frame()
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.pdu_r_can_tp_copy_rx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cfs[0]))
+        handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        assert_rx_session_aborted()
+
+
 class TestSWS00281:
     """
     However, if the message is configured to use an extended or a mixed addressing format, the CanTp module must fill
