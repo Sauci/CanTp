@@ -26,40 +26,32 @@ class TestSWS00031:
     CanTp_Init has been called.
     """
 
-    def test_shutdown(self):
+    @pytest.mark.parametrize('function, parameters', [
+        pytest.param('CanTp_Shutdown', tuple(), id='shutdown'),
+        pytest.param('CanTp_Transmit', (lambda h: 0, lambda h: h.ffi.NULL), id='transmit'),
+        pytest.param('CanTp_CancelTransmit', (lambda h: 0,), id='cancel_transmit'),
+        pytest.param('CanTp_CancelReceive', (lambda h: 0,), id='cancel_receive'),
+        pytest.param('CanTp_ChangeParameter', (lambda h: 0, lambda h: 0, lambda h: 0), id='change_parameter'),
+        pytest.param('CanTp_ReadParameter', (lambda h: 0, lambda h: 0, lambda h: h.ffi.NULL), id='read_parameter'),
+        pytest.param('CanTp_MainFunction', tuple(), id='main_function')])
+    def test_uninit_error_raised(self, function, parameters):
         handle = CanTpTest(DefaultReceiver(), initialize=False)
-        handle.lib.CanTp_Shutdown()
+        getattr(handle.lib, function)(*[l(handle) for l in parameters])
         handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_UNINIT'))
 
-    def test_transmit(self):
-        handle = CanTpTest(DefaultReceiver(), initialize=False)
-        handle.lib.CanTp_Transmit(0, handle.ffi.NULL)
-        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_UNINIT'))
-
-    def test_cancel_transmit(self):
-        handle = CanTpTest(DefaultReceiver(), initialize=False)
-        handle.lib.CanTp_CancelTransmit(0)
-        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_UNINIT'))
-
-    def test_cancel_receive(self):
-        handle = CanTpTest(DefaultReceiver(), initialize=False)
-        handle.lib.CanTp_CancelReceive(0)
-        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_UNINIT'))
-
-    def test_change_parameter(self):
-        handle = CanTpTest(DefaultReceiver(), initialize=False)
-        handle.lib.CanTp_ChangeParameter(0, 0, 0)
-        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_UNINIT'))
-
-    def test_read_parameter(self):
-        handle = CanTpTest(DefaultReceiver(), initialize=False)
-        handle.lib.CanTp_ReadParameter(0, 0, handle.ffi.NULL)
-        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_UNINIT'))
-
-    def test_main_function(self):
-        handle = CanTpTest(DefaultReceiver(), initialize=False)
-        handle.lib.CanTp_MainFunction()
-        handle.det_report_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_UNINIT'))
+    @pytest.mark.parametrize('function, parameters', [
+        pytest.param('CanTp_Shutdown', tuple(), id='shutdown'),
+        pytest.param('CanTp_Transmit', (lambda h: 0, lambda h: h.ffi.NULL), id='transmit'),
+        pytest.param('CanTp_CancelTransmit', (lambda h: 0,), id='cancel_transmit'),
+        pytest.param('CanTp_CancelReceive', (lambda h: 0,), id='cancel_receive'),
+        pytest.param('CanTp_ChangeParameter', (lambda h: 0, lambda h: 0, lambda h: 0), id='change_parameter'),
+        pytest.param('CanTp_ReadParameter', (lambda h: 0, lambda h: 0, lambda h: h.ffi.NULL), id='read_parameter'),
+        pytest.param('CanTp_MainFunction', tuple(), id='main_function')])
+    def test_uninit_error_not_raised(self, function, parameters):
+        handle = CanTpTest(DefaultReceiver(), initialize=True)
+        getattr(handle.lib, function)(*[l(handle) for l in parameters])
+        if handle.det_report_error.call_count:
+            assert handle.det_report_error.call_args[0][3] != handle.define('CANTP_E_UNINIT')
 
 
 class TestSWS00057:
@@ -349,6 +341,31 @@ class TestSWS00081:
         handle.can_if_transmit.assert_not_called()
 
 
+class TestSWS00087:
+    """
+    If PduR_CanTpCopyTxData() returns BUFREQ_E_NOT_OK, the CanTp module shall abort the transmit request and notify the
+    upper layer of this failure by calling the callback function PduR_CanTpTxConfirmation() with the result E_NOT_OK.
+    """
+
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    def test_single_frame(self, data_size):
+        handle = CanTpTest(DefaultSender())
+        handle.pdu_r_can_tp_copy_tx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * data_size))
+        handle.lib.CanTp_MainFunction()
+        handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        assert_tx_session_aborted()
+
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    def test_multi_frame(self, data_size):
+        handle = CanTpTest(DefaultSender())
+        handle.pdu_r_can_tp_copy_tx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * data_size))
+        handle.lib.CanTp_MainFunction()
+        handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        assert_tx_session_aborted()
+
+
 class TestSWS00093:
     """
     If a multiple segmented session occurs (on both receiver and sender side) with a handle whose communication type is
@@ -443,7 +460,7 @@ class TestSWS00229:
 
     @pytest.mark.parametrize('data_size', single_frame_sizes + multi_frames_sizes)
     @pytest.mark.parametrize('n_as', n_as_timeouts)
-    def test_as_timeout(self, data_size, n_as):
+    def test_as_timeout_not_confirmed(self, data_size, n_as):
         config = DefaultSender(n_as=n_as)
         handle = CanTpTest(config)
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * data_size))
@@ -452,6 +469,19 @@ class TestSWS00229:
         handle.det_report_error.assert_not_called()
         handle.lib.CanTp_MainFunction()
         handle.det_report_error.assert_called_once_with(ANY, handle.define('CANTP_I_N_AS'), ANY, handle.define('CANTP_E_TX_COM'))
+
+    @pytest.mark.parametrize('data_size', single_frame_sizes + multi_frames_sizes)
+    @pytest.mark.parametrize('n_as', n_as_timeouts)
+    def test_as_timeout_confirmed(self, data_size, n_as):
+        config = DefaultSender(n_as=n_as)
+        handle = CanTpTest(config)
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * data_size))
+        for _ in range(int(n_as / config.main_period)):
+            handle.lib.CanTp_MainFunction()
+        handle.det_report_error.assert_not_called()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_MainFunction()
+        handle.det_report_error.assert_not_called()
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     @pytest.mark.parametrize('n_bs', n_bs_timeouts)
@@ -642,6 +672,41 @@ def test_sws_00263():
     handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
     handle.lib.CanTp_CancelReceive(0)
     handle.pdu_r_can_tp_rx_indication.called_once_with(ANY, handle.define('E_NOT_OK'))
+
+
+class TestSWS00271:
+    """
+    If the PduR_CanTpCopyRxData() returns BUFREQ_E_NOT_OK after reception of a Consecutive Frame in a block the CanTp
+    shall abort the reception of N-SDU and notify the PduR module by calling the PduR_CanTpRxIndication() with the
+    result E_NOT_OK.
+    """
+
+    def test_single_frame(self):
+        handle = CanTpTest(DefaultReceiver())
+        handle.pdu_r_can_tp_copy_rx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
+        sf = handle.get_receiver_single_frame()
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(sf))
+        handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        assert_rx_session_aborted()
+
+    def test_first_frame(self):
+        handle = CanTpTest(DefaultReceiver())
+        handle.pdu_r_can_tp_copy_rx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
+        ff, _ = handle.get_receiver_multi_frame()
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+        handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        assert_rx_session_aborted()
+
+    def test_consecutive_frame(self):
+        handle = CanTpTest(DefaultReceiver())
+        ff, cfs = handle.get_receiver_multi_frame()
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.pdu_r_can_tp_copy_rx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cfs[0]))
+        handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        assert_rx_session_aborted()
 
 
 class TestSWS00281:
@@ -960,6 +1025,59 @@ class TestSWS00339:
         handle.can_if_transmit.assert_not_called()
 
 
+def test_sws_00342():
+    """
+    CanTp shall terminate the current reception connection when CanIf_Transmit()returns E_NOT_OK when transmitting an
+    FC.
+    """
+
+    handle = CanTpTest(DefaultReceiver())
+    handle.can_if_transmit.return_value = handle.define('E_NOT_OK')
+    ff, cfs = handle.get_receiver_multi_frame((0xFF,) * 80, bs=0)
+    handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+    handle.lib.CanTp_MainFunction()
+    handle.can_if_transmit.assert_called_once()
+    assert_rx_session_aborted()
+
+
+class TestSWS00343:
+    """
+    CanTp shall terminate the current transmission connection when CanIf_Transmit() returns E_NOT_OK when transmitting
+    an SF, FF, of CF.
+    """
+
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    def test_single_frame(self, data_size):
+        handle = CanTpTest(DefaultSender())
+        handle.can_if_transmit.return_value = handle.define('E_NOT_OK')
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size))
+        handle.lib.CanTp_MainFunction()
+        handle.can_if_transmit.assert_called_once()
+        assert_tx_session_aborted()
+
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    def test_first_frame(self, data_size):
+        handle = CanTpTest(DefaultSender())
+        handle.can_if_transmit.return_value = handle.define('E_NOT_OK')
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size))
+        handle.lib.CanTp_MainFunction()
+        handle.can_if_transmit.assert_called_once()
+        assert_tx_session_aborted()
+
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    def test_consecutive_frame(self, data_size):
+        handle = CanTpTest(DefaultSender())
+        fc = handle.get_receiver_flow_control()
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(fc))
+        handle.can_if_transmit.return_value = handle.define('E_NOT_OK')
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_count == 2
+        assert_tx_session_aborted()
+
+
 @pytest.mark.parametrize('af', addressing_formats)
 def test_sws_00345(af):
     """
@@ -1136,69 +1254,3 @@ class TestSWS00355:
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_NOT_OK'))
         assert_rx_session_aborted()
-
-
-@pytest.mark.parametrize('st_min, call_count', [
-    pytest.param(v,
-                 lambda st_min: st_min * 1000,
-                 id='STmin = {} [ms]'.format(v)) for v in range(0x7F + 0x01)] + [
-                             pytest.param(v,
-                                          lambda st_min: 0x7F * 1000,
-                                          id='STmin = reserved (0x{:02X})'.format(v)) for v in
-                             (i + 0x80 for i in range(0xF0 - 0x80 + 0x01))] + [
-                             pytest.param(0xF1 + v,
-                                          lambda st_min: (st_min & 0x0F) * 100,
-                                          id='STmin = {} [us]'.format(100 + v * 100)) for v in range(9)] + [
-                             pytest.param(v,
-                                          lambda st_min: 0x7F * 1000,
-                                          id='STmin = reserved (0x{:02X})'.format(v)) for v in
-                             (i + 0xFA for i in range(0xFF - 0xFA + 0x01))])
-def test_separation_time_minimum_value(st_min, call_count):
-    """
-    6.5.5.5 Definition of SeparationTime (STmin) parameter
-    The STmin parameter shall be encoded in byte #3 of the FC N_PCI.
-    This time is specified by the receiving entity and shall be kept by the sending network entity for the duration of a
-    segmented message transmission.
-    The STmin parameter value specifies the minimum time gap allowed between the transmission of consecutive frame
-    network protocol data units.
-
-    Hex value | Description
-    ----------+---------------------------------------------------------------------------------------------------------
-    00 - 7F   | SeparationTime (STmin) range: 0 ms – 127 ms
-              | The units of STmin in the range 00 hex – 7F hex are absolute milliseconds (ms).
-    ----------+---------------------------------------------------------------------------------------------------------
-    80 – F0   | Reserved
-              | This range of values is reserved by this part of ISO 15765.
-    ----------+---------------------------------------------------------------------------------------------------------
-    F1 – F9   | SeparationTime (STmin) range: 100 μs – 900 μs
-              | The units of STmin in the range F1 hex – F9 hex are even 100 microseconds (μs), where parameter value F1
-              | hex represents 100 μs and parameter value F9 hex represents 900 μs.
-    ----------+---------------------------------------------------------------------------------------------------------
-    FA – FF   | Reserved
-              | This range of values is reserved by this part of ISO 15765.
-    ----------+---------------------------------------------------------------------------------------------------------
-
-    The measurement of the STmin starts after completion of transmission of a ConsecutiveFrame (CF) and ends at the
-    request for the transmission of the next CF.
-
-    If an FC N_PDU message is received with a reserved ST parameter value, then the sending network entity shall use the
-    longest ST value specified by this part of ISO 15765 (7F hex – 127 ms) instead of the value received from the
-    receiving network entity for the duration of the ongoing segmented message transmission.
-    """
-
-    handle = CanTpTest(DefaultSender(padding=0xFF))
-    fc_frame = handle.get_receiver_flow_control(padding=0xFF, bs=0, st_min=st_min)
-    handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * 100))
-    handle.lib.CanTp_MainFunction()
-    assert handle.can_if_transmit.call_count == 1  # sent FF
-    handle.can_if_transmit.assert_called_once()
-    handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
-    handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(fc_frame))
-    handle.lib.CanTp_MainFunction()
-    assert handle.can_if_transmit.call_count == 2  # sent first CF
-    handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
-    for _ in range(call_count(st_min)):
-        handle.lib.CanTp_MainFunction()
-    assert handle.can_if_transmit.call_count == 2  # wait for timeout
-    handle.lib.CanTp_MainFunction()
-    assert handle.can_if_transmit.call_count == 3  # sent next CF after timeout

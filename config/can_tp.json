@@ -10,7 +10,7 @@
             {
               "block_size": 2,
               "wait_for_transmission_maximum": 1,
-              "minimum_separation_time": 2,
+              "minimum_separation_time": 0.01,
               "N_Ar_timeout": 1.0,
               "N_Br_timeout": 0.9,
               "N_Cr_timeout": 1.0,

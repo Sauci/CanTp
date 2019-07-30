@@ -14,6 +14,7 @@ extern "C"
 
 #endif /* ifdef __cplusplus */
 
+#include "Compiler.h"
 #include "Platform_Types.h"
 
 #ifndef STD_ON
