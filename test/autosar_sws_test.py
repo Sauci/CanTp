@@ -341,6 +341,31 @@ class TestSWS00081:
         handle.can_if_transmit.assert_not_called()
 
 
+class TestSWS00087:
+    """
+    If PduR_CanTpCopyTxData() returns BUFREQ_E_NOT_OK, the CanTp module shall abort the transmit request and notify the
+    upper layer of this failure by calling the callback function PduR_CanTpTxConfirmation() with the result E_NOT_OK.
+    """
+
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    def test_single_frame(self, data_size):
+        handle = CanTpTest(DefaultSender())
+        handle.pdu_r_can_tp_copy_tx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * data_size))
+        handle.lib.CanTp_MainFunction()
+        handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        assert_tx_session_aborted()
+
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    def test_multi_frame(self, data_size):
+        handle = CanTpTest(DefaultSender())
+        handle.pdu_r_can_tp_copy_tx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * data_size))
+        handle.lib.CanTp_MainFunction()
+        handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        assert_tx_session_aborted()
+
+
 class TestSWS00093:
     """
     If a multiple segmented session occurs (on both receiver and sender side) with a handle whose communication type is
