@@ -2377,21 +2377,21 @@ static uint8 CanTp_EncodeSTMinValue(const uint16 value)
 {
     uint8 result;
 
-    if (CanTp_ConvertUsToMs(value) <= 0x7Fu)
-    {
-        result = (uint8)CanTp_ConvertUsToMs(value);
-    }
-    else if ((value == 100u) ||
-             (value == 200u) ||
-             (value == 300u) ||
-             (value == 400u) ||
-             (value == 500u) ||
-             (value == 600u) ||
-             (value == 700u) ||
-             (value == 800u) ||
-             (value == 900u))
+    if ((value == 100u) ||
+        (value == 200u) ||
+        (value == 300u) ||
+        (value == 400u) ||
+        (value == 500u) ||
+        (value == 600u) ||
+        (value == 700u) ||
+        (value == 800u) ||
+        (value == 900u))
     {
         result = (uint8)(0x00F0u | (value / 100u));
+    }
+    else if (CanTp_ConvertUsToMs(value) <= 0x7Fu)
+    {
+        result = (uint8)CanTp_ConvertUsToMs(value);
     }
     else
     {
