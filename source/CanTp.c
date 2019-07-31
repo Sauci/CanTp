@@ -1175,72 +1175,57 @@ static boolean CanTp_NetworkLayerTimeoutExpired(const CanTp_NSduType *pNSdu, con
 {
     boolean result = FALSE;
 
-    switch (instanceId)
+    if (instanceId == CANTP_I_N_AS)
     {
-        case CANTP_I_N_AS:
+        if ((pNSdu->n[CANTP_I_N_AS] >= pNSdu->tx.cfg->nas) &&
+            ((pNSdu->t_flag & ((uint32)0x01u /* << CANTP_I_N_AS */)) != 0x00u))
         {
-            if ((pNSdu->n[CANTP_I_N_AS] >= pNSdu->tx.cfg->nas) &&
-                ((pNSdu->t_flag & ((uint32)0x01u /* << CANTP_I_N_AS */)) != 0x00u))
-            {
-                result = TRUE;
-            }
-
-            break;
+            result = TRUE;
         }
-        case CANTP_I_N_BS:
+    }
+    else if (instanceId == CANTP_I_N_BS)
+    {
+        if ((pNSdu->n[CANTP_I_N_BS] >= pNSdu->tx.cfg->nbs) &&
+            ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_BS)) != 0x00u))
         {
-            if ((pNSdu->n[CANTP_I_N_BS] >= pNSdu->tx.cfg->nbs) &&
-                ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_BS)) != 0x00u))
-            {
-                result = TRUE;
-            }
-
-            break;
+            result = TRUE;
         }
-        case CANTP_I_N_CS:
+    }
+    else if (instanceId == CANTP_I_N_CS)
+    {
+        if ((pNSdu->n[CANTP_I_N_CS] >= pNSdu->tx.cfg->ncs) &&
+            ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_CS)) != 0x00u))
         {
-            if ((pNSdu->n[CANTP_I_N_CS] >= pNSdu->tx.cfg->ncs) &&
-                ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_CS)) != 0x00u))
-            {
-                result = TRUE;
-            }
-
-            break;
+            result = TRUE;
         }
-        case CANTP_I_N_AR:
+    }
+    else if (instanceId == CANTP_I_N_AR)
+    {
+        if ((pNSdu->n[CANTP_I_N_AR] >= pNSdu->rx.cfg->nar) &&
+            ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_AR)) != 0x00u))
         {
-            if ((pNSdu->n[CANTP_I_N_AR] >= pNSdu->rx.cfg->nar) &&
-                ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_AR)) != 0x00u))
-            {
-                result = TRUE;
-            }
-
-            break;
+            result = TRUE;
         }
-        case CANTP_I_N_BR:
+    }
+    else if (instanceId == CANTP_I_N_BR)
+    {
+        if ((pNSdu->n[CANTP_I_N_BR] >= pNSdu->rx.cfg->nbr) &&
+            ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_BR)) != 0x00u))
         {
-            if ((pNSdu->n[CANTP_I_N_BR] >= pNSdu->rx.cfg->nbr) &&
-                ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_BR)) != 0x00u))
-            {
-                result = TRUE;
-            }
-
-            break;
+            result = TRUE;
         }
-        case CANTP_I_N_CR:
+    }
+    else if (instanceId == CANTP_I_N_CR)
+    {
+        if ((pNSdu->n[CANTP_I_N_CR] >= pNSdu->rx.cfg->ncr) &&
+            ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_CR)) != 0x00u))
         {
-            if ((pNSdu->n[CANTP_I_N_CR] >= pNSdu->rx.cfg->ncr) &&
-                ((pNSdu->t_flag & ((uint32)0x01u << CANTP_I_N_CR)) != 0x00u))
-            {
-                result = TRUE;
-            }
-
-            break;
+            result = TRUE;
         }
-        default:
-        {
-            break;
-        }
+    }
+    else
+    {
+        /* MISRA C, do nothing. */
     }
 
     return result;
