@@ -2452,16 +2452,11 @@ STATIC void CanTp_AbortTxSession(CanTp_NSduType *pNSdu, const uint8 instanceId, 
     }
 }
 
-STATIC void CanTp_TransmitRxCANData(CanTp_NSduType *pNSdu)
+STATIC Std_ReturnType CanTp_TransmitRxCANData(CanTp_NSduType *pNSdu)
 {
     CanTp_StartNetworkLayerTimeout(pNSdu, CANTP_I_N_AR);
 
-    if (CanIf_Transmit(pNSdu->rx.cfg->rxNSduRef, &pNSdu->rx.can_if_pdu_info) != E_OK)
-    {
-        /* SWS_CanTp_00342 CanTp shall terminate the current reception connection when
-         * CanIf_Transmit() returns E_NOT_OK when transmitting an FC. */
-        CanTp_AbortRxSession(pNSdu, CANTP_I_NONE, FALSE);
-    }
+    return CanIf_Transmit(pNSdu->rx.cfg->rxNSduRef, &pNSdu->rx.can_if_pdu_info);
 }
 
 STATIC void CanTp_TransmitTxCANData(CanTp_NSduType *pNSdu)
@@ -2516,15 +2511,29 @@ STATIC void CanTp_PerformStepRx(CanTp_NSduType *pNSdu)
                 {
                     case CANTP_RX_FRAME_STATE_FC_TX_CONFIRMATION:
                     {
-                        CanTp_TransmitRxCANData(p_n_sdu);
+                        if (CanTp_TransmitRxCANData(p_n_sdu) != E_OK)
+                        {
+                            /* SWS_CanTp_00342 CanTp shall terminate the current reception
+                             * connection when CanIf_Transmit() returns E_NOT_OK when transmitting
+                             * an FC. */
+                            CanTp_AbortRxSession(pNSdu, CANTP_I_NONE, FALSE);
+                        }
 
                         break;
                     }
                     case CANTP_RX_FRAME_STATE_FC_OVFLW_TX_CONFIRMATION:
                     {
-                        CanTp_TransmitRxCANData(p_n_sdu);
-
-                        CanTp_AbortRxSession(pNSdu, CANTP_I_N_BUFFER_OVFLW, FALSE);
+                        if (CanTp_TransmitRxCANData(p_n_sdu) != E_OK)
+                        {
+                            /* SWS_CanTp_00342 CanTp shall terminate the current reception
+                             * connection when CanIf_Transmit() returns E_NOT_OK when transmitting
+                             * an FC. */
+                            CanTp_AbortRxSession(pNSdu, CANTP_I_NONE, FALSE);
+                        }
+                        else
+                        {
+                            CanTp_AbortRxSession(pNSdu, CANTP_I_N_BUFFER_OVFLW, FALSE);
+                        }
 
                         break;
                     }
