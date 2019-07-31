@@ -1250,7 +1250,7 @@ def test_sws_00353():
     handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_OVFL
     handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_single_frame()))
     handle.lib.CanTp_MainFunction()
-    handle.can_if_transmit.assert_not_called()
+    assert_rx_session_aborted()
 
 
 class TestSWS00355:

@@ -1603,9 +1603,17 @@ CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 
             break;
         }
+        case BUFREQ_E_OVFL:
+        {
+            /* SWS_CanTp_00353: After the reception of a Single Frame, if the function
+             * PduR_CanTpStartOfReception()returns BUFREQ_E_OVFL to the CanTp module, the CanTp
+             * module shall abort the N-SDU reception. */
+            result = CANTP_FRAME_STATE_ABORT;
+
+            break;
+        }
         case BUFREQ_E_NOT_OK:
         case BUFREQ_E_BUSY:
-        case BUFREQ_E_OVFL:
         default:
         {
             break;
