@@ -896,6 +896,64 @@ def test_sws_00314(af, data_size):
     assert_rx_session_aborted(handle)
 
 
+class TestSWS00315:
+    """
+    The CanTp module shall start a timeout observation for N_Bs time at confirmation of the FF transmission, last CF of
+    a block transmission and at each indication of FC with FS=WT (i.e. time until reception of the next FC).
+    """
+
+    @pytest.mark.parametrize('n_bs', n_bs_timeouts)
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    def test_first_frame_confirmation(self, n_bs, data_size):
+        config = DefaultSender(n_bs=n_bs)
+        handle = CanTpTest(config)
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * data_size))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        for _ in range(int(n_bs / config.main_period)):
+            handle.lib.CanTp_MainFunction()
+        handle.det_report_error.assert_not_called()
+        handle.lib.CanTp_MainFunction()
+        handle.det_report_error.assert_called_once_with(ANY, handle.define('CANTP_I_N_BS'), ANY, handle.define('CANTP_E_TX_COM'))
+
+    @pytest.mark.parametrize('af', addressing_formats)
+    @pytest.mark.parametrize('bs', block_sizes)
+    @pytest.mark.parametrize('n_bs', n_bs_timeouts)
+    def test_last_consecutive_frame_confirmation(self, af, bs, n_bs):
+        if bs == 0:
+            pytest.skip(msg='if BS is set to 0, no FC frame is awaited.')
+        config = DefaultSender(af=af, n_bs=n_bs)
+        handle = CanTpTest(config)
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * (handle.get_payload_size(af, 'FF') +
+                                                                          bs * handle.get_payload_size(af, 'CF') + 1)))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK')) # sent FF
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(bs=bs, af=af)))
+        for _ in range(bs):
+            handle.lib.CanTp_MainFunction()
+            handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        for _ in range(int(n_bs / config.main_period)):
+            handle.lib.CanTp_MainFunction()
+        handle.det_report_error.assert_not_called()
+        handle.lib.CanTp_MainFunction()
+        handle.det_report_error.assert_called_once_with(ANY, handle.define('CANTP_I_N_BS'), ANY, handle.define('CANTP_E_TX_COM'))
+
+    @pytest.mark.parametrize('n_bs', n_bs_timeouts)
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    def test_flow_control_wait_indication(self, n_bs, data_size):
+        config = DefaultSender(n_bs=n_bs)
+        handle = CanTpTest(config)
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * data_size))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(fs='wait')))
+        for _ in range(int(n_bs / config.main_period)):
+            handle.lib.CanTp_MainFunction()
+        handle.det_report_error.assert_not_called()
+        handle.lib.CanTp_MainFunction()
+        handle.det_report_error.assert_called_once_with(ANY, handle.define('CANTP_I_N_BS'), ANY, handle.define('CANTP_E_TX_COM'))
+
+
 def test_sws_00318():
     """
     After the reception of a First Frame, if the function PduR_CanTpStartOfReception() returns BUFREQ_E_OVFL to the

@@ -240,7 +240,7 @@ class CanTpTest(object):
         return tmp_return
 
     @staticmethod
-    def get_receiver_flow_control(flow_status='continue to send',
+    def get_receiver_flow_control(fs='continue to send',
                                   bs=1,
                                   st_min=0,
                                   af='CANTP_STANDARD',
@@ -256,7 +256,7 @@ class CanTpTest(object):
         }[af]
         pci = [(3 << 4) | {'continue to send': 0,
                            'wait': 1,
-                           'overflow': 2}[flow_status],
+                           'overflow': 2}[fs],
                bs,
                st_min]
         return n_ai + pci + (([padding] * (4 if n_ai else 5)) if padding is not None else [])
