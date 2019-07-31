@@ -511,7 +511,7 @@ CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 #include "CanTp_MemMap.h"
 
 static CanTp_FrameStateType
-CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo);
+CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -1858,7 +1858,8 @@ CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
     return result;
 }
 
-static CanTp_FrameStateType CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo)
+static CanTp_FrameStateType
+CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize)
 {
     CanTp_FrameStateType result;
     CanTp_NSduType *p_n_sdu = pNSdu;
@@ -1873,9 +1874,9 @@ static CanTp_FrameStateType CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduIn
      * shall be reported to the Default Error Tracer. */
     if (!((pNSdu->tx.cfg->padding == CANTP_ON) && (pPduInfo->SduLength < CANTP_CAN_FRAME_SIZE)))
     {
-        p_n_sdu->tx.fs = (CanTp_FlowStatusType)pPduInfo->SduDataPtr[0x00u] & 0x0Fu;
-        p_n_sdu->tx.bs = pPduInfo->SduDataPtr[0x01u];
-        p_n_sdu->tx.target_st_min = CanTp_DecodeSTMinValue(pPduInfo->SduDataPtr[0x02u]);
+        p_n_sdu->tx.fs = (CanTp_FlowStatusType)pPduInfo->SduDataPtr[nAeSize] & 0x0Fu;
+        p_n_sdu->tx.bs = pPduInfo->SduDataPtr[nAeSize + 0x01u];
+        p_n_sdu->tx.target_st_min = CanTp_DecodeSTMinValue(pPduInfo->SduDataPtr[nAeSize + 0x02u]);
 
         /* SWS_CanTp_00315: the CanTp module shall start a timeout observation for N_Bs time at
          * confirmation of the FF transmission, last CF of a block transmission and at each
@@ -2075,7 +2076,7 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo)
                     {
                         if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_FC_RX_INDICATION)
                         {
-                            next_state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo);
+                            next_state = CanTp_LDataIndTFC(p_n_sdu, pPduInfo, n_ae_field_size);
                         }
                         else
                         {
