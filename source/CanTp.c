@@ -2113,13 +2113,11 @@ void CanTp_TxConfirmation(PduIdType txPduId, Std_ReturnType result)
         {
             if ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u)
             {
+                next_state = CANTP_FRAME_STATE_INVALID;
+
                 if (p_n_sdu->rx.shared.state == CANTP_RX_FRAME_STATE_FC_TX_CONFIRMATION)
                 {
                     next_state = CanTp_LDataConRFC(p_n_sdu);
-                }
-                else
-                {
-                    next_state = CANTP_FRAME_STATE_INVALID;
                 }
 
                 if (next_state != CANTP_FRAME_STATE_INVALID)
@@ -2130,6 +2128,8 @@ void CanTp_TxConfirmation(PduIdType txPduId, Std_ReturnType result)
 
             if ((p_n_sdu->dir & CANTP_DIRECTION_TX) != 0x00u)
             {
+                next_state = CANTP_FRAME_STATE_INVALID;
+
                 if (p_n_sdu->tx.shared.state == CANTP_TX_FRAME_STATE_SF_TX_CONFIRMATION)
                 {
                     next_state = CanTp_LDataConTSF(p_n_sdu);
@@ -2144,7 +2144,7 @@ void CanTp_TxConfirmation(PduIdType txPduId, Std_ReturnType result)
                 }
                 else
                 {
-                    next_state = CANTP_FRAME_STATE_INVALID;
+                    /* MISRA C, do nothing. */
                 }
 
                 if (next_state != CANTP_FRAME_STATE_INVALID)
@@ -2232,29 +2232,22 @@ static Std_ReturnType CanTp_DecodeNAIValue(const CanTp_AddressingFormatType af,
 
     if (pPduLength != NULL_PTR)
     {
-        switch (af)
+        if ((af == CANTP_EXTENDED) ||
+            (af == CANTP_MIXED) ||
+            (af == CANTP_MIXED29BIT))
         {
-            case CANTP_EXTENDED:
-            case CANTP_MIXED:
-            case CANTP_MIXED29BIT:
-            {
-                *pPduLength = 0x01u;
-                result = E_OK;
-
-                break;
-            }
-            case CANTP_STANDARD:
-            case CANTP_NORMALFIXED:
-            {
-                *pPduLength = 0x00u;
-                result = E_OK;
-
-                break;
-            }
-            default:
-            {
-                break;
-            }
+            *pPduLength = 0x01u;
+            result = E_OK;
+        }
+        else if ((af == CANTP_STANDARD) ||
+            (af == CANTP_NORMALFIXED))
+        {
+            *pPduLength = 0x00u;
+            result = E_OK;
+        }
+        else
+        {
+            /* MISRA C, do nothing. */
         }
     }
 
