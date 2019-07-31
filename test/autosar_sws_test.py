@@ -263,19 +263,18 @@ class TestSWS00057:
     @pytest.mark.parametrize('channel_mode', channel_modes)
     def test_unexpected_cf_reception_while_segmented_receive_is_in_progress(self, af, channel_mode):
         handle = CanTpTest(DefaultReceiver(af=af, ch_mode=channel_mode))
-        rx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + 1)
+        rx_data = (dummy_byte,) * (handle.get_payload_size(af, 'SF') + handle.get_payload_size(af, 'CF') * 2)
         ff, cfs = handle.get_receiver_multi_frame(af=af, payload=rx_data)
         cf_ok = list(cfs[0])
         cf_ko = list(cfs[0])
-        cf_ko[8 - handle.get_payload_size(af, 'CF') - 1] = 34
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
-        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cf_ko))
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cf_ok))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cf_ko))
         handle.pdu_r_can_tp_start_of_reception.assert_called_once()
         assert handle.pdu_r_can_tp_copy_rx_data.call_count == 2
-        handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_OK'))
+        handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
 
     @pytest.mark.parametrize('af', addressing_formats)
     @pytest.mark.parametrize('channel_mode', channel_modes)
