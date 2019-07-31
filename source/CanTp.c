@@ -401,6 +401,14 @@ STATIC PduLengthType CanTp_DecodeDLValue(const CanTp_NPciType frameType,
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
+STATIC void CanTp_AbortRxSession(CanTp_NSduType *pNSdu, uint8 instanceId, boolean confirm);
+
+#define CanTp_STOP_SEC_CODE_FAST
+#include "CanTp_MemMap.h"
+
+#define CanTp_START_SEC_CODE_FAST
+#include "CanTp_MemMap.h"
+
 STATIC void CanTp_AbortTxSession(CanTp_NSduType *pNSdu, uint8 instanceId, boolean confirm);
 
 #define CanTp_STOP_SEC_CODE_FAST
