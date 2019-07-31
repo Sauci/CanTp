@@ -1771,8 +1771,6 @@ CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 
     if (p_n_sdu->rx.shared.taskState == CANTP_PROCESSING)
     {
-        /* If awaited, process the CF N_PDU in the on-going reception and perform the required
-         * checks (e.g. SN in right order), otherwise ignore it. */
         if ((pPduInfo->SduDataPtr[nAeSize] & 0x0Fu) == ((p_n_sdu->rx.sn + 0x01u) & 0x0Fu))
         {
             header_size = CANTP_CF_PCI_FIELD_SIZE + nAeSize;
@@ -1833,6 +1831,15 @@ CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
                     break;
                 }
             }
+        }
+        else
+        {
+            /* SWS_CanTp_00314] ⌈The CanTp shall check the correctness of each SN received during a
+             * segmented reception. In case of wrong SN received the CanTp module shall abort
+             * reception and notify the upper layer of this failure by calling the indication
+             * function PduR_CanTpRxIndication() with the result E_NOT_OK. */
+            result = CANTP_FRAME_STATE_ABORT;
+            PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
         }
     }
 

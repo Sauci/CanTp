@@ -875,6 +875,26 @@ class TestSWS00305:
         handle.det_report_error.assert_not_called()
 
 
+@pytest.mark.parametrize('af', addressing_formats)
+@pytest.mark.parametrize('data_size', multi_frames_sizes)
+def test_sws_00314(af, data_size):
+    """
+    The CanTp shall check the correctness of each SN received during a segmented reception. In case
+    of wrong SN received the CanTp module shall abort reception and notify the upper layer of this
+    failure by calling the indication function PduR_CanTpRxIndication() with the result E_NOT_OK.
+    """
+    handle = CanTpTest(DefaultReceiver(af=af))
+    ff, cfs = handle.get_receiver_multi_frame(payload=(dummy_byte,) * data_size, af=af)
+    pci_byte = cfs[0][8 - handle.get_payload_size(af, 'CF') - 1]
+    cfs[0][8 - handle.get_payload_size(af, 'CF') - 1] = (pci_byte & 0xF0) | (((pci_byte & 0x0F) + 1) & 0x0F)
+    handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+    handle.lib.CanTp_MainFunction()
+    handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+    handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cfs[0]))
+    handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+    assert_rx_session_aborted()
+
+
 def test_sws_00318():
     """
     After the reception of a First Frame, if the function PduR_CanTpStartOfReception() returns BUFREQ_E_OVFL to the
