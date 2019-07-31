@@ -1584,8 +1584,8 @@ CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 
                         break;
                     }
-                    case BUFREQ_E_BUSY:
                     case BUFREQ_E_OVFL:
+                    case BUFREQ_E_BUSY:
                     default:
                     {
                         /* TODO: check behavior to adopt in this case... */
@@ -1679,17 +1679,6 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
                                        p_n_sdu->rx.buf.size,
                                        &p_n_sdu->rx.buf.rmng))
     {
-        case BUFREQ_E_OVFL:
-        {
-            /* SWS_CanTp_00318: After the reception of a First Frame, if the function
-             * PduR_CanTpStartOfReception() returns BUFREQ_E_OVFL to the CanTp module, the CanTp
-             * module shall send a Flow Control N-PDU with overflow status (FC(OVFLW)) and abort the
-             * N-SDU reception. */
-            result = CANTP_RX_FRAME_STATE_FC_TX_REQUEST;
-            p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_OVFLW;
-
-            break;
-        }
         case BUFREQ_OK:
         {
             /* SWS_CanTp_00339: After the reception of a First Frame or Single Frame, if the
@@ -1740,8 +1729,8 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 
                         break;
                     }
-                    case BUFREQ_E_BUSY:
                     case BUFREQ_E_OVFL:
+                    case BUFREQ_E_BUSY:
                     default:
                     {
                         /* TODO: check behavior to adopt in this case... */
@@ -1759,6 +1748,17 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
              * the CanTp module shall abort the reception of this N-SDU. No Flow Control will be
              * sent and PduR_CanTpRxIndication() will not be called in this case. */
             result = CANTP_FRAME_STATE_ABORT;
+
+            break;
+        }
+        case BUFREQ_E_OVFL:
+        {
+            /* SWS_CanTp_00318: After the reception of a First Frame, if the function
+             * PduR_CanTpStartOfReception() returns BUFREQ_E_OVFL to the CanTp module, the CanTp
+             * module shall send a Flow Control N-PDU with overflow status (FC(OVFLW)) and abort the
+             * N-SDU reception. */
+            result = CANTP_RX_FRAME_STATE_FC_TX_REQUEST;
+            p_n_sdu->rx.fs = CANTP_FLOW_STATUS_TYPE_OVFLW;
 
             break;
         }
@@ -1835,8 +1835,8 @@ CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 
                     break;
                 }
-                case BUFREQ_E_BUSY:
                 case BUFREQ_E_OVFL:
+                case BUFREQ_E_BUSY:
                 default:
                 {
                     /* TODO: check behavior to adopt in this case... */
@@ -2751,8 +2751,8 @@ static BufReq_ReturnType CanTp_CopyTxPayload(CanTp_NSduType *pNSdu, PduLengthTyp
 
             break;
         }
-        case BUFREQ_E_BUSY:
         case BUFREQ_E_OVFL:
+        case BUFREQ_E_BUSY:
         default:
         {
             break;
