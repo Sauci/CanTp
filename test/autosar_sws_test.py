@@ -9,14 +9,12 @@ from .parameter import *
 from .ffi import CanTpTest
 
 
-def assert_rx_session_aborted():
-    # TODO: find a way how to evaluate this statement.
-    assert True
+def assert_rx_session_aborted(handle):
+    assert handle.lib.CanTp_AbortedRxSession == handle.define('TRUE')
 
 
-def assert_tx_session_aborted():
-    # TODO: find a way how to evaluate this statement.
-    assert True
+def assert_tx_session_aborted(handle):
+    assert handle.lib.CanTp_AbortedTxSession == handle.define('TRUE')
 
 
 class TestSWS00031:
@@ -325,9 +323,10 @@ class TestSWS00081:
         handle = CanTpTest(DefaultReceiver())
         handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_NOT_OK
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_single_frame()))
-        handle.pdu_r_can_tp_rx_indication.assert_not_called()
         handle.lib.CanTp_MainFunction()
+        assert_rx_session_aborted(handle)
         handle.can_if_transmit.assert_not_called()
+        handle.pdu_r_can_tp_rx_indication.assert_not_called()
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     def test_first_frame(self, data_size):
@@ -353,7 +352,7 @@ class TestSWS00087:
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * data_size))
         handle.lib.CanTp_MainFunction()
         handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
-        assert_tx_session_aborted()
+        assert_tx_session_aborted(handle)
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     def test_multi_frame(self, data_size):
@@ -362,7 +361,7 @@ class TestSWS00087:
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * data_size))
         handle.lib.CanTp_MainFunction()
         handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
-        assert_tx_session_aborted()
+        assert_tx_session_aborted(handle)
 
 
 class TestSWS00093:
@@ -429,6 +428,7 @@ def test_sws_00223(wft_max):
     handle.lib.CanTp_MainFunction()
     assert handle.can_if_transmit.call_count == wft_max
     handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+    assert_rx_session_aborted(handle)
 
 
 @pytest.mark.parametrize('bs', block_sizes)
@@ -598,6 +598,7 @@ def test_sws_00256():
     handle = CanTpTest(DefaultSender())
     handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,)))
     assert handle.lib.CanTp_CancelTransmit(0) == handle.define('E_OK')
+    assert_tx_session_aborted(handle)
 
 
 class TestSWS00260:
@@ -633,6 +634,7 @@ def test_sws_00261(af):
     handle.lib.CanTp_MainFunction()
     handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
     assert handle.lib.CanTp_CancelReceive(0) == handle.define('E_OK')
+    assert_rx_session_aborted(handle)
 
 
 class TestSWS00262:
@@ -686,7 +688,7 @@ class TestSWS00271:
         sf = handle.get_receiver_single_frame()
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(sf))
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
-        assert_rx_session_aborted()
+        assert_rx_session_aborted(handle)
 
     def test_first_frame(self):
         handle = CanTpTest(DefaultReceiver())
@@ -694,7 +696,7 @@ class TestSWS00271:
         ff, _ = handle.get_receiver_multi_frame()
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
-        assert_rx_session_aborted()
+        assert_rx_session_aborted(handle)
 
     def test_consecutive_frame(self):
         handle = CanTpTest(DefaultReceiver())
@@ -705,7 +707,7 @@ class TestSWS00271:
         handle.pdu_r_can_tp_copy_rx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cfs[0]))
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
-        assert_rx_session_aborted()
+        assert_rx_session_aborted(handle)
 
 
 class TestSWS00281:
@@ -891,7 +893,7 @@ def test_sws_00314(af, data_size):
     handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
     handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cfs[0]))
     handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
-    assert_rx_session_aborted()
+    assert_rx_session_aborted(handle)
 
 
 def test_sws_00318():
@@ -909,6 +911,7 @@ def test_sws_00318():
     handle.det_report_error.assert_called_once_with(ANY, handle.define('CANTP_I_N_BUFFER_OVFLW'), ANY, handle.define('CANTP_E_RX_COM'))
     handle.lib.CanTp_MainFunction()
     handle.can_if_transmit.assert_called_once()
+    assert_rx_session_aborted(handle)
 
 
 class TestSWS00319:
@@ -1030,6 +1033,7 @@ class TestSWS00339:
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
         handle.lib.CanTp_MainFunction()
         handle.can_if_transmit.assert_not_called()
+        assert_rx_session_aborted(handle)
 
     @pytest.mark.parametrize('af', addressing_formats)
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
@@ -1042,11 +1046,12 @@ class TestSWS00339:
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
         handle.lib.CanTp_MainFunction()
         handle.can_if_transmit.assert_not_called()
+        assert_rx_session_aborted(handle)
 
 
 def test_sws_00342():
     """
-    CanTp shall terminate the current reception connection when CanIf_Transmit()returns E_NOT_OK when transmitting an
+    CanTp shall terminate the current reception connection when CanIf_Transmit() returns E_NOT_OK when transmitting an
     FC.
     """
 
@@ -1056,7 +1061,7 @@ def test_sws_00342():
     handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
     handle.lib.CanTp_MainFunction()
     handle.can_if_transmit.assert_called_once()
-    assert_rx_session_aborted()
+    assert_rx_session_aborted(handle)
 
 
 class TestSWS00343:
@@ -1072,7 +1077,7 @@ class TestSWS00343:
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size))
         handle.lib.CanTp_MainFunction()
         handle.can_if_transmit.assert_called_once()
-        assert_tx_session_aborted()
+        assert_tx_session_aborted(handle)
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     def test_first_frame(self, data_size):
@@ -1081,7 +1086,7 @@ class TestSWS00343:
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size))
         handle.lib.CanTp_MainFunction()
         handle.can_if_transmit.assert_called_once()
-        assert_tx_session_aborted()
+        assert_tx_session_aborted(handle)
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     def test_consecutive_frame(self, data_size):
@@ -1094,7 +1099,7 @@ class TestSWS00343:
         handle.can_if_transmit.return_value = handle.define('E_NOT_OK')
         handle.lib.CanTp_MainFunction()
         assert handle.can_if_transmit.call_count == 2
-        assert_tx_session_aborted()
+        assert_tx_session_aborted(handle)
 
 
 @pytest.mark.parametrize('af', addressing_formats)
@@ -1135,6 +1140,7 @@ class TestSWS00346:
         handle.lib.CanTp_RxIndication(0, sf_pdu)
         handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PADDING'))
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        assert_rx_session_aborted(handle)
 
     @pytest.mark.parametrize('af', addressing_formats)
     def test_invalid_first_frame(self, af):
@@ -1145,6 +1151,7 @@ class TestSWS00346:
         handle.lib.CanTp_RxIndication(0, ff_pdu)
         handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PADDING'))
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        assert_rx_session_aborted(handle)
 
     @pytest.mark.parametrize('af', addressing_formats)
     def test_invalid_last_consecutive_frame(self, af):
@@ -1161,6 +1168,7 @@ class TestSWS00346:
         handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PADDING'))
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
         handle.lib.CanTp_MainFunction()
+        assert_rx_session_aborted(handle)
 
 
 class TestSWS00348:
@@ -1212,6 +1220,7 @@ def test_sws_00349(af):
     handle.lib.CanTp_MainFunction()
     handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
     handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_PADDING'))
+    assert_tx_session_aborted(handle)
 
 
 @pytest.mark.skip(reason='I don\'t understand this statement...')
@@ -1250,7 +1259,7 @@ def test_sws_00353():
     handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_OVFL
     handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_single_frame()))
     handle.lib.CanTp_MainFunction()
-    assert_rx_session_aborted()
+    assert_rx_session_aborted(handle)
 
 
 class TestSWS00355:
@@ -1264,7 +1273,7 @@ class TestSWS00355:
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_NOT_OK'))
         handle.lib.CanTp_MainFunction()
-        assert_tx_session_aborted()
+        assert_tx_session_aborted(handle)
 
     def test_receiver_side(self):
         handle = CanTpTest(DefaultReceiver())
@@ -1272,4 +1281,4 @@ class TestSWS00355:
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_NOT_OK'))
-        assert_rx_session_aborted()
+        assert_rx_session_aborted(handle)
