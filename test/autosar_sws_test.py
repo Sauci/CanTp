@@ -1107,6 +1107,43 @@ class TestSWS00339:
         assert_rx_session_aborted(handle)
 
 
+class TestSWS00341:
+    """
+    If the N_Br timer expires and the available buffer size is still not big enough, the CanTp module shall send a new
+    FC(WAIT) to suspend the N- SDU reception and reload the N_Br timer.
+    """
+
+    @pytest.mark.parametrize('af', addressing_formats)
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    @pytest.mark.parametrize('n_br', n_br_timeouts)
+    def test_flow_status_wait(self, af, data_size, n_br):
+        config = DefaultReceiver(af=af, n_br=n_br, bs=0, wft_max=1)
+        handle = CanTpTest(config, rx_buffer_size=data_size - 1)
+        ff, _ = handle.get_receiver_multi_frame((dummy_byte,) * data_size, af=af)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+        for _ in range(int(n_br / config.main_period)):
+            handle.lib.CanTp_MainFunction()
+        handle.can_if_transmit.assert_not_called()
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0 if af in ('CANTP_STANDARD',
+                                                                             'CANTP_NORMALFIXED') else 1] & 0x0F == 1
+
+    @pytest.mark.parametrize('af', addressing_formats)
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    @pytest.mark.parametrize('n_br', n_br_timeouts)
+    def test_flow_status_continue_to_send(self, af, data_size, n_br):
+        config = DefaultReceiver(af=af, n_br=n_br, bs=0, wft_max=1)
+        handle = CanTpTest(config, rx_buffer_size=data_size - 1)
+        ff, _ = handle.get_receiver_multi_frame((dummy_byte,) * data_size, af=af)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+        handle.lib.CanTp_MainFunction()
+        handle.can_if_transmit.assert_not_called()
+        handle.available_rx_buffer = data_size
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0 if af in ('CANTP_STANDARD',
+                                                                             'CANTP_NORMALFIXED') else 1] & 0x0F == 0
+
+
 def test_sws_00342():
     """
     CanTp shall terminate the current reception connection when CanIf_Transmit() returns E_NOT_OK when transmitting an
