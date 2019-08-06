@@ -8,6 +8,7 @@ option(ENABLE_SCA "enable/disable static code analysis." OFF)
 option(ENABLE_DOC "enable/disable documentation generation." OFF)
 set(MISRA_C_VERSION 2012 CACHE STRING "MISRA standard.")
 set(CANTP_CONFIG_FILEPATH ${CMAKE_CURRENT_SOURCE_DIR}/config/can_tp.json CACHE FILEPATH "")
+set(OUTPUT_LIB_NAME CanTp CACHE STRING "default library name")
 
 find_package(PythonInterp 3.6 REQUIRED)
 
@@ -25,9 +26,9 @@ endif ()
 
 add_subdirectory(generated)
 
-add_library(${PROJECT_NAME} STATIC source/CanTp.c)
+add_library(${OUTPUT_LIB_NAME} STATIC source/CanTp.c)
 
-target_compile_definitions(${PROJECT_NAME}
+target_compile_definitions(${OUTPUT_LIB_NAME}
     PRIVATE CANTP_DEV_ERROR_DETECT=$<IF:$<BOOL:${ENABLE_DET}>,STD_ON,STD_OFF>
     PRIVATE CANTP_SW_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
     PRIVATE CANTP_SW_VERSION_MINOR=${PROJECT_VERSION_MINOR}
@@ -44,7 +45,7 @@ target_compile_definitions(${PROJECT_NAME}
     PUBLIC CANTP_READ_PARAMETER_API=STD_ON
     PUBLIC CANTP_BUILD_CFFI_INTERFACE=$<IF:$<BOOL:${ENABLE_TEST}>,STD_ON,STD_OFF>)
 
-target_include_directories(${PROJECT_NAME}
+target_include_directories(${OUTPUT_LIB_NAME}
     PUBLIC interface
     PUBLIC $<$<BOOL:${ENABLE_TEST}>:${CMAKE_CURRENT_SOURCE_DIR}/generated>
     PUBLIC $<$<BOOL:${ENABLE_TEST}>:${CMAKE_CURRENT_SOURCE_DIR}/test/stub>)
@@ -52,7 +53,7 @@ target_include_directories(${PROJECT_NAME}
 if (${ENABLE_TEST})
     ENABLE_TESTing()
 
-    target_link_libraries(${PROJECT_NAME}
+    target_link_libraries(${OUTPUT_LIB_NAME}
         PUBLIC CanTp_PBcfg)
 
     add_test(NAME CanTp_UnitTest
