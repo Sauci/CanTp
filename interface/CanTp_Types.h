@@ -182,7 +182,7 @@ typedef struct
     const uint16 wftMax; /* CanTpRxWftMax. */
 
     /**
-     * @brief separation time minimum between two consecutive frames [μs].
+     * @brief separation time minimum between two consecutive frames [us].
      */
     const uint16 sTMin; /* CanTpSTmin. */
     const CanTp_AddressingFormatType af; /* CanTpRxAddressingFormat. */
@@ -208,19 +208,19 @@ typedef struct
     const CanTp_NAeType *pNAe;
 
     /**
-     * @brief value [μs] of the N_As timeout. N_As is the time for transmission of a CAN frame (any
+     * @brief value [us] of the N_As timeout. N_As is the time for transmission of a CAN frame (any
      * N-PDU) on the part of the sender
      */
     const uint32 nas; /* CanTpNas. */
 
     /**
-     * @brief value [μs] of the N_Bs timeout. N_Bs is the time of transmission until reception of
+     * @brief value [us] of the N_Bs timeout. N_Bs is the time of transmission until reception of
      * the next flow control N-PDU
      */
     const uint32 nbs; /* CanTpNbs. */
 
     /**
-     * @brief value [μs] of the performance requirement of (N_Cs + N_As). N_Cs is the time in which
+     * @brief value [us] of the performance requirement of (N_Cs + N_As). N_Cs is the time in which
      * CanTp is allowed to request the tx data of a consecutive frame N-PDU
      */
     const uint32 ncs; /* CanTpNcs. */
@@ -287,7 +287,7 @@ typedef struct
 typedef struct
 {
     /**
-     * @brief period between two calls of CanTp_MainFunction [μs].
+     * @brief period between two calls of CanTp_MainFunction [us].
      * @note see CanTpMainFunctionPeriod parameter
      */
     const uint32 mainFunctionPeriod;
