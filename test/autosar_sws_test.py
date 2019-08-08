@@ -1147,13 +1147,15 @@ class TestSWS00341:
                                                                              'CANTP_NORMALFIXED') else 1] & 0x0F == 0
 
 
-def test_sws_00342():
+@pytest.mark.parametrize('status', ['BUFREQ_OK', 'BUFREQ_E_OVFL'])
+def test_sws_00342(status):
     """
     CanTp shall terminate the current reception connection when CanIf_Transmit() returns E_NOT_OK when transmitting an
     FC.
     """
 
     handle = CanTpTest(DefaultReceiver())
+    handle.pdu_r_can_tp_start_of_reception.return_value = getattr(handle.lib, status)
     handle.can_if_transmit.return_value = handle.define('E_NOT_OK')
     ff, cfs = handle.get_receiver_multi_frame((0xFF,) * 80, bs=0)
     handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
