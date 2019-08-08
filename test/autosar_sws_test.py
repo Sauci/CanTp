@@ -682,29 +682,32 @@ class TestSWS00271:
     result E_NOT_OK.
     """
 
-    def test_single_frame(self):
+    @pytest.mark.parametrize('result', ['BUFREQ_E_NOT_OK', 'BUFREQ_E_OVFL', 'BUFREQ_E_BUSY'])
+    def test_single_frame(self, result):
         handle = CanTpTest(DefaultReceiver())
-        handle.pdu_r_can_tp_copy_rx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.pdu_r_can_tp_copy_rx_data.return_value = getattr(handle.lib, result)
         sf = handle.get_receiver_single_frame()
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(sf))
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
         assert_rx_session_aborted(handle)
 
-    def test_first_frame(self):
+    @pytest.mark.parametrize('result', ['BUFREQ_E_NOT_OK', 'BUFREQ_E_OVFL', 'BUFREQ_E_BUSY'])
+    def test_first_frame(self, result):
         handle = CanTpTest(DefaultReceiver())
-        handle.pdu_r_can_tp_copy_rx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.pdu_r_can_tp_copy_rx_data.return_value = getattr(handle.lib, result)
         ff, _ = handle.get_receiver_multi_frame()
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
         assert_rx_session_aborted(handle)
 
-    def test_consecutive_frame(self):
+    @pytest.mark.parametrize('result', ['BUFREQ_E_NOT_OK', 'BUFREQ_E_OVFL', 'BUFREQ_E_BUSY'])
+    def test_consecutive_frame(self, result):
         handle = CanTpTest(DefaultReceiver())
         ff, cfs = handle.get_receiver_multi_frame()
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
-        handle.pdu_r_can_tp_copy_rx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.pdu_r_can_tp_copy_rx_data.return_value = getattr(handle.lib, result)
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cfs[0]))
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
         assert_rx_session_aborted(handle)
