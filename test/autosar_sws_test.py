@@ -318,21 +318,23 @@ class TestSWS00081:
     be sent and PduR_CanTpRxIndication() will not be called in this case.
     """
 
+    @pytest.mark.parametrize('status', ['BUFREQ_E_NOT_OK', 'BUFREQ_E_BUSY'])
     @pytest.mark.parametrize('data_size', single_frame_sizes)
-    def test_single_frame(self, data_size):
+    def test_single_frame(self, status, data_size):
         handle = CanTpTest(DefaultReceiver())
-        handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.pdu_r_can_tp_start_of_reception.return_value = getattr(handle.lib, status)
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_single_frame()))
         handle.lib.CanTp_MainFunction()
         assert_rx_session_aborted(handle)
         handle.can_if_transmit.assert_not_called()
         handle.pdu_r_can_tp_rx_indication.assert_not_called()
 
+    @pytest.mark.parametrize('status', ['BUFREQ_E_NOT_OK', 'BUFREQ_E_BUSY'])
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
-    def test_first_frame(self, data_size):
+    def test_first_frame(self, status, data_size):
         handle = CanTpTest(DefaultReceiver())
         ff, _ = handle.get_receiver_multi_frame()
-        handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.pdu_r_can_tp_start_of_reception.return_value = getattr(handle.lib, status)
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
         handle.pdu_r_can_tp_rx_indication.assert_not_called()
         handle.lib.CanTp_MainFunction()
@@ -682,29 +684,32 @@ class TestSWS00271:
     result E_NOT_OK.
     """
 
-    def test_single_frame(self):
+    @pytest.mark.parametrize('result', ['BUFREQ_E_NOT_OK', 'BUFREQ_E_OVFL', 'BUFREQ_E_BUSY'])
+    def test_single_frame(self, result):
         handle = CanTpTest(DefaultReceiver())
-        handle.pdu_r_can_tp_copy_rx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.pdu_r_can_tp_copy_rx_data.return_value = getattr(handle.lib, result)
         sf = handle.get_receiver_single_frame()
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(sf))
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
         assert_rx_session_aborted(handle)
 
-    def test_first_frame(self):
+    @pytest.mark.parametrize('result', ['BUFREQ_E_NOT_OK', 'BUFREQ_E_OVFL', 'BUFREQ_E_BUSY'])
+    def test_first_frame(self, result):
         handle = CanTpTest(DefaultReceiver())
-        handle.pdu_r_can_tp_copy_rx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.pdu_r_can_tp_copy_rx_data.return_value = getattr(handle.lib, result)
         ff, _ = handle.get_receiver_multi_frame()
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
         assert_rx_session_aborted(handle)
 
-    def test_consecutive_frame(self):
+    @pytest.mark.parametrize('result', ['BUFREQ_E_NOT_OK', 'BUFREQ_E_OVFL', 'BUFREQ_E_BUSY'])
+    def test_consecutive_frame(self, result):
         handle = CanTpTest(DefaultReceiver())
         ff, cfs = handle.get_receiver_multi_frame()
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
-        handle.pdu_r_can_tp_copy_rx_data.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.pdu_r_can_tp_copy_rx_data.return_value = getattr(handle.lib, result)
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cfs[0]))
         handle.pdu_r_can_tp_rx_indication.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
         assert_rx_session_aborted(handle)
@@ -1144,13 +1149,15 @@ class TestSWS00341:
                                                                              'CANTP_NORMALFIXED') else 1] & 0x0F == 0
 
 
-def test_sws_00342():
+@pytest.mark.parametrize('status', ['BUFREQ_OK', 'BUFREQ_E_OVFL'])
+def test_sws_00342(status):
     """
     CanTp shall terminate the current reception connection when CanIf_Transmit() returns E_NOT_OK when transmitting an
     FC.
     """
 
     handle = CanTpTest(DefaultReceiver())
+    handle.pdu_r_can_tp_start_of_reception.return_value = getattr(handle.lib, status)
     handle.can_if_transmit.return_value = handle.define('E_NOT_OK')
     ff, cfs = handle.get_receiver_multi_frame((0xFF,) * 80, bs=0)
     handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))

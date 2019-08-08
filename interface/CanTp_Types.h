@@ -184,7 +184,7 @@ typedef struct
     /**
      * @brief separation time minimum between two consecutive frames [us].
      */
-    const uint16 sTMin; /* CanTpSTmin. */
+    const uint32 sTMin; /* CanTpSTmin. */
     const CanTp_AddressingFormatType af; /* CanTpRxAddressingFormat. */
     const CanTp_RxPaddingActivationType padding; /* CanTpRxPaddingActivation. */
     const CanTp_ComTypeType taType; /* CanTpRxTaType. */

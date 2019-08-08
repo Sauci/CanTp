@@ -147,7 +147,7 @@ static const CanTp_RxNSduType CanTp_RxNSduConfig{{'%02X' % configuration_loop.in
         (uint32)((ieee_float){{'%f' % receiver.N_Br_timeout}} * (ieee_float)1000000),
         (uint32)((ieee_float){{'%f' % receiver.N_Cr_timeout}} * (ieee_float)1000000),
         {{'0x%04Xu' % receiver.wait_for_transmission_maximum}},
-        (uint16)((ieee_float){{'%f' % receiver.minimum_separation_time}} * (ieee_float)1000000),
+        (uint32)((ieee_float){{'%f' % receiver.minimum_separation_time}} * (ieee_float)1000000),
         {{receiver.addressing_format}},
         {% if receiver.enable_padding %}CANTP_ON{% else %}CANTP_OFF{% endif %},
         {{receiver.communication_type}},

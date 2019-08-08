@@ -69,6 +69,19 @@ class TestSTMinValue:
         handle.lib.CanTp_MainFunction()
         assert handle.can_if_transmit.call_count == 3  # sent next CF after timeout
 
+    @pytest.mark.parametrize('st_min, expected',
+                             [pytest.param(v, v, id='STmin = {} [ms]'.format(v)) for v in range(0x00, 0x7F)] +
+                             [pytest.param(v, 127, id='STmin = reserved (0x{:02X})'.format(v)) for v in
+                             (i + 0x80 for i in range(0xF0 - 0x80 + 0x01))] +
+                             [pytest.param(0xF1 + v, 0xF1 + v, id='STmin = {} [us]'.format(100 + v * 100)) for v in range(9)] +
+                             [pytest.param(v, 127, id='STmin = reserved (0x{:02X})'.format(v)) for v in
+                             (i + 0xFA for i in range(0xFF - 0xFA + 0x01))])
+    def test_receiver_side(self, st_min, expected):
+        handle = CanTpTest(DefaultReceiver(st_min=st_min))
+        ff, _ = handle.get_receiver_multi_frame()
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args[0][1].SduDataPtr[2] == expected
 
 
 @pytest.mark.skip('non-deterministic fails, should be investigated...')
