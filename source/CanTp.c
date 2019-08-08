@@ -256,11 +256,6 @@ LOCAL_INLINE uint32 CanTp_ConvertUsToUs(uint32 timeout)
     return timeout;
 }
 
-LOCAL_INLINE uint32 CanTp_ConvertUsToMs(uint32 timeout)
-{
-    return timeout / 1000u;
-}
-
 LOCAL_INLINE void CanTp_ReportError(uint8 instanceId, uint8 apiId, uint8 errorId)
 {
 #if (CANTP_DEV_ERROR_DETECT == STD_ON)
