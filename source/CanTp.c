@@ -184,7 +184,7 @@ typedef struct
          * CanTp_ChangeParameter.
          */
         struct {
-            uint16 st_min;
+            uint32 st_min;
             uint8 bs;
         } m_param;
     } shared;
@@ -251,14 +251,14 @@ LOCAL_INLINE uint32 CanTp_ConvertMsToUs(uint32 timeout)
     return timeout * 1000u;
 }
 
-LOCAL_INLINE uint32 CanTp_ConvertUsToMs(uint32 timeout)
-{
-    return timeout / 1000u;
-}
-
 LOCAL_INLINE uint32 CanTp_ConvertUsToUs(uint32 timeout)
 {
     return timeout;
+}
+
+LOCAL_INLINE uint32 CanTp_ConvertUsToMs(uint32 timeout)
+{
+    return timeout / 1000u;
 }
 
 LOCAL_INLINE void CanTp_ReportError(uint8 instanceId, uint8 apiId, uint8 errorId)
@@ -352,7 +352,7 @@ static Std_ReturnType CanTp_EncodeNAIValue(const CanTp_AddressingFormatType af,
  * @param data [in]: the raw minimum separation time (8 bits STmin value)
  * @return decoded minimum separation time value [us]
  */
-static uint32_least CanTp_DecodeSTMinValue(const uint8 data);
+static uint32 CanTp_DecodeSTMinValue(const uint8 data);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -369,7 +369,7 @@ static uint32_least CanTp_DecodeSTMinValue(const uint8 data);
  * @param value [in]: the minimum separation time [us]
  * @return encoded minimum separation time value (8 bits STmin value)
  */
-static uint8 CanTp_EncodeSTMinValue(uint16 value);
+static uint8 CanTp_EncodeSTMinValue(const uint32 value);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -2304,9 +2304,9 @@ static PduLengthType CanTp_DecodeDLValue(const CanTp_NPciType frameType,
     return result;
 }
 
-static uint32_least CanTp_DecodeSTMinValue(const uint8 data)
+static uint32 CanTp_DecodeSTMinValue(const uint8 data)
 {
-    uint32_least result;
+    uint32 result;
 
     /* ISO15765: the units of STmin in the range 00 hex - 7F hex are absolute milliseconds (ms). */
     if (data <= 0x7Fu)
@@ -2332,25 +2332,25 @@ static uint32_least CanTp_DecodeSTMinValue(const uint8 data)
     return result;
 }
 
-static uint8 CanTp_EncodeSTMinValue(const uint16 value)
+static uint8 CanTp_EncodeSTMinValue(const uint32 value)
 {
     uint8 result;
 
-    if ((value == 100u) ||
-        (value == 200u) ||
-        (value == 300u) ||
-        (value == 400u) ||
-        (value == 500u) ||
-        (value == 600u) ||
-        (value == 700u) ||
-        (value == 800u) ||
-        (value == 900u))
+    if ((value == 241000000u) ||
+        (value == 242000000u) ||
+        (value == 243000000u) ||
+        (value == 244000000u) ||
+        (value == 245000000u) ||
+        (value == 246000000u) ||
+        (value == 247000000u) ||
+        (value == 248000000u) ||
+        (value == 249000000u))
     {
-        result = (uint8)(0x00F0u | (value / 100u));
+        result = (uint8)(value / 1000000u);
     }
-    else if (CanTp_ConvertUsToMs(value) <= 0x7Fu)
+    else if ((value / 1000000u) <= 0x7Fu)
     {
-        result = (uint8)CanTp_ConvertUsToMs(value);
+        result = (uint8)(value / 1000000u);
     }
     else
     {
