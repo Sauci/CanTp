@@ -1584,6 +1584,7 @@ CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 
             break;
         }
+        case BUFREQ_E_BUSY: /* implementation specific. */
         case BUFREQ_E_NOT_OK:
         {
             /* SWS_CanTp_00081: ⌈After the reception of a First Frame or Single Frame, if the
@@ -1603,7 +1604,6 @@ CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 
             break;
         }
-        case BUFREQ_E_BUSY:
         default:
         {
             break;
@@ -1714,6 +1714,7 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 
             break;
         }
+        case BUFREQ_E_BUSY: /* implementation specific. */
         case BUFREQ_E_NOT_OK:
         {
             /* SWS_CanTp_00081: After the reception of a First Frame or Single Frame, if the
@@ -1735,7 +1736,6 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 
             break;
         }
-        case BUFREQ_E_BUSY:
         default:
         {
             break;

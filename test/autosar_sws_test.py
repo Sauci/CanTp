@@ -318,21 +318,23 @@ class TestSWS00081:
     be sent and PduR_CanTpRxIndication() will not be called in this case.
     """
 
+    @pytest.mark.parametrize('status', ['BUFREQ_E_NOT_OK', 'BUFREQ_E_BUSY'])
     @pytest.mark.parametrize('data_size', single_frame_sizes)
-    def test_single_frame(self, data_size):
+    def test_single_frame(self, status, data_size):
         handle = CanTpTest(DefaultReceiver())
-        handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.pdu_r_can_tp_start_of_reception.return_value = getattr(handle.lib, status)
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_single_frame()))
         handle.lib.CanTp_MainFunction()
         assert_rx_session_aborted(handle)
         handle.can_if_transmit.assert_not_called()
         handle.pdu_r_can_tp_rx_indication.assert_not_called()
 
+    @pytest.mark.parametrize('status', ['BUFREQ_E_NOT_OK', 'BUFREQ_E_BUSY'])
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
-    def test_first_frame(self, data_size):
+    def test_first_frame(self, status, data_size):
         handle = CanTpTest(DefaultReceiver())
         ff, _ = handle.get_receiver_multi_frame()
-        handle.pdu_r_can_tp_start_of_reception.return_value = handle.lib.BUFREQ_E_NOT_OK
+        handle.pdu_r_can_tp_start_of_reception.return_value = getattr(handle.lib, status)
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff))
         handle.pdu_r_can_tp_rx_indication.assert_not_called()
         handle.lib.CanTp_MainFunction()
