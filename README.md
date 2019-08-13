@@ -3,7 +3,7 @@
 | [master](https://github.com/Sauci/CanTp/tree/master)   | [![Build Status](https://travis-ci.org/Sauci/CanTp.svg?branch=master)](https://travis-ci.org/Sauci/CanTp)  | [![codecov](https://codecov.io/gh/Sauci/CanTp/branch/master/graph/badge.svg)](https://codecov.io/gh/Sauci/CanTp/branch/master)   |
 | [develop](https://github.com/Sauci/CanTp/tree/develop) | [![Build Status](https://travis-ci.org/Sauci/CanTp.svg?branch=develop)](https://travis-ci.org/Sauci/CanTp) | [![codecov](https://codecov.io/gh/Sauci/CanTp/branch/develop/graph/badge.svg)](https://codecov.io/gh/Sauci/CanTp/branch/develop) |
 
-### CMake definitions
+# CMake definitions
 The following definitions might be set by the user, depending on the needs.
 
 | definition                  | values                           | default                        | description                                                                                                                                                                      |
@@ -18,3 +18,12 @@ The following definitions might be set by the user, depending on the needs.
 | ```ENABLE_DOC```            | ```ON```/```OFF```               | ```OFF```                      | enables/disables generation of [Doxygen](http://www.doxygen.nl/) documentation                                                                                                   |
 
 To use this feature, simply add ```-D<definition>=<value>``` when configuring the build with CMake.
+
+# Notes
+Bellow, a few point to consider when using this module:
+- This module does not support nested interrupts. In other words, the functions 
+```CanTp_RxIndication```, ```CanTp_TxConfirmation``` and ```CanTp_MainFunction``` (if scheduled 
+using timer interrupt) should not be able to interrupt each other.
+
+# TODO
+- Protect variables used in both synchronous and asynchronous APIs.

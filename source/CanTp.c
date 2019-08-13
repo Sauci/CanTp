@@ -234,18 +234,6 @@ typedef struct
  * @{
  */
 
-#ifndef CANTP_ENTER_CRITICAL_SECTION
-
-#define CANTP_ENTER_CRITICAL_SECTION
-
-#endif /* #ifndef CANTP_ENTER_CRITICAL_SECTION */
-
-#ifndef CANTP_EXIT_CRITICAL_SECTION
-
-#define CANTP_EXIT_CRITICAL_SECTION
-
-#endif /* #ifndef CANTP_EXIT_CRITICAL_SECTION */
-
 LOCAL_INLINE uint32 CanTp_ConvertMsToUs(uint32 timeout)
 {
     return timeout * 1000u;
@@ -879,9 +867,8 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
             ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u))
         {
             (void)CanTp_DecodeNAIValue(p_n_sdu->rx.cfg->af, &n_ae_field_size);
-            CANTP_ENTER_CRITICAL_SECTION
+
             task_state = p_n_sdu->rx.shared.taskState;
-            CANTP_EXIT_CRITICAL_SECTION
 
             if (task_state == CANTP_PROCESSING)
             {
@@ -892,9 +879,7 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId)
                  * E_NOT_OK. */
                 if (p_n_sdu->rx.buf.size > ((CANTP_CAN_FRAME_SIZE - CANTP_CF_PCI_FIELD_SIZE) + n_ae_field_size))
                 {
-                    CANTP_ENTER_CRITICAL_SECTION
                     p_n_sdu->rx.shared.taskState = CANTP_WAIT;
-                    CANTP_EXIT_CRITICAL_SECTION
 
                     /* SWS_CanTp_00263: if the CanTp_CancelReceive service has been successfully
                      * executed the CanTp shall call the PduR_CanTpRxIndication with notification
@@ -943,9 +928,7 @@ Std_ReturnType CanTp_ChangeParameter(PduIdType pduId, TPParameterType parameter,
 
         if (CanTp_GetNSduFromPduId(pduId, &p_n_sdu) == E_OK)
         {
-            CANTP_ENTER_CRITICAL_SECTION
             task_state = p_n_sdu->rx.shared.taskState;
-            CANTP_EXIT_CRITICAL_SECTION
 
             if (task_state != CANTP_PROCESSING)
             {
@@ -955,9 +938,7 @@ Std_ReturnType CanTp_ChangeParameter(PduIdType pduId, TPParameterType parameter,
                     {
                         if ((value <= 0xFFu) && ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u))
                         {
-                            CANTP_ENTER_CRITICAL_SECTION
                             p_n_sdu->rx.shared.m_param.st_min = value;
-                            CANTP_EXIT_CRITICAL_SECTION
 
                             tmp_return = E_OK;
                         }
@@ -968,9 +949,7 @@ Std_ReturnType CanTp_ChangeParameter(PduIdType pduId, TPParameterType parameter,
                     {
                         if ((value <= 0xFFu) && ((p_n_sdu->dir & CANTP_DIRECTION_RX) != 0x00u))
                         {
-                            CANTP_ENTER_CRITICAL_SECTION
                             p_n_sdu->rx.shared.m_param.bs = (uint8)value;
-                            CANTP_EXIT_CRITICAL_SECTION
 
                             tmp_return = E_OK;
                         }
@@ -1026,9 +1005,7 @@ Std_ReturnType CanTp_ReadParameter(PduIdType pduId, TPParameterType parameter, u
                     {
                         case TP_STMIN:
                         {
-                            CANTP_ENTER_CRITICAL_SECTION
                             value = (uint16)p_n_sdu->rx.shared.m_param.st_min;
-                            CANTP_EXIT_CRITICAL_SECTION
 
                             *pValue = value;
                             tmp_return = E_OK;
@@ -1037,9 +1014,7 @@ Std_ReturnType CanTp_ReadParameter(PduIdType pduId, TPParameterType parameter, u
                         }
                         case TP_BS:
                         {
-                            CANTP_ENTER_CRITICAL_SECTION
                             value = (uint16)p_n_sdu->rx.shared.m_param.bs;
-                            CANTP_EXIT_CRITICAL_SECTION
 
                             *pValue = value;
                             tmp_return = E_OK;
@@ -1106,9 +1081,7 @@ void CanTp_MainFunction(void)
             {
                 p_n_sdu = &CanTp_Rt[channel_idx].sdu[n_sdu_idx];
 
-                CANTP_ENTER_CRITICAL_SECTION
                 task_state_rx = p_n_sdu->rx.shared.taskState;
-                CANTP_EXIT_CRITICAL_SECTION
 
                 task_state_tx = p_n_sdu->tx.taskState;
 
@@ -1131,7 +1104,6 @@ void CanTp_MainFunction(void)
 
 #endif
 
-                CANTP_ENTER_CRITICAL_SECTION
                 p_n_sdu->n[0x00u] += dt;
                 p_n_sdu->n[0x01u] += dt;
                 p_n_sdu->n[0x02u] += dt;
@@ -1140,7 +1112,6 @@ void CanTp_MainFunction(void)
                 p_n_sdu->n[0x05u] += dt;
                 p_n_sdu->rx.st_min += dt;
                 p_n_sdu->tx.st_min += dt;
-                CANTP_EXIT_CRITICAL_SECTION
             }
         }
     }
@@ -1526,9 +1497,7 @@ CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
     }
     else
     {
-        CANTP_ENTER_CRITICAL_SECTION
         p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;
-        CANTP_EXIT_CRITICAL_SECTION
     }
 
     /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD frames)
@@ -1630,9 +1599,7 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
     }
     else
     {
-        CANTP_ENTER_CRITICAL_SECTION
         p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;
-        CANTP_EXIT_CRITICAL_SECTION
     }
 
     header_size = CANTP_FF_PCI_FIELD_SIZE + nAeSize;
