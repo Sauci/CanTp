@@ -2145,25 +2145,22 @@ static Std_ReturnType CanTp_DecodeNAIValue(const CanTp_AddressingFormatType af,
 {
     Std_ReturnType result = E_NOT_OK;
 
-    if (pPduLength != NULL_PTR)
+    if ((af == CANTP_EXTENDED) ||
+        (af == CANTP_MIXED) ||
+        (af == CANTP_MIXED29BIT))
     {
-        if ((af == CANTP_EXTENDED) ||
-            (af == CANTP_MIXED) ||
-            (af == CANTP_MIXED29BIT))
-        {
-            *pPduLength = 0x01u;
-            result = E_OK;
-        }
-        else if ((af == CANTP_STANDARD) ||
-            (af == CANTP_NORMALFIXED))
-        {
-            *pPduLength = 0x00u;
-            result = E_OK;
-        }
-        else
-        {
-            /* MISRA C, do nothing. */
-        }
+        *pPduLength = 0x01u;
+        result = E_OK;
+    }
+    else if ((af == CANTP_STANDARD) ||
+        (af == CANTP_NORMALFIXED))
+    {
+        *pPduLength = 0x00u;
+        result = E_OK;
+    }
+    else
+    {
+        /* MISRA C, do nothing. */
     }
 
     return result;
@@ -2215,18 +2212,15 @@ static Std_ReturnType CanTp_DecodePCIValue(CanTp_NPciType *pPci, const uint8 *pD
     Std_ReturnType tmp_return = E_NOT_OK;
     CanTp_NPciType pci;
 
-    if ((pPci != NULL_PTR) && (pData != NULL_PTR))
-    {
-        pci = (CanTp_NPciType)((uint8)(pData[0x00u] >> 0x04u) & 0x0Fu);
+    pci = (CanTp_NPciType)((uint8)(pData[0x00u] >> 0x04u) & 0x0Fu);
 
-        if ((pci == CANTP_N_PCI_TYPE_SF) ||
-            (pci == CANTP_N_PCI_TYPE_FF) ||
-            (pci == CANTP_N_PCI_TYPE_CF) ||
-            (pci == CANTP_N_PCI_TYPE_FC))
-        {
-            *pPci = pci;
-            tmp_return = E_OK;
-        }
+    if ((pci == CANTP_N_PCI_TYPE_SF) ||
+        (pci == CANTP_N_PCI_TYPE_FF) ||
+        (pci == CANTP_N_PCI_TYPE_CF) ||
+        (pci == CANTP_N_PCI_TYPE_FC))
+    {
+        *pPci = pci;
+        tmp_return = E_OK;
     }
 
     return tmp_return;
