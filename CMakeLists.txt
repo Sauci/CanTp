@@ -2,10 +2,11 @@ cmake_minimum_required(VERSION 3.8.0)
 
 project(CanTp VERSION 0.1.0 LANGUAGES C)
 
-option(ENABLE_DET "enable/disable development error detection." ON)
-option(ENABLE_TEST "enable/disable tests." ON)
-option(ENABLE_SCA "enable/disable static code analysis." OFF)
-option(ENABLE_DOC "enable/disable documentation generation." OFF)
+option(OS_GET_TIME_API "indicates whether the OSEK API GetTime is available or not." OFF)
+option(ENABLE_DET "enables/disables development error detection." ON)
+option(ENABLE_TEST "enables/disables tests." ON)
+option(ENABLE_SCA "enables/disables static code analysis." OFF)
+option(ENABLE_DOC "enables/disables documentation generation." OFF)
 set(MISRA_C_VERSION 2012 CACHE STRING "MISRA standard.")
 set(CANTP_CONFIG_FILEPATH ${CMAKE_CURRENT_SOURCE_DIR}/config/can_tp.json CACHE FILEPATH "")
 set(OUTPUT_LIB_NAME CanTp CACHE STRING "default library name")
@@ -43,7 +44,8 @@ target_compile_definitions(${OUTPUT_LIB_NAME}
     PUBLIC CANTP_CHANGE_PARAMETER_API=STD_ON
     # ECUC_CanTp_00300
     PUBLIC CANTP_READ_PARAMETER_API=STD_ON
-    PUBLIC CANTP_BUILD_CFFI_INTERFACE=$<IF:$<BOOL:${ENABLE_TEST}>,STD_ON,STD_OFF>)
+    PUBLIC CANTP_BUILD_CFFI_INTERFACE=$<IF:$<BOOL:${ENABLE_TEST}>,STD_ON,STD_OFF>
+    PUBLIC OS_GET_TIME_API=$<IF:$<BOOL:${OS_GET_TIME_API}>,STD_ON,STD_OFF>)
 
 target_include_directories(${OUTPUT_LIB_NAME}
     PUBLIC interface

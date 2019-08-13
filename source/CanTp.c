@@ -1090,6 +1090,7 @@ Std_ReturnType CanTp_ReadParameter(PduIdType pduId, TPParameterType parameter, u
 
 void CanTp_MainFunction(void)
 {
+    uint32 dt;
     uint32_least channel_idx;
     uint32_least n_sdu_idx;
     CanTp_NSduType *p_n_sdu;
@@ -1121,15 +1122,24 @@ void CanTp_MainFunction(void)
                     CanTp_PerformStepTx(p_n_sdu);
                 }
 
+#if (OS_GET_TIME_API == STD_ON)
+
+                dt = GetTime();
+#else
+
+                dt = CanTp_ConfigPtr->mainFunctionPeriod;
+
+#endif
+
                 CANTP_ENTER_CRITICAL_SECTION
-                p_n_sdu->n[0x00u] += CanTp_ConfigPtr->mainFunctionPeriod;
-                p_n_sdu->n[0x01u] += CanTp_ConfigPtr->mainFunctionPeriod;
-                p_n_sdu->n[0x02u] += CanTp_ConfigPtr->mainFunctionPeriod;
-                p_n_sdu->n[0x03u] += CanTp_ConfigPtr->mainFunctionPeriod;
-                p_n_sdu->n[0x04u] += CanTp_ConfigPtr->mainFunctionPeriod;
-                p_n_sdu->n[0x05u] += CanTp_ConfigPtr->mainFunctionPeriod;
-                p_n_sdu->rx.st_min += CanTp_ConfigPtr->mainFunctionPeriod;
-                p_n_sdu->tx.st_min += CanTp_ConfigPtr->mainFunctionPeriod;
+                p_n_sdu->n[0x00u] += dt;
+                p_n_sdu->n[0x01u] += dt;
+                p_n_sdu->n[0x02u] += dt;
+                p_n_sdu->n[0x03u] += dt;
+                p_n_sdu->n[0x04u] += dt;
+                p_n_sdu->n[0x05u] += dt;
+                p_n_sdu->rx.st_min += dt;
+                p_n_sdu->tx.st_min += dt;
                 CANTP_EXIT_CRITICAL_SECTION
             }
         }
