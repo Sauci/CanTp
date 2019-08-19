@@ -167,6 +167,7 @@ typedef struct
 {
     const CanTp_RxNSduType *cfg;
     CanTp_NSduBufferType buf;
+    boolean has_meta_data;
     CanTp_FlowStatusType fs;
     uint32 st_min;
     uint8 bs;
@@ -194,6 +195,7 @@ typedef struct
 {
     const CanTp_TxNSduType *cfg;
     CanTp_NSduBufferType buf;
+    boolean has_meta_data;
     CanTp_FlowStatusType fs;
     uint32 target_st_min;
     uint32 st_min;
@@ -744,6 +746,15 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
         {
             if (CanTp_GetNSduFromPduId(txPduId, &p_n_sdu) == E_OK)
             {
+                if (pPduInfo->MetaDataPtr != NULL_PTR)
+                {
+                    p_n_sdu->rx.has_meta_data = TRUE;
+                }
+                else
+                {
+                    p_n_sdu->rx.has_meta_data = FALSE;
+                }
+
                 /* SWS_CanTp_00206: the function CanTp_Transmit shall reject a request if the CanTp_Transmit
                  * service is called for a N-SDU identifier which is being used in a currently running CAN
                  * Transport Layer session. */
@@ -1499,6 +1510,15 @@ CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
         p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;
     }
 
+    if (pPduInfo->MetaDataPtr != NULL_PTR)
+    {
+        p_n_sdu->rx.has_meta_data = TRUE;
+    }
+    else
+    {
+        p_n_sdu->rx.has_meta_data = FALSE;
+    }
+
     /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD frames)
      * are used for a Rx N-SDU and CanTpRxPaddingActivation is equal to CANTP_ON, then CanTp
      * receives by means of CanTp_RxIndication() call an SF Rx N-PDU belonging to that N-SDU, with a
@@ -1599,6 +1619,15 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
     else
     {
         p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;
+    }
+
+    if (pPduInfo->MetaDataPtr != NULL_PTR)
+    {
+        p_n_sdu->rx.has_meta_data = TRUE;
+    }
+    else
+    {
+        p_n_sdu->rx.has_meta_data = FALSE;
     }
 
     header_size = CANTP_FF_PCI_FIELD_SIZE + nAeSize;
