@@ -167,6 +167,8 @@ typedef struct
 {
     const CanTp_RxNSduType *cfg;
     CanTp_NSduBufferType buf;
+    CanTp_NSaType saved_n_sa;
+    CanTp_NTaType saved_n_ta;
     boolean has_meta_data;
     CanTp_FlowStatusType fs;
     uint32 st_min;
@@ -1510,9 +1512,20 @@ CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
         p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;
     }
 
-    if (pPduInfo->MetaDataPtr != NULL_PTR)
+    /* SWS_CanTp_00330: When CanTp_RxIndication is called for a SF or FF N-PDU with MetaData
+     * (indicating a generic connection), the CanTp module shall store the addressing information
+     * contained in the MetaData of the PDU and use this information for the initiation of the
+     * connection to the upper layer, for transmission of FC N-PDUs and for identification of CF
+     * N-PDUs. The addressing information in the MetaData depends on the addressing format:
+     * - Normal, Extended, Mixed 11 bit: none
+     * - Normal fixed, Mixed 29 bit: N_SA, N_TA */
+    if ((pPduInfo->MetaDataPtr != NULL_PTR) &&
+        ((p_n_sdu->rx.cfg->af == CANTP_NORMALFIXED) || (p_n_sdu->rx.cfg->af == CANTP_MIXED29BIT)))
     {
         p_n_sdu->rx.has_meta_data = TRUE;
+
+        p_n_sdu->rx.saved_n_sa.nSa = pPduInfo->MetaDataPtr[0x00u];
+        p_n_sdu->rx.saved_n_ta.nTa = pPduInfo->MetaDataPtr[0x01u];
     }
     else
     {
@@ -1621,9 +1634,20 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
         p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;
     }
 
-    if (pPduInfo->MetaDataPtr != NULL_PTR)
+    /* SWS_CanTp_00330: When CanTp_RxIndication is called for a SF or FF N-PDU with MetaData
+     * (indicating a generic connection), the CanTp module shall store the addressing information
+     * contained in the MetaData of the PDU and use this information for the initiation of the
+     * connection to the upper layer, for transmission of FC N-PDUs and for identification of CF
+     * N-PDUs. The addressing information in the MetaData depends on the addressing format:
+     * - Normal, Extended, Mixed 11 bit: none
+     * - Normal fixed, Mixed 29 bit: N_SA, N_TA */
+    if ((pPduInfo->MetaDataPtr != NULL_PTR) &&
+        ((p_n_sdu->rx.cfg->af == CANTP_NORMALFIXED) || (p_n_sdu->rx.cfg->af == CANTP_MIXED29BIT)))
     {
         p_n_sdu->rx.has_meta_data = TRUE;
+
+        p_n_sdu->rx.saved_n_sa.nSa = pPduInfo->MetaDataPtr[0x00u];
+        p_n_sdu->rx.saved_n_ta.nTa = pPduInfo->MetaDataPtr[0x01u];
     }
     else
     {
