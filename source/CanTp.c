@@ -199,6 +199,8 @@ typedef struct
     const CanTp_TxNSduType *cfg;
     CanTp_NSduBufferType buf;
     uint8 meta_data[0x04u];
+    CanTp_NSaType saved_n_sa;
+    CanTp_NTaType saved_n_ta;
     boolean has_meta_data;
     CanTp_FlowStatusType fs;
     uint32 target_st_min;
@@ -2433,20 +2435,22 @@ static void CanTp_TransmitTxCANData(CanTp_NSduType *pNSdu)
 {
     CanTp_StartNetworkLayerTimeout(pNSdu, CANTP_I_N_AS);
 
-    /* SWS_CanTp_00332: When calling CanIf_Transmit() for an FC on a generic connection (N-PDU with
-     * MetaData), the CanTp module shall provide the stored addressing information via the MetaData
-     * of the N-PDU. The addressing information in the MetaData depends on the addressing format:
+    /* SWS_CanTp_00335: When calling CanIf_Transmit() for an SF, FF, or CF of a generic connection
+     * (N-PDU with MetaData), the CanTp module shall provide the stored addressing information via
+     * MetaData of the N-PDU. The addressing information in the MetaData depends on the addressing
+     * format:
      * - Normal, Extended, Mixed 11 bit: none
-     * - Normal fixed, Mixed 29 bit: N_SA (saved N_TA), N_TA (saved N_SA) */
-    if (pNSdu->rx.has_meta_data == TRUE)
+     * - Normal fixed, Mixed 29 bit: N_SA, N_TA. */
+    if ((pNSdu->tx.has_meta_data == TRUE) &&
+        ((pNSdu->tx.cfg->af == CANTP_NORMALFIXED) || (pNSdu->tx.cfg->af == CANTP_MIXED29BIT)))
     {
-        pNSdu->rx.meta_data[0x00u] = pNSdu->rx.saved_n_ta.nTa;
-        pNSdu->rx.meta_data[0x01u] = pNSdu->rx.saved_n_sa.nSa;
-        pNSdu->rx.can_if_pdu_info.MetaDataPtr = &pNSdu->rx.meta_data[0x00u];
+        pNSdu->tx.meta_data[0x00u] = pNSdu->tx.saved_n_sa.nSa;
+        pNSdu->tx.meta_data[0x01u] = pNSdu->tx.saved_n_ta.nTa;
+        pNSdu->tx.can_if_pdu_info.MetaDataPtr = &pNSdu->tx.meta_data[0x00u];
     }
     else
     {
-        pNSdu->rx.can_if_pdu_info.MetaDataPtr = NULL_PTR;
+        pNSdu->tx.can_if_pdu_info.MetaDataPtr = NULL_PTR;
     }
 
     if (CanIf_Transmit((PduIdType)pNSdu->tx.cfg->txNSduRef, &pNSdu->tx.can_if_pdu_info) != E_OK)

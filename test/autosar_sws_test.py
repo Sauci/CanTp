@@ -1109,6 +1109,67 @@ class TestSWS00332:
         assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[1] == n_sa
 
 
+class TestSWS00335:
+    """
+    When calling CanIf_Transmit() for an SF, FF, or CF of a generic connection (N-PDU with MetaData), the CanTp module
+    shall provide the stored addressing information via MetaData of the N-PDU. The addressing information in the
+    MetaData depends on the addressing format:
+    - Normal, Extended, Mixed 11 bit: none
+    - Normal fixed, Mixed 29 bit: N_SA, N_TA.
+    """
+
+    @pytest.mark.parametrize('af', ['CANTP_STANDARD', 'CANTP_EXTENDED', 'CANTP_MIXED'])
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_non_segmented_message_for_addressing_formats_without_meta_data(self, af, data_size, n_sa, n_ta):
+        handle = CanTpTest(DefaultSender(af=af))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr == handle.ffi.NULL
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_non_segmented_message_for_addressing_formats_with_meta_data(self, af, data_size, n_sa, n_ta):
+        handle = CanTpTest(DefaultSender(af=af))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[0] == n_sa
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[1] == n_ta
+
+    @pytest.mark.parametrize('af', ['CANTP_STANDARD', 'CANTP_EXTENDED', 'CANTP_MIXED'])
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_segmented_message_for_addressing_formats_without_meta_data(self, af, data_size, n_sa, n_ta):
+        handle = CanTpTest(DefaultSender(af=af))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr == handle.ffi.NULL
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af=af)))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr == handle.ffi.NULL
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_segmented_message_for_addressing_formats_with_meta_data(self, af, data_size, n_sa, n_ta):
+        handle = CanTpTest(DefaultSender(af=af))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[0] == n_sa
+        assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[1] == n_ta
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af=af)))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr[0] == n_sa
+        assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr[1] == n_ta
+
+
 class TestSWS00339:
     """
     After the reception of a First Frame or Single Frame, if the function PduR_CanTpStartOfReception() returns BUFREQ_OK
