@@ -201,6 +201,7 @@ typedef struct
     uint8 meta_data[0x04u];
     CanTp_NSaType saved_n_sa;
     CanTp_NTaType saved_n_ta;
+    CanTp_NAeType saved_n_ae;
     boolean has_meta_data;
     CanTp_FlowStatusType fs;
     uint32 target_st_min;
@@ -783,11 +784,45 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo)
             {
                 if (pPduInfo->MetaDataPtr != NULL_PTR)
                 {
-                    p_n_sdu->rx.has_meta_data = TRUE;
+                    p_n_sdu->tx.has_meta_data = TRUE;
+
+                    /* SWS_CanTp_00334: When CanTp_Transmit is called for an N-SDU with MetaData,
+                     * the CanTp module shall store the addressing information contained in the
+                     * MetaData of the N-SDU and use this information for transmission of SF, FF,
+                     * and CF N-PDUs and for identification of FC N-PDUs. The addressing information
+                     * in the MedataData depends on the addressing format:
+                     * - Normal: none
+                     * - Extended: N_TA
+                     * - Mixed 11 bit: N_AE
+                     * - Normal fixed: N_SA, N_TA
+                     * - Mixed 29 bit: N_SA, N_TA, N_AE. */
+                    if (p_n_sdu->tx.cfg->af == CANTP_EXTENDED)
+                    {
+                        p_n_sdu->tx.saved_n_ta.nTa = pPduInfo->MetaDataPtr[0x00u];
+                    }
+                    else if (p_n_sdu->tx.cfg->af == CANTP_MIXED)
+                    {
+                        p_n_sdu->tx.saved_n_ae.nAe = pPduInfo->MetaDataPtr[0x00u];
+                    }
+                    else if (p_n_sdu->tx.cfg->af == CANTP_NORMALFIXED)
+                    {
+                        p_n_sdu->tx.saved_n_sa.nSa = pPduInfo->MetaDataPtr[0x00u];
+                        p_n_sdu->tx.saved_n_ta.nTa = pPduInfo->MetaDataPtr[0x01u];
+                    }
+                    else if (p_n_sdu->tx.cfg->af == CANTP_MIXED29BIT)
+                    {
+                        p_n_sdu->tx.saved_n_sa.nSa = pPduInfo->MetaDataPtr[0x00u];
+                        p_n_sdu->tx.saved_n_ta.nTa = pPduInfo->MetaDataPtr[0x01u];
+                        p_n_sdu->tx.saved_n_ae.nAe = pPduInfo->MetaDataPtr[0x02u];
+                    }
+                    else
+                    {
+                        /* MISRA C, do nothing. */
+                    }
                 }
                 else
                 {
-                    p_n_sdu->rx.has_meta_data = FALSE;
+                    p_n_sdu->tx.has_meta_data = FALSE;
                 }
 
                 /* SWS_CanTp_00206: the function CanTp_Transmit shall reject a request if the CanTp_Transmit
@@ -1313,8 +1348,8 @@ static CanTp_FrameStateType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
     p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
 
     if (CanTp_SetAddrInfoInPayload(p_n_sdu->tx.cfg->af,
-                                   p_n_sdu->tx.cfg->pNAe,
-                                   p_n_sdu->tx.cfg->pNTa,
+                                   p_n_sdu->tx.has_meta_data ? &p_n_sdu->tx.saved_n_ae : p_n_sdu->tx.cfg->pNAe,
+                                   p_n_sdu->tx.has_meta_data ? &p_n_sdu->tx.saved_n_ta : p_n_sdu->tx.cfg->pNTa,
                                    &p_pdu_info->SduDataPtr[ofs],
                                    &ofs) == E_OK)
     {
@@ -1355,8 +1390,8 @@ static CanTp_FrameStateType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
     p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
 
     if (CanTp_SetAddrInfoInPayload(p_n_sdu->tx.cfg->af,
-                                   p_n_sdu->tx.cfg->pNAe,
-                                   p_n_sdu->tx.cfg->pNTa,
+                                   p_n_sdu->tx.has_meta_data ? &p_n_sdu->tx.saved_n_ae : p_n_sdu->tx.cfg->pNAe,
+                                   p_n_sdu->tx.has_meta_data ? &p_n_sdu->tx.saved_n_ta : p_n_sdu->tx.cfg->pNTa,
                                    &p_pdu_info->SduDataPtr[ofs],
                                    &ofs) == E_OK)
     {
@@ -1400,8 +1435,8 @@ static CanTp_FrameStateType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
     p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
 
     if (CanTp_SetAddrInfoInPayload(p_n_sdu->tx.cfg->af,
-                                   p_n_sdu->tx.cfg->pNAe,
-                                   p_n_sdu->tx.cfg->pNTa,
+                                   p_n_sdu->tx.has_meta_data ? &p_n_sdu->tx.saved_n_ae : p_n_sdu->tx.cfg->pNAe,
+                                   p_n_sdu->tx.has_meta_data ? &p_n_sdu->tx.saved_n_ta : p_n_sdu->tx.cfg->pNTa,
                                    &p_pdu_info->SduDataPtr[ofs],
                                    &ofs) == E_OK)
     {
