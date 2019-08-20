@@ -351,7 +351,7 @@ static PduLengthType CanTp_GetAddrInfoSizeInPayload(const CanTp_AddressingFormat
 static Std_ReturnType CanTp_SetAddrInfoInPayload(const CanTp_AddressingFormatType af,
                                                  const CanTp_NAeType *pNAe,
                                                  const CanTp_NTaType *pNTa,
-                                                 uint8 *pBuffer,
+                                                 uint8 *pPayload,
                                                  PduLengthType *pOfs);
 
 #define CanTp_STOP_SEC_CODE_FAST
@@ -2211,7 +2211,7 @@ static PduLengthType CanTp_GetAddrInfoSizeInPayload(const CanTp_AddressingFormat
 static Std_ReturnType CanTp_SetAddrInfoInPayload(const CanTp_AddressingFormatType af,
                                                  const CanTp_NAeType *pNAe,
                                                  const CanTp_NTaType *pNTa,
-                                                 uint8 *pBuffer,
+                                                 uint8 *pPayload,
                                                  PduLengthType *pOfs)
 {
     Std_ReturnType result = E_NOT_OK;
@@ -2223,14 +2223,14 @@ static Std_ReturnType CanTp_SetAddrInfoInPayload(const CanTp_AddressingFormatTyp
      * Therefore a CAN NSduId may also be related to a N_TA or N_AE value.*/
     if ((af == CANTP_EXTENDED) && (pNTa != NULL_PTR))
     {
-        pBuffer[0x00u] = pNTa->nTa;
+        pPayload[0x00u] = pNTa->nTa;
         ofs += 0x01u;
 
         result = E_OK;
     }
     else if (((af == CANTP_MIXED) || (af == CANTP_MIXED29BIT)) && (pNAe != NULL_PTR))
     {
-        pBuffer[0x00u] = pNAe->nAe;
+        pPayload[0x00u] = pNAe->nAe;
         ofs += 0x01u;
 
         result = E_OK;
