@@ -312,6 +312,33 @@ LOCAL_INLINE boolean CanTp_StoreRxIndicationMetaData(const CanTp_AddressingForma
     return result;
 }
 
+LOCAL_INLINE Std_ReturnType CanTp_VerifyMetaDataInfo(const boolean hasMetaData,
+                                                     const CanTp_AddressingFormatType af,
+                                                     const CanTp_NSaType *pSavedNSa,
+                                                     const CanTp_NTaType *pSavedNTa,
+                                                     const uint8 *pMetaData)
+{
+    boolean result = E_OK;
+
+    if (hasMetaData == TRUE)
+    {
+        if (pMetaData != NULL_PTR)
+        {
+            if (((af == CANTP_NORMALFIXED) || (af == CANTP_MIXED29BIT)) &&
+                ((pSavedNSa->nSa != pMetaData[0x00u]) || (pSavedNTa->nTa != pMetaData[0x01u])))
+            {
+                result = E_NOT_OK;
+            }
+        }
+        else
+        {
+            result = E_NOT_OK;
+        }
+    }
+
+    return result;
+}
+
 /** @} */
 
 
@@ -1906,7 +1933,6 @@ static CanTp_FrameStateType
 CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduLengthType nAeSize)
 {
     CanTp_FrameStateType result;
-    boolean meta_data_ok = TRUE;
     CanTp_NSduType *p_n_sdu = pNSdu;
 
     CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BS);
@@ -1914,25 +1940,11 @@ CanTp_LDataIndTFC(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
     /* SWS_CanTp_00336: When CanTp_RxIndication is called for an FC on a generic connection (N-PDU
      * with MetaData), the CanTp module shall check the addressing information contained in the
      * MetaData against the stored values. */
-    if (p_n_sdu->tx.has_meta_data == TRUE)
-    {
-        if (pPduInfo->MetaDataPtr != NULL_PTR)
-        {
-            if (((p_n_sdu->tx.cfg->af == CANTP_NORMALFIXED) ||
-                 (p_n_sdu->tx.cfg->af == CANTP_MIXED29BIT)) &&
-                ((p_n_sdu->tx.saved_n_sa.nSa != pPduInfo->MetaDataPtr[0x00u]) ||
-                 (p_n_sdu->tx.saved_n_ta.nTa != pPduInfo->MetaDataPtr[0x01u])))
-            {
-                meta_data_ok = FALSE;
-            }
-        }
-        else
-        {
-            meta_data_ok = FALSE;
-        }
-    }
-
-    if (meta_data_ok == TRUE)
+    if (CanTp_VerifyMetaDataInfo(p_n_sdu->tx.has_meta_data,
+                                 p_n_sdu->tx.cfg->af,
+                                 &p_n_sdu->tx.saved_n_sa,
+                                 &p_n_sdu->tx.saved_n_ta,
+                                 &pPduInfo->MetaDataPtr[0x00u]) == E_OK)
     {
         /* SWS_CanTp_00349: if CanTpTxPaddingActivation is equal to CANTP_ON for a Tx N-SDU, and if
          * a FC N-PDU is received for that Tx N-SDU on a ongoing transmission, by means of
