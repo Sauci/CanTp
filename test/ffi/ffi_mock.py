@@ -212,7 +212,8 @@ class CanTpTest(object):
         pdu_info.SduDataPtr = sdu_data
         pdu_info.SduLength = sdu_length
         if meta_data:
-            raise NotImplementedError
+            sdu_meta_data = self.code.ffi.new('uint8 []', list(meta_data))
+            pdu_info.MetaDataPtr = sdu_meta_data
         else:
             pdu_info.MetaDataPtr = self.code.ffi.NULL
         return pdu_info

@@ -1078,6 +1078,37 @@ class TestSWS00329:
             assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].SduDataPtr[idx] == dummy_byte
 
 
+class TestSWS00332:
+    """
+    When calling CanIf_Transmit() for an FC on a generic connection (N-PDU with MetaData), the CanTp module shall
+    provide the stored addressing information via the MetaData of the N-PDU. The addressing information in the MetaData
+    depends on the addressing format:
+    - Normal, Extended, Mixed 11 bit: none
+    - Normal fixed, Mixed 29 bit: N_SA (saved N_TA), N_TA (saved N_SA)
+    """
+
+    @pytest.mark.parametrize('af', ['CANTP_STANDARD', 'CANTP_EXTENDED', 'CANTP_MIXED'])
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_addressing_formats_without_meta_data(self, af, n_sa, n_ta):
+        handle = CanTpTest(DefaultReceiver(af=af))
+        ff, _ = handle.get_receiver_multi_frame(af=af)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr == handle.ffi.NULL
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_addressing_formats_with_meta_data(self, af, n_sa, n_ta):
+        handle = CanTpTest(DefaultReceiver(af=af))
+        ff, _ = handle.get_receiver_multi_frame(af=af)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[0] == n_ta
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[1] == n_sa
+
+
 class TestSWS00339:
     """
     After the reception of a First Frame or Single Frame, if the function PduR_CanTpStartOfReception() returns BUFREQ_OK
