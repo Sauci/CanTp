@@ -1344,12 +1344,25 @@ static CanTp_FrameStateType CanTp_LDataReqTSF(CanTp_NSduType *pNSdu)
     CanTp_NSduType *p_n_sdu = pNSdu;
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
     PduLengthType ofs = 0x00u;
+    const CanTp_NAeType *pNAe;
+    const CanTp_NTaType *pNTa;
+
+    if (p_n_sdu->tx.has_meta_data == TRUE)
+    {
+        pNAe = &p_n_sdu->tx.saved_n_ae;
+        pNTa = &p_n_sdu->tx.saved_n_ta;
+    }
+    else
+    {
+        pNAe = p_n_sdu->tx.cfg->pNAe;
+        pNTa = p_n_sdu->tx.cfg->pNTa;
+    }
 
     p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
 
     if (CanTp_SetAddrInfoInPayload(p_n_sdu->tx.cfg->af,
-                                   p_n_sdu->tx.has_meta_data ? &p_n_sdu->tx.saved_n_ae : p_n_sdu->tx.cfg->pNAe,
-                                   p_n_sdu->tx.has_meta_data ? &p_n_sdu->tx.saved_n_ta : p_n_sdu->tx.cfg->pNTa,
+                                   pNAe,
+                                   pNTa,
                                    &p_pdu_info->SduDataPtr[ofs],
                                    &ofs) == E_OK)
     {
@@ -1386,12 +1399,25 @@ static CanTp_FrameStateType CanTp_LDataReqTFF(CanTp_NSduType *pNSdu)
     CanTp_NSduType *p_n_sdu = pNSdu;
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
     PduLengthType ofs = 0x00u;
+    const CanTp_NAeType *pNAe;
+    const CanTp_NTaType *pNTa;
+
+    if (p_n_sdu->tx.has_meta_data == TRUE)
+    {
+        pNAe = &p_n_sdu->tx.saved_n_ae;
+        pNTa = &p_n_sdu->tx.saved_n_ta;
+    }
+    else
+    {
+        pNAe = p_n_sdu->tx.cfg->pNAe;
+        pNTa = p_n_sdu->tx.cfg->pNTa;
+    }
 
     p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
 
     if (CanTp_SetAddrInfoInPayload(p_n_sdu->tx.cfg->af,
-                                   p_n_sdu->tx.has_meta_data ? &p_n_sdu->tx.saved_n_ae : p_n_sdu->tx.cfg->pNAe,
-                                   p_n_sdu->tx.has_meta_data ? &p_n_sdu->tx.saved_n_ta : p_n_sdu->tx.cfg->pNTa,
+                                   pNAe,
+                                   pNTa,
                                    &p_pdu_info->SduDataPtr[ofs],
                                    &ofs) == E_OK)
     {
@@ -1431,12 +1457,25 @@ static CanTp_FrameStateType CanTp_LDataReqTCF(CanTp_NSduType *pNSdu)
     CanTp_NSduType *p_n_sdu = pNSdu;
     PduInfoType *p_pdu_info = &p_n_sdu->tx.can_if_pdu_info;
     PduLengthType ofs = 0x00u;
+    const CanTp_NAeType *pNAe;
+    const CanTp_NTaType *pNTa;
+
+    if (p_n_sdu->tx.has_meta_data == TRUE)
+    {
+        pNAe = &p_n_sdu->tx.saved_n_ae;
+        pNTa = &p_n_sdu->tx.saved_n_ta;
+    }
+    else
+    {
+        pNAe = p_n_sdu->tx.cfg->pNAe;
+        pNTa = p_n_sdu->tx.cfg->pNTa;
+    }
 
     p_pdu_info->SduDataPtr = &p_n_sdu->tx.buf.can[0x00u];
 
     if (CanTp_SetAddrInfoInPayload(p_n_sdu->tx.cfg->af,
-                                   p_n_sdu->tx.has_meta_data ? &p_n_sdu->tx.saved_n_ae : p_n_sdu->tx.cfg->pNAe,
-                                   p_n_sdu->tx.has_meta_data ? &p_n_sdu->tx.saved_n_ta : p_n_sdu->tx.cfg->pNTa,
+                                   pNAe,
+                                   pNTa,
                                    &p_pdu_info->SduDataPtr[ofs],
                                    &ofs) == E_OK)
     {
