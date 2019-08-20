@@ -280,6 +280,35 @@ LOCAL_INLINE void CanTp_ReportRuntimeError(uint8 instanceId, uint8 apiId, uint8 
 #endif /* #if (CANTP_DEV_ERROR_DETECT == STD_ON) */
 }
 
+LOCAL_INLINE boolean CanTp_StoreRxIndicationMetaData(const CanTp_AddressingFormatType af,
+                                                     const uint8 *pMetaData,
+                                                     CanTp_NSaType *pSavedNSa,
+                                                     CanTp_NTaType *pSavedNTa)
+{
+    boolean result;
+
+    /* SWS_CanTp_00330: When CanTp_RxIndication is called for a SF or FF N-PDU with MetaData
+     * (indicating a generic connection), the CanTp module shall store the addressing information
+     * contained in the MetaData of the PDU and use this information for the initiation of the
+     * connection to the upper layer, for transmission of FC N-PDUs and for identification of CF
+     * N-PDUs. The addressing information in the MetaData depends on the addressing format:
+     * - Normal, Extended, Mixed 11 bit: none
+     * - Normal fixed, Mixed 29 bit: N_SA, N_TA */
+    if ((pMetaData != NULL_PTR) && ((af == CANTP_NORMALFIXED) || (af == CANTP_MIXED29BIT)))
+    {
+        result = TRUE;
+
+        pSavedNSa->nSa = pMetaData[0x00u];
+        pSavedNTa->nTa = pMetaData[0x01u];
+    }
+    else
+    {
+        result = FALSE;
+    }
+
+    return result;
+}
+
 /** @} */
 
 
@@ -1514,25 +1543,10 @@ CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
         p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;
     }
 
-    /* SWS_CanTp_00330: When CanTp_RxIndication is called for a SF or FF N-PDU with MetaData
-     * (indicating a generic connection), the CanTp module shall store the addressing information
-     * contained in the MetaData of the PDU and use this information for the initiation of the
-     * connection to the upper layer, for transmission of FC N-PDUs and for identification of CF
-     * N-PDUs. The addressing information in the MetaData depends on the addressing format:
-     * - Normal, Extended, Mixed 11 bit: none
-     * - Normal fixed, Mixed 29 bit: N_SA, N_TA */
-    if ((pPduInfo->MetaDataPtr != NULL_PTR) &&
-        ((p_n_sdu->rx.cfg->af == CANTP_NORMALFIXED) || (p_n_sdu->rx.cfg->af == CANTP_MIXED29BIT)))
-    {
-        p_n_sdu->rx.has_meta_data = TRUE;
-
-        p_n_sdu->rx.saved_n_sa.nSa = pPduInfo->MetaDataPtr[0x00u];
-        p_n_sdu->rx.saved_n_ta.nTa = pPduInfo->MetaDataPtr[0x01u];
-    }
-    else
-    {
-        p_n_sdu->rx.has_meta_data = FALSE;
-    }
+    p_n_sdu->rx.has_meta_data = CanTp_StoreRxIndicationMetaData(p_n_sdu->rx.cfg->af,
+                                                                pPduInfo->MetaDataPtr,
+                                                                &p_n_sdu->rx.saved_n_sa,
+                                                                &p_n_sdu->rx.saved_n_ta);
 
     /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD frames)
      * are used for a Rx N-SDU and CanTpRxPaddingActivation is equal to CANTP_ON, then CanTp
@@ -1636,25 +1650,10 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
         p_n_sdu->rx.shared.taskState = CANTP_PROCESSING;
     }
 
-    /* SWS_CanTp_00330: When CanTp_RxIndication is called for a SF or FF N-PDU with MetaData
-     * (indicating a generic connection), the CanTp module shall store the addressing information
-     * contained in the MetaData of the PDU and use this information for the initiation of the
-     * connection to the upper layer, for transmission of FC N-PDUs and for identification of CF
-     * N-PDUs. The addressing information in the MetaData depends on the addressing format:
-     * - Normal, Extended, Mixed 11 bit: none
-     * - Normal fixed, Mixed 29 bit: N_SA, N_TA */
-    if ((pPduInfo->MetaDataPtr != NULL_PTR) &&
-        ((p_n_sdu->rx.cfg->af == CANTP_NORMALFIXED) || (p_n_sdu->rx.cfg->af == CANTP_MIXED29BIT)))
-    {
-        p_n_sdu->rx.has_meta_data = TRUE;
-
-        p_n_sdu->rx.saved_n_sa.nSa = pPduInfo->MetaDataPtr[0x00u];
-        p_n_sdu->rx.saved_n_ta.nTa = pPduInfo->MetaDataPtr[0x01u];
-    }
-    else
-    {
-        p_n_sdu->rx.has_meta_data = FALSE;
-    }
+    p_n_sdu->rx.has_meta_data = CanTp_StoreRxIndicationMetaData(p_n_sdu->rx.cfg->af,
+                                                                pPduInfo->MetaDataPtr,
+                                                                &p_n_sdu->rx.saved_n_sa,
+                                                                &p_n_sdu->rx.saved_n_ta);
 
     header_size = CANTP_FF_PCI_FIELD_SIZE + nAeSize;
     payload_size = CANTP_CAN_FRAME_SIZE - header_size;
