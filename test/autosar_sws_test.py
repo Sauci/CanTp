@@ -1186,7 +1186,8 @@ class TestSWS00334:
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
         assert handle.can_if_transmit.call_args_list[0][0][1].SduDataPtr[0] == n_ta
-        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_EXTENDED')))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_EXTENDED'),
+                                                             meta_data=[n_ta]))
         handle.lib.CanTp_MainFunction()
         assert handle.can_if_transmit.call_args_list[1][0][1].SduDataPtr[0] == n_ta
 
@@ -1198,7 +1199,8 @@ class TestSWS00334:
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
         assert handle.can_if_transmit.call_args_list[0][0][1].SduDataPtr[0] == n_ae
-        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_MIXED')))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_MIXED'),
+                                                             meta_data=[n_ae]))
         handle.lib.CanTp_MainFunction()
         assert handle.can_if_transmit.call_args_list[1][0][1].SduDataPtr[0] == n_ae
 
@@ -1212,7 +1214,8 @@ class TestSWS00334:
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
         assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[0] == n_sa
         assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[1] == n_ta
-        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_NORMALFIXED')))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_NORMALFIXED'),
+                                                             meta_data=[n_sa, n_ta]))
         handle.lib.CanTp_MainFunction()
         assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr[0] == n_sa
         assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr[1] == n_ta
@@ -1230,7 +1233,8 @@ class TestSWS00334:
         assert handle.can_if_transmit.call_args_list[0][0][1].SduDataPtr[0] == n_ae
         assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[0] == n_sa
         assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[1] == n_ta
-        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_MIXED29BIT')))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_MIXED29BIT'),
+                                                             meta_data=[n_sa, n_ta, n_ae]))
         handle.lib.CanTp_MainFunction()
         assert handle.can_if_transmit.call_args_list[1][0][1].SduDataPtr[0] == n_ae
         assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr[0] == n_sa
@@ -1277,7 +1281,8 @@ class TestSWS00335:
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
         assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr == handle.ffi.NULL
-        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af=af)))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af=af),
+                                                             meta_data=[n_sa, n_ta]))
         handle.lib.CanTp_MainFunction()
         assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr == handle.ffi.NULL
 
@@ -1292,10 +1297,59 @@ class TestSWS00335:
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
         assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[0] == n_sa
         assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[1] == n_ta
-        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af=af)))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af=af),
+                                                             meta_data=[n_sa, n_ta]))
         handle.lib.CanTp_MainFunction()
         assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr[0] == n_sa
         assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr[1] == n_ta
+
+
+class TestSWS00336:
+    """
+    When CanTp_RxIndication is called for an FC on a generic connection (N-PDU with MetaData), the CanTp module shall
+    check the addressing information contained in the MetaData against the stored values.
+    """
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_invalid_meta_data_pointer(self, af, data_size, n_sa, n_ta):
+        handle = CanTpTest(DefaultSender(af=af))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af=af), meta_data=None))
+        handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_COM'))
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_invalid_n_sa_value(self, af, data_size, n_sa, n_ta):
+        handle = CanTpTest(DefaultSender(af=af))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af=af),
+                                                             meta_data=[n_sa + 1, n_ta]))
+        handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_COM'))
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_invalid_n_ta_value(self, af, data_size, n_sa, n_ta):
+        handle = CanTpTest(DefaultSender(af=af))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af=af),
+                                                             meta_data=[n_sa, n_ta + 1]))
+        handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_COM'))
 
 
 class TestSWS00339:
