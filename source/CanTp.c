@@ -1866,64 +1866,82 @@ CanTp_LDataIndRCF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 
     CanTp_StopNetworkLayerTimeout(p_n_sdu, CANTP_I_N_CR);
 
-    if (p_n_sdu->rx.shared.taskState == CANTP_PROCESSING)
+    /* SWS_CanTp_00333: When CanTp_RxIndication is called for a CF on a generic connection (N-PDU
+     * with MetaData), the CanTp module shall check the addressing information contained in the
+     * MetaData of the N-PDU against the stored values from the FF. */
+    if (CanTp_VerifyMetaDataInfo(p_n_sdu->rx.has_meta_data,
+                                 p_n_sdu->rx.cfg->af,
+                                 &p_n_sdu->rx.saved_n_sa,
+                                 &p_n_sdu->rx.saved_n_ta,
+                                 &pPduInfo->MetaDataPtr[0x00u]) == E_OK)
     {
-        if ((pPduInfo->SduDataPtr[nAeSize] & 0x0Fu) == ((p_n_sdu->rx.sn + 0x01u) & 0x0Fu))
+        if (p_n_sdu->rx.shared.taskState == CANTP_PROCESSING)
         {
-            header_size = CANTP_CF_PCI_FIELD_SIZE + nAeSize;
-
-            p_n_sdu->rx.sn++;
-            p_n_sdu->rx.bs--;
-
-            p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[header_size];
-            p_n_sdu->rx.pdu_r_pdu_info.SduLength = pPduInfo->SduLength - header_size;
-            p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr = NULL_PTR;
-
-            if (CanTp_CopyRxPayload(p_n_sdu) == BUFREQ_OK)
+            if ((pPduInfo->SduDataPtr[nAeSize] & 0x0Fu) == ((p_n_sdu->rx.sn + 0x01u) & 0x0Fu))
             {
-                if (p_n_sdu->rx.buf.size != 0x00u)
-                {
-                    if (p_n_sdu->rx.bs == 0x00u)
-                    {
-                        p_n_sdu->rx.bs = p_n_sdu->rx.shared.m_param.bs;
+                header_size = CANTP_CF_PCI_FIELD_SIZE + nAeSize;
 
-                        /* SWS_CanTp_00166: At the reception of a FF or last CF of a block, the CanTp
-                         * module shall start a time-out N_Br before calling PduR_CanTpStartOfReception
-                         * or PduR_CanTpCopyRxData. */
-                        CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
-                        result = CANTP_RX_FRAME_STATE_FC_TX_REQUEST;
-                    }
-                    else
-                    {
-                        CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_CR);
-                        result = CANTP_RX_FRAME_STATE_CF_RX_INDICATION;
-                    }
-                }
-                else
-                {
-                    PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_OK);
-                    result = CANTP_FRAME_STATE_OK;
-                }
-            }
-            else
-            {
+                p_n_sdu->rx.sn++;
+                p_n_sdu->rx.bs--;
+
+                p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[header_size];
+                p_n_sdu->rx.pdu_r_pdu_info.SduLength = pPduInfo->SduLength - header_size;
+                p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr = NULL_PTR;
+
                 /* SWS_CanTp_00271: If the PduR_CanTpCopyRxData() returns BUFREQ_E_NOT_OK after
                  * reception of a Consecutive Frame in a block the CanTp shall abort the reception
                  * of N-SDU and notify the PduR module by calling the PduR_CanTpRxIndication() with
                  * the result E_NOT_OK. */
-                PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
+                if (CanTp_CopyRxPayload(p_n_sdu) == BUFREQ_OK)
+                {
+                    if (p_n_sdu->rx.buf.size != 0x00u)
+                    {
+                        if (p_n_sdu->rx.bs == 0x00u)
+                        {
+                            p_n_sdu->rx.bs = p_n_sdu->rx.shared.m_param.bs;
+
+                            /* SWS_CanTp_00166: At the reception of a FF or last CF of a block, the
+                             * CanTp module shall start a time-out N_Br before calling
+                             * PduR_CanTpStartOfReception or PduR_CanTpCopyRxData. */
+                            CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_BR);
+                            result = CANTP_RX_FRAME_STATE_FC_TX_REQUEST;
+                        }
+                        else
+                        {
+                            CanTp_StartNetworkLayerTimeout(p_n_sdu, CANTP_I_N_CR);
+                            result = CANTP_RX_FRAME_STATE_CF_RX_INDICATION;
+                        }
+                    }
+                    else
+                    {
+                        PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_OK);
+                        result = CANTP_FRAME_STATE_OK;
+                    }
+                }
+                else
+                {
+                    PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
+                    result = CANTP_FRAME_STATE_ABORT;
+                }
+            }
+            else
+            {
+                /* SWS_CanTp_00314: The CanTp shall check the correctness of each SN received during
+                 * a segmented reception. In case of wrong SN received the CanTp module shall abort
+                 * reception and notify the upper layer of this failure by calling the indication
+                 * function PduR_CanTpRxIndication() with the result E_NOT_OK. */
                 result = CANTP_FRAME_STATE_ABORT;
+                PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
             }
         }
-        else
-        {
-            /* SWS_CanTp_00314: The CanTp shall check the correctness of each SN received during a
-             * segmented reception. In case of wrong SN received the CanTp module shall abort
-             * reception and notify the upper layer of this failure by calling the indication
-             * function PduR_CanTpRxIndication() with the result E_NOT_OK. */
-            result = CANTP_FRAME_STATE_ABORT;
-            PduR_CanTpRxIndication(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
-        }
+    }
+    else
+    {
+        /* TODO: check if an expected behavior is defined in the SWS... */
+        PduR_CanTpTxConfirmation(p_n_sdu->rx.cfg->nSduId, E_NOT_OK);
+        CanTp_ReportRuntimeError(0x00u, CANTP_RX_INDICATION_API_ID, CANTP_E_COM);
+
+        result = CANTP_FRAME_STATE_ABORT;
     }
 
     return result;
