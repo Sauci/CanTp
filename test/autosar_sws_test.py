@@ -1078,6 +1078,329 @@ class TestSWS00329:
             assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].SduDataPtr[idx] == dummy_byte
 
 
+class TestSWS00332:
+    """
+    When calling CanIf_Transmit() for an FC on a generic connection (N-PDU with MetaData), the CanTp module shall
+    provide the stored addressing information via the MetaData of the N-PDU. The addressing information in the MetaData
+    depends on the addressing format:
+    - Normal, Extended, Mixed 11 bit: none
+    - Normal fixed, Mixed 29 bit: N_SA (saved N_TA), N_TA (saved N_SA)
+    """
+
+    @pytest.mark.parametrize('af', ['CANTP_STANDARD', 'CANTP_EXTENDED', 'CANTP_MIXED'])
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_addressing_formats_without_meta_data(self, af, n_sa, n_ta):
+        handle = CanTpTest(DefaultReceiver(af=af))
+        ff, _ = handle.get_receiver_multi_frame(af=af)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr == handle.ffi.NULL
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_addressing_formats_with_meta_data(self, af, n_sa, n_ta):
+        handle = CanTpTest(DefaultReceiver(af=af))
+        ff, _ = handle.get_receiver_multi_frame(af=af)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[0] == n_ta
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[1] == n_sa
+
+
+class TestSWS00333:
+    """
+    When CanTp_RxIndication is called for a CF on a generic connection (N-PDU with MetaData), the CanTp module shall
+    check the addressing information contained in the MetaData of the N-PDU against the stored values from the FF.
+    """
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_invalid_meta_data_pointer(self, af, n_sa, n_ta):
+        handle = CanTpTest(DefaultReceiver(af=af))
+        ff, cfs = handle.get_receiver_multi_frame(af=af)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cfs[0], meta_data=None))
+        handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_COM'))
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_invalid_n_sa_value(self, af, n_sa, n_ta):
+        handle = CanTpTest(DefaultReceiver(af=af))
+        ff, cfs = handle.get_receiver_multi_frame(af=af)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cfs[0], meta_data=[n_sa + 1, n_ta]))
+        handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_COM'))
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_invalid_n_ta_value(self, af, n_sa, n_ta):
+        handle = CanTpTest(DefaultReceiver(af=af))
+        ff, cfs = handle.get_receiver_multi_frame(af=af)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(cfs[0], meta_data=[n_sa, n_ta + 1]))
+        handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_COM'))
+
+
+class TestSWS00334:
+    """
+    When CanTp_Transmit is called for an N-SDU with MetaData, the CanTp module shall store the addressing information
+    contained in the MetaData of the N-SDU and use this information for transmission of SF, FF, and CF N-PDUs and for
+    identification of FC N-PDUs. The addressing information in the MedataData depends on the addressing format:
+    - Normal: none
+    - Extended: N_TA
+    - Mixed 11 bit: N_AE
+    - Normal fixed: N_SA, N_TA
+    - Mixed 29 bit: N_SA, N_TA, N_AE.
+    """
+
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    def test_non_segmented_message_for_standard_addressing_format(self, data_size):
+        handle = CanTpTest(DefaultSender(af='CANTP_STANDARD'))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr == handle.ffi.NULL
+
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_non_segmented_message_for_extended_addressing_format(self, data_size, n_ta):
+        handle = CanTpTest(DefaultSender(af='CANTP_EXTENDED'))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_ta]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] == n_ta
+
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    @pytest.mark.parametrize('n_ae', custom_n_ae)
+    def test_non_segmented_message_for_mixed_addressing_format(self, data_size, n_ae):
+        handle = CanTpTest(DefaultSender(af='CANTP_MIXED'))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_ae]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] == n_ae
+
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_non_segmented_message_for_normal_fixed_addressing_format(self, data_size, n_sa, n_ta):
+        handle = CanTpTest(DefaultSender(af='CANTP_NORMALFIXED'))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[0] == n_sa
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[1] == n_ta
+
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    @pytest.mark.parametrize('n_ae', custom_n_ae)
+    def test_non_segmented_message_for_mixed_29_bits_format(self, data_size, n_sa, n_ta, n_ae):
+        handle = CanTpTest(DefaultSender(af='CANTP_MIXED29BIT'))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size,
+                                                         meta_data=[n_sa, n_ta, n_ae]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args[0][1].SduDataPtr[0] == n_ae
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[0] == n_sa
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[1] == n_ta
+
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    def test_segmented_message_for_standard_addressing_format(self, data_size):
+        handle = CanTpTest(DefaultSender(af='CANTP_STANDARD'))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr == handle.ffi.NULL
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_STANDARD')))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr == handle.ffi.NULL
+
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_segmented_message_for_extended_addressing_format(self, data_size, n_ta):
+        handle = CanTpTest(DefaultSender(af='CANTP_EXTENDED'))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        assert handle.can_if_transmit.call_args_list[0][0][1].SduDataPtr[0] == n_ta
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_EXTENDED'),
+                                                             meta_data=[n_ta]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args_list[1][0][1].SduDataPtr[0] == n_ta
+
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    @pytest.mark.parametrize('n_ae', custom_n_ae)
+    def test_segmented_message_for_mixed_addressing_format(self, data_size, n_ae):
+        handle = CanTpTest(DefaultSender(af='CANTP_MIXED'))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_ae]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        assert handle.can_if_transmit.call_args_list[0][0][1].SduDataPtr[0] == n_ae
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_MIXED'),
+                                                             meta_data=[n_ae]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args_list[1][0][1].SduDataPtr[0] == n_ae
+
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_segmented_message_for_normal_fixed_addressing_format(self, data_size, n_sa, n_ta):
+        handle = CanTpTest(DefaultSender(af='CANTP_NORMALFIXED'))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[0] == n_sa
+        assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[1] == n_ta
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_NORMALFIXED'),
+                                                             meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr[0] == n_sa
+        assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr[1] == n_ta
+
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    @pytest.mark.parametrize('n_ae', custom_n_ae)
+    def test_segmented_message_for_mixed_29_bits_addressing_format(self, data_size, n_sa, n_ta, n_ae):
+        handle = CanTpTest(DefaultSender(af='CANTP_MIXED29BIT'))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size,
+                                                         meta_data=[n_sa, n_ta, n_ae]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        assert handle.can_if_transmit.call_args_list[0][0][1].SduDataPtr[0] == n_ae
+        assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[0] == n_sa
+        assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[1] == n_ta
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_MIXED29BIT'),
+                                                             meta_data=[n_sa, n_ta, n_ae]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args_list[1][0][1].SduDataPtr[0] == n_ae
+        assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr[0] == n_sa
+        assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr[1] == n_ta
+
+
+class TestSWS00335:
+    """
+    When calling CanIf_Transmit() for an SF, FF, or CF of a generic connection (N-PDU with MetaData), the CanTp module
+    shall provide the stored addressing information via MetaData of the N-PDU. The addressing information in the
+    MetaData depends on the addressing format:
+    - Normal, Extended, Mixed 11 bit: none
+    - Normal fixed, Mixed 29 bit: N_SA, N_TA.
+    """
+
+    @pytest.mark.parametrize('af', ['CANTP_STANDARD', 'CANTP_EXTENDED', 'CANTP_MIXED'])
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_non_segmented_message_for_addressing_formats_without_meta_data(self, af, data_size, n_sa, n_ta):
+        handle = CanTpTest(DefaultSender(af=af))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr == handle.ffi.NULL
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('data_size', single_frame_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_non_segmented_message_for_addressing_formats_with_meta_data(self, af, data_size, n_sa, n_ta):
+        handle = CanTpTest(DefaultSender(af=af))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[0] == n_sa
+        assert handle.can_if_transmit.call_args[0][1].MetaDataPtr[1] == n_ta
+
+    @pytest.mark.parametrize('af', ['CANTP_STANDARD', 'CANTP_EXTENDED', 'CANTP_MIXED'])
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_segmented_message_for_addressing_formats_without_meta_data(self, af, data_size, n_sa, n_ta):
+        handle = CanTpTest(DefaultSender(af=af))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr == handle.ffi.NULL
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af=af),
+                                                             meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr == handle.ffi.NULL
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_segmented_message_for_addressing_formats_with_meta_data(self, af, data_size, n_sa, n_ta):
+        handle = CanTpTest(DefaultSender(af=af))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[0] == n_sa
+        assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[1] == n_ta
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af=af),
+                                                             meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr[0] == n_sa
+        assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr[1] == n_ta
+
+
+class TestSWS00336:
+    """
+    When CanTp_RxIndication is called for an FC on a generic connection (N-PDU with MetaData), the CanTp module shall
+    check the addressing information contained in the MetaData against the stored values.
+    """
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_invalid_meta_data_pointer(self, af, data_size, n_sa, n_ta):
+        handle = CanTpTest(DefaultSender(af=af))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af=af), meta_data=None))
+        handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_COM'))
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_invalid_n_sa_value(self, af, data_size, n_sa, n_ta):
+        handle = CanTpTest(DefaultSender(af=af))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af=af),
+                                                             meta_data=[n_sa + 1, n_ta]))
+        handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_COM'))
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('data_size', multi_frames_sizes)
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_invalid_n_ta_value(self, af, data_size, n_sa, n_ta):
+        handle = CanTpTest(DefaultSender(af=af))
+        handle.lib.CanTp_Transmit(0, handle.get_pdu_info(payload=(dummy_byte,) * data_size, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af=af),
+                                                             meta_data=[n_sa, n_ta + 1]))
+        handle.pdu_r_can_tp_tx_confirmation.assert_called_once_with(ANY, handle.define('E_NOT_OK'))
+        handle.det_report_runtime_error.assert_called_once_with(ANY, ANY, ANY, handle.define('CANTP_E_COM'))
+
+
 class TestSWS00339:
     """
     After the reception of a First Frame or Single Frame, if the function PduR_CanTpStartOfReception() returns BUFREQ_OK
