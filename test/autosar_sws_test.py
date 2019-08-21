@@ -922,11 +922,9 @@ class TestSWS00315:
         handle.det_report_error.assert_called_once_with(ANY, handle.define('CANTP_I_N_BS'), ANY, handle.define('CANTP_E_TX_COM'))
 
     @pytest.mark.parametrize('af', addressing_formats)
-    @pytest.mark.parametrize('bs', block_sizes)
+    @pytest.mark.parametrize('bs', [bs for bs in block_sizes if bs.values[0] != 0])
     @pytest.mark.parametrize('n_bs', n_bs_timeouts)
     def test_last_consecutive_frame_confirmation(self, af, bs, n_bs):
-        if bs == 0:
-            pytest.skip(msg='if BS is set to 0, no FC frame is awaited.')
         config = DefaultSender(af=af, n_bs=n_bs)
         handle = CanTpTest(config)
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * (handle.get_payload_size(af, 'FF') +
