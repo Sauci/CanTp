@@ -168,6 +168,7 @@ typedef struct
     const CanTp_RxNSduType *cfg;
     CanTp_NSduBufferType buf;
     uint8 meta_data_lower[0x04u];
+    uint8 meta_data_upper[0x04u];
     CanTp_NSaType saved_n_sa;
     CanTp_NTaType saved_n_ta;
     boolean has_meta_data;
@@ -334,6 +335,56 @@ LOCAL_INLINE Std_ReturnType CanTp_VerifyMetaDataInfo(const boolean hasMetaData,
         {
             result = E_NOT_OK;
         }
+    }
+
+    return result;
+}
+
+LOCAL_INLINE uint8 *CanTp_GetUpperLayerMetaData(const boolean hasMetaData,
+                                                const CanTp_AddressingFormatType af,
+                                                const CanTp_NSaType *pSavedNSa,
+                                                const CanTp_NTaType *pSavedNTa,
+                                                const CanTp_NAeType *pNAe,
+                                                uint8 *pMetaDataBuffer)
+{
+    uint8 *result = NULL_PTR;
+
+    /* SWS_CanTp_00331: When calling PduR_CanTpStartOfReception() for a generic connection (N-SDU
+     * with MetaData), the CanTp module shall forward the extracted addressing information via the
+     * MetaData of the N-SDU. The addressing information in the MetaData depends on the addressing
+     * format:
+     * - Normal: none
+     * - Extended: N_TA
+     * - Mixed 11 bit: N_AE
+     * - Normal fixed: N_SA, N_TA
+     * - Mixed 29 bit: N_SA, N_TA, N_AE */
+    if (hasMetaData == TRUE)
+    {
+        if (af == CANTP_EXTENDED)
+        {
+            pMetaDataBuffer[0x00u] = pSavedNTa->nTa;
+        }
+        else if (af == CANTP_MIXED)
+        {
+            pMetaDataBuffer[0x00u] = pNAe->nAe;
+        }
+        else if (af == CANTP_NORMALFIXED)
+        {
+            pMetaDataBuffer[0x00u] = pSavedNSa->nSa;
+            pMetaDataBuffer[0x01u] = pSavedNTa->nTa;
+        }
+        else if (af == CANTP_MIXED29BIT)
+        {
+            pMetaDataBuffer[0x00u] = pSavedNSa->nSa;
+            pMetaDataBuffer[0x01u] = pSavedNTa->nTa;
+            pMetaDataBuffer[0x02u] = pNAe->nAe;
+        }
+        else
+        {
+            /* MISRA C, do nothing. */
+        }
+
+        result = &pMetaDataBuffer[0x00u];
     }
 
     return result;
@@ -1667,7 +1718,23 @@ CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 
     p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[header_size];
     p_n_sdu->rx.pdu_r_pdu_info.SduLength = dl;
-    p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr = NULL_PTR;
+
+    /* SWS_CanTp_00331: When calling PduR_CanTpStartOfReception() for a generic connection (N-SDU
+     * with MetaData), the CanTp module shall forward the extracted addressing information via the
+     * MetaData of the N-SDU. The addressing information in the MetaData depends on the addressing
+     * format:
+     * - Normal: none
+     * - Extended: N_TA
+     * - Mixed 11 bit: N_AE
+     * - Normal fixed: N_SA, N_TA
+     * - Mixed 29 bit: N_SA, N_TA, N_AE */
+    p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr =
+        CanTp_GetUpperLayerMetaData(p_n_sdu->rx.has_meta_data,
+                                    p_n_sdu->rx.cfg->af,
+                                    &p_n_sdu->rx.saved_n_sa,
+                                    &p_n_sdu->rx.saved_n_ta,
+                                    p_n_sdu->rx.cfg->pNAe,
+                                    &p_n_sdu->rx.meta_data_upper[0x00u]);
 
     status = PduR_CanTpStartOfReception(p_n_sdu->rx.cfg->nSduId,
                                         &p_n_sdu->rx.pdu_r_pdu_info,
@@ -1771,7 +1838,23 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
 
     p_n_sdu->rx.pdu_r_pdu_info.SduDataPtr = &pPduInfo->SduDataPtr[header_size];
     p_n_sdu->rx.pdu_r_pdu_info.SduLength = pPduInfo->SduLength - header_size;
-    p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr = NULL_PTR;
+
+    /* SWS_CanTp_00331: When calling PduR_CanTpStartOfReception() for a generic connection (N-SDU
+     * with MetaData), the CanTp module shall forward the extracted addressing information via the
+     * MetaData of the N-SDU. The addressing information in the MetaData depends on the addressing
+     * format:
+     * - Normal: none
+     * - Extended: N_TA
+     * - Mixed 11 bit: N_AE
+     * - Normal fixed: N_SA, N_TA
+     * - Mixed 29 bit: N_SA, N_TA, N_AE */
+    p_n_sdu->rx.pdu_r_pdu_info.MetaDataPtr =
+        CanTp_GetUpperLayerMetaData(p_n_sdu->rx.has_meta_data,
+                                    p_n_sdu->rx.cfg->af,
+                                    &p_n_sdu->rx.saved_n_sa,
+                                    &p_n_sdu->rx.saved_n_ta,
+                                    p_n_sdu->rx.cfg->pNAe,
+                                    &p_n_sdu->rx.meta_data_upper[0x00u]);
 
     /* TODO: as I understand, the N_Br is the time allowed for the upper layer to provide the
      *  required buffer. thus, the N_Br timeout will be handled according to SWS_CanTp_00082. */
