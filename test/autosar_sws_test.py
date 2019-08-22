@@ -798,6 +798,33 @@ def test_sws_00283(af):
 
 
 class TestSWS00293:
+    """
+    The CanTp module shall be able to detect the following errors:
+
+    Type of error                                               | Relevance   | Related error code         | Value [hex]
+    ------------------------------------------------------------+-------------+----------------------------+------------
+    API service called with wrong parameter(s): When            | Development | Could be a combination of: |
+    CanTp_Transmit is called for a none configured PDU          |             | CANTP_E_PARAM_CONFIG       | 0x01
+    identifier or with an identifier for a received PDU.        |             | CANTP_E_PARAM_ID           | 0x02
+    ------------------------------------------------------------+-------------+----------------------------+------------
+    API service called with a NULL pointer. In case of this     | Development | CANTP_E_PARAM_POINTER      | 0x03
+    error, the API service shall return immediately without any |             |                            |
+    further action, besides reporting this development error.   |             |                            |
+    ------------------------------------------------------------+-------------+----------------------------+------------
+    Module initialization has failed, e.g. CanTp_Init() called  | Development | CANTP_E_INIT_FAILED        | 0x04
+    with an invalid pointer in postbuild.                       |             |                            |
+    ------------------------------------------------------------+-------------+----------------------------+------------
+    API service used without module initialization : On any API | Development | CANTP_E_UNINIT             | 0x20
+    call except CanTp_Init(), CanTp_GetVersionInfo() and        |             |                            |
+    CanTp_MainFunction() if CanTp is in state CANTP_OFF.        |             |                            |
+    ------------------------------------------------------------+-------------+----------------------------+------------
+    Invalid Transmit PDU identifier (e.g. a service is called   | Development | CANTP_E_INVALID_TX_ID      | 0x30
+    with an inexistent Tx PDU identifier).                      |             |                            |
+    ------------------------------------------------------------+-------------+----------------------------+------------
+    Invalid Receive PDU identifier (e.g. a service is called    | Development | CANTP_E_INVALID_RX_ID      | 0x40
+    with an inexistent Rx PDU identifier).                      |             |                            |
+    ------------------------------------------------------------+-------------+----------------------------+------------
+    """
 
     @pytest.mark.parametrize('code_name, value', [pytest.param('CANTP_E_PARAM_CONFIG', 0x01),
                                                   pytest.param('CANTP_E_PARAM_ID', 0x02),
