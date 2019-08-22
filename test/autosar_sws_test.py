@@ -1101,6 +1101,30 @@ class TestSWS00329:
             assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].SduDataPtr[idx] == dummy_byte
 
 
+class TestSWS00330:
+    """
+    When CanTp_RxIndication is called for a SF or FF N-PDU with MetaData (indicating a generic connection), the CanTp
+    module shall store the addressing information contained in the MetaData of the PDU and use this information for the
+    initiation of the connection to the upper layer, for transmission of FC N-PDUs and for identification of CF N-PDUs.
+    The addressing information in the MetaData depends on the addressing format:
+    - Normal, Extended, Mixed 11 bit: none
+    - Normal fixed, Mixed 29 bit: N_SA, N_TA
+    """
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_flow_control_transmission_for_addressing_formats_with_meta_data(self, af, n_sa, n_ta):
+        handle = CanTpTest(DefaultReceiver(af=af, n_sa=default_n_sa, n_ta=default_n_ta))
+        ff, _ = handle.get_receiver_multi_frame(af=af)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[0] == n_ta
+        assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[1] == n_sa
+
+
 class TestSWS00331:
     """
     When calling PduR_CanTpStartOfReception() for a generic connection (N-SDU with MetaData), the CanTp module shall
