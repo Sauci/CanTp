@@ -167,7 +167,7 @@ typedef struct
 {
     const CanTp_RxNSduType *cfg;
     CanTp_NSduBufferType buf;
-    uint8 meta_data[0x04u];
+    uint8 meta_data_lower[0x04u];
     CanTp_NSaType saved_n_sa;
     CanTp_NTaType saved_n_ta;
     boolean has_meta_data;
@@ -2556,9 +2556,9 @@ static Std_ReturnType CanTp_TransmitRxCANData(CanTp_NSduType *pNSdu)
      * - Normal fixed, Mixed 29 bit: N_SA (saved N_TA), N_TA (saved N_SA) */
     if (pNSdu->rx.has_meta_data == TRUE)
     {
-        pNSdu->rx.meta_data[0x00u] = pNSdu->rx.saved_n_ta.nTa;
-        pNSdu->rx.meta_data[0x01u] = pNSdu->rx.saved_n_sa.nSa;
-        pNSdu->rx.can_if_pdu_info.MetaDataPtr = &pNSdu->rx.meta_data[0x00u];
+        pNSdu->rx.meta_data_lower[0x00u] = pNSdu->rx.saved_n_ta.nTa;
+        pNSdu->rx.meta_data_lower[0x01u] = pNSdu->rx.saved_n_sa.nSa;
+        pNSdu->rx.can_if_pdu_info.MetaDataPtr = &pNSdu->rx.meta_data_lower[0x00u];
     }
     else
     {
