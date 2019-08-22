@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-try:
-    from unittest.mock import ANY
-except ImportError:
-    from mock import ANY
+from unittest.mock import ANY
+
 from .parameter import *
 from .ffi import CanTpTest
 
