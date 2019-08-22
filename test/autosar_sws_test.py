@@ -1101,6 +1101,69 @@ class TestSWS00329:
             assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].SduDataPtr[idx] == dummy_byte
 
 
+class TestSWS00331:
+    """
+    When calling PduR_CanTpStartOfReception() for a generic connection (N-SDU with MetaData), the CanTp module shall
+    forward the extracted addressing information via the MetaData of the N-SDU. The addressing information in the
+    MetaData depends on the addressing format:
+    - Normal: none
+    - Extended: N_TA
+    - Mixed 11 bit: N_AE
+    - Normal fixed: N_SA, N_TA
+    - Mixed 29 bit: N_SA, N_TA, N_AE
+    """
+
+    @pytest.mark.parametrize('frame', [pytest.param(lambda h, **kw: h.get_receiver_single_frame(**kw), id='SF'),
+                                       pytest.param(lambda h, **kw: h.get_receiver_multi_frame(**kw)[0], id='FF')])
+    def test_normal_addressing_format(self, frame):
+        handle = CanTpTest(DefaultReceiver(af='CANTP_STANDARD'))
+        frame = frame(handle, af='CANTP_STANDARD')
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(frame, meta_data=[]))
+        assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].MetaDataPtr == handle.ffi.NULL
+
+    @pytest.mark.parametrize('frame', [pytest.param(lambda h, **kw: h.get_receiver_single_frame(**kw), id='SF'),
+                                       pytest.param(lambda h, **kw: h.get_receiver_multi_frame(**kw)[0], id='FF')])
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_extended_addressing_format(self, frame, n_ta):
+        handle = CanTpTest(DefaultReceiver(af='CANTP_EXTENDED'))
+        frame = frame(handle, af='CANTP_EXTENDED', n_ta=n_ta)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(frame, meta_data=[]))
+        assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].MetaDataPtr[0] == n_ta
+
+    @pytest.mark.parametrize('frame', [pytest.param(lambda h, **kw: h.get_receiver_single_frame(**kw), id='SF'),
+                                       pytest.param(lambda h, **kw: h.get_receiver_multi_frame(**kw)[0], id='FF')])
+    @pytest.mark.parametrize('n_ae', custom_n_ae)
+    def test_mixed_addressing_format(self, frame, n_ae):
+        handle = CanTpTest(DefaultReceiver(af='CANTP_MIXED'))
+        frame = frame(handle, af='CANTP_MIXED', n_ae=n_ae)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(frame, meta_data=[]))
+        assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].MetaDataPtr[0] == n_ae
+
+    @pytest.mark.parametrize('frame', [pytest.param(lambda h, **kw: h.get_receiver_single_frame(**kw), id='SF'),
+                                       pytest.param(lambda h, **kw: h.get_receiver_multi_frame(**kw)[0], id='FF')])
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_normal_fixed_addressing_format(self, frame, n_sa, n_ta):
+        handle = CanTpTest(DefaultReceiver(af='CANTP_NORMALFIXED'))
+        frame = frame(handle, af='CANTP_NORMALFIXED')
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(frame, meta_data=[n_sa, n_ta]))
+        assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].MetaDataPtr[0] == n_sa
+        assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].MetaDataPtr[1] == n_ta
+
+    @pytest.mark.parametrize('frame', [pytest.param(lambda h, **kw: h.get_receiver_single_frame(**kw), id='SF'),
+                                       pytest.param(lambda h, **kw: h.get_receiver_multi_frame(**kw)[0], id='FF')])
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    @pytest.mark.parametrize('n_ae', custom_n_ae)
+    def test_mixed_29_bits_addressing_format(self, frame, n_sa, n_ta, n_ae):
+        handle = CanTpTest(DefaultReceiver(af='CANTP_MIXED29BIT'))
+        frame = frame(handle, af='CANTP_MIXED29BIT', n_ae=n_ae)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(frame, meta_data=[n_sa, n_ta]))
+        assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].MetaDataPtr[0] == n_sa
+        assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].MetaDataPtr[1] == n_ta
+        assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].MetaDataPtr[2] == n_ae
+
+
 class TestSWS00332:
     """
     When calling CanIf_Transmit() for an FC on a generic connection (N-PDU with MetaData), the CanTp module shall

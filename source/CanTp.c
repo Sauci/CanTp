@@ -171,6 +171,7 @@ typedef struct
     uint8 meta_data_upper[0x04u];
     CanTp_NSaType saved_n_sa;
     CanTp_NTaType saved_n_ta;
+    CanTp_NAeType saved_n_ae;
     boolean has_meta_data;
     CanTp_FlowStatusType fs;
     uint32 st_min;
@@ -285,9 +286,10 @@ LOCAL_INLINE void CanTp_ReportRuntimeError(uint8 instanceId, uint8 apiId, uint8 
 }
 
 LOCAL_INLINE boolean CanTp_StoreRxIndicationMetaData(const CanTp_AddressingFormatType af,
-                                                     const uint8 *pMetaData,
+                                                     const PduInfoType *pPduInfo,
                                                      CanTp_NSaType *pSavedNSa,
-                                                     CanTp_NTaType *pSavedNTa)
+                                                     CanTp_NTaType *pSavedNTa,
+                                                     CanTp_NAeType *pSavedNAe)
 {
     boolean result;
 
@@ -298,12 +300,33 @@ LOCAL_INLINE boolean CanTp_StoreRxIndicationMetaData(const CanTp_AddressingForma
      * N-PDUs. The addressing information in the MetaData depends on the addressing format:
      * - Normal, Extended, Mixed 11 bit: none
      * - Normal fixed, Mixed 29 bit: N_SA, N_TA */
-    if ((pMetaData != NULL_PTR) && ((af == CANTP_NORMALFIXED) || (af == CANTP_MIXED29BIT)))
+    if (pPduInfo->MetaDataPtr != NULL_PTR)
     {
         result = TRUE;
 
-        pSavedNSa->nSa = pMetaData[0x00u];
-        pSavedNTa->nTa = pMetaData[0x01u];
+        if (af == CANTP_EXTENDED)
+        {
+            pSavedNTa->nTa = pPduInfo->SduDataPtr[0x00u];
+        }
+        else if (af == CANTP_MIXED)
+        {
+            pSavedNAe->nAe = pPduInfo->SduDataPtr[0x00u];
+        }
+        else if (af == CANTP_NORMALFIXED)
+        {
+            pSavedNSa->nSa = pPduInfo->MetaDataPtr[0x00u];
+            pSavedNTa->nTa = pPduInfo->MetaDataPtr[0x01u];
+        }
+        else if (af == CANTP_MIXED29BIT)
+        {
+            pSavedNSa->nSa = pPduInfo->MetaDataPtr[0x00u];
+            pSavedNTa->nTa = pPduInfo->MetaDataPtr[0x01u];
+            pSavedNAe->nAe = pPduInfo->SduDataPtr[0x00u];
+        }
+        else
+        {
+            /* MISRA C, do nothing. */
+        }
     }
     else
     {
@@ -360,7 +383,11 @@ LOCAL_INLINE uint8 *CanTp_GetUpperLayerMetaData(const boolean hasMetaData,
      * - Mixed 29 bit: N_SA, N_TA, N_AE */
     if (hasMetaData == TRUE)
     {
-        if (af == CANTP_EXTENDED)
+        if (af == CANTP_STANDARD)
+        {
+            pMetaDataBuffer = NULL_PTR;
+        }
+        else if (af == CANTP_EXTENDED)
         {
             pMetaDataBuffer[0x00u] = pSavedNTa->nTa;
         }
@@ -1698,9 +1725,10 @@ CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
     }
 
     p_n_sdu->rx.has_meta_data = CanTp_StoreRxIndicationMetaData(p_n_sdu->rx.cfg->af,
-                                                                pPduInfo->MetaDataPtr,
+                                                                pPduInfo,
                                                                 &p_n_sdu->rx.saved_n_sa,
-                                                                &p_n_sdu->rx.saved_n_ta);
+                                                                &p_n_sdu->rx.saved_n_ta,
+                                                                &p_n_sdu->rx.saved_n_ae);
 
     /* SWS_CanTp_00345: If frames with a payload <= 8 (either CAN 2.0 frames or small CAN FD frames)
      * are used for a Rx N-SDU and CanTpRxPaddingActivation is equal to CANTP_ON, then CanTp
@@ -1733,7 +1761,7 @@ CanTp_LDataIndRSF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
                                     p_n_sdu->rx.cfg->af,
                                     &p_n_sdu->rx.saved_n_sa,
                                     &p_n_sdu->rx.saved_n_ta,
-                                    p_n_sdu->rx.cfg->pNAe,
+                                    &p_n_sdu->rx.saved_n_ae,
                                     &p_n_sdu->rx.meta_data_upper[0x00u]);
 
     status = PduR_CanTpStartOfReception(p_n_sdu->rx.cfg->nSduId,
@@ -1821,9 +1849,10 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
     }
 
     p_n_sdu->rx.has_meta_data = CanTp_StoreRxIndicationMetaData(p_n_sdu->rx.cfg->af,
-                                                                pPduInfo->MetaDataPtr,
+                                                                pPduInfo,
                                                                 &p_n_sdu->rx.saved_n_sa,
-                                                                &p_n_sdu->rx.saved_n_ta);
+                                                                &p_n_sdu->rx.saved_n_ta,
+                                                                &p_n_sdu->rx.saved_n_ae);
 
     header_size = CANTP_FF_PCI_FIELD_SIZE + nAeSize;
     payload_size = CANTP_CAN_FRAME_SIZE - header_size;
@@ -1853,7 +1882,7 @@ CanTp_LDataIndRFF(CanTp_NSduType *pNSdu, const PduInfoType *pPduInfo, const PduL
                                     p_n_sdu->rx.cfg->af,
                                     &p_n_sdu->rx.saved_n_sa,
                                     &p_n_sdu->rx.saved_n_ta,
-                                    p_n_sdu->rx.cfg->pNAe,
+                                    &p_n_sdu->rx.saved_n_ae,
                                     &p_n_sdu->rx.meta_data_upper[0x00u]);
 
     /* TODO: as I understand, the N_Br is the time allowed for the upper layer to provide the
