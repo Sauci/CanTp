@@ -8,9 +8,9 @@ default_n_sa = 0x5A
 default_n_ta = 0x7A
 default_st_min = 0x00
 
-custom_n_sa = [0x01, 0x02]
-custom_n_ta = [0x03, 0x04]
-custom_n_ae = [0x05, 0x06]
+custom_n_sa = [pytest.param(na, id='N_Sa = 0x{:02X}'.format(na)) for na in (1, 2)]
+custom_n_ta = [pytest.param(na, id='N_Ta = 0x{:02X}'.format(na)) for na in (3, 4)]
+custom_n_ae = [pytest.param(na, id='N_Ae = 0x{:02X}'.format(na)) for na in (5, 6)]
 
 single_frame_sizes = [pytest.param(fs, id='SF_DL = {}'.format(fs)) for fs in (1, 2, 6)]
 multi_frames_sizes = [pytest.param(fs, id='FF_DL = {}'.format(fs)) for fs in (8, 4095)]
