@@ -371,6 +371,7 @@ LOCAL_INLINE uint8 *CanTp_GetUpperLayerMetaData(const boolean hasMetaData,
                                                 uint8 *pMetaDataBuffer)
 {
     uint8 *result = NULL_PTR;
+    uint8 *pTmpMetaDataBuffer = pMetaDataBuffer;
 
     /* SWS_CanTp_00331: When calling PduR_CanTpStartOfReception() for a generic connection (N-SDU
      * with MetaData), the CanTp module shall forward the extracted addressing information via the
@@ -385,33 +386,33 @@ LOCAL_INLINE uint8 *CanTp_GetUpperLayerMetaData(const boolean hasMetaData,
     {
         if (af == CANTP_STANDARD)
         {
-            pMetaDataBuffer = NULL_PTR;
+            pTmpMetaDataBuffer = NULL_PTR;
         }
         else if (af == CANTP_EXTENDED)
         {
-            pMetaDataBuffer[0x00u] = pSavedNTa->nTa;
+            pTmpMetaDataBuffer[0x00u] = pSavedNTa->nTa;
         }
         else if (af == CANTP_MIXED)
         {
-            pMetaDataBuffer[0x00u] = pNAe->nAe;
+            pTmpMetaDataBuffer[0x00u] = pNAe->nAe;
         }
         else if (af == CANTP_NORMALFIXED)
         {
-            pMetaDataBuffer[0x00u] = pSavedNSa->nSa;
-            pMetaDataBuffer[0x01u] = pSavedNTa->nTa;
+            pTmpMetaDataBuffer[0x00u] = pSavedNSa->nSa;
+            pTmpMetaDataBuffer[0x01u] = pSavedNTa->nTa;
         }
         else if (af == CANTP_MIXED29BIT)
         {
-            pMetaDataBuffer[0x00u] = pSavedNSa->nSa;
-            pMetaDataBuffer[0x01u] = pSavedNTa->nTa;
-            pMetaDataBuffer[0x02u] = pNAe->nAe;
+            pTmpMetaDataBuffer[0x00u] = pSavedNSa->nSa;
+            pTmpMetaDataBuffer[0x01u] = pSavedNTa->nTa;
+            pTmpMetaDataBuffer[0x02u] = pNAe->nAe;
         }
         else
         {
             /* MISRA C, do nothing. */
         }
 
-        result = &pMetaDataBuffer[0x00u];
+        result = pTmpMetaDataBuffer;
     }
 
     return result;
