@@ -59,7 +59,7 @@ if (${ENABLE_TEST})
         PUBLIC CanTp_PBcfg)
 
     add_test(NAME CanTp_UnitTest
-        COMMAND ${PYTHON_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test
+        COMMAND ${PYTHON_EXECUTABLE} -W ignore::DeprecationWarning -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test
         --junitxml=./report/ut.xml
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
