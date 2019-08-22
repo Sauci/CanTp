@@ -2637,7 +2637,8 @@ static Std_ReturnType CanTp_TransmitRxCANData(CanTp_NSduType *pNSdu)
      * of the N-PDU. The addressing information in the MetaData depends on the addressing format:
      * - Normal, Extended, Mixed 11 bit: none
      * - Normal fixed, Mixed 29 bit: N_SA (saved N_TA), N_TA (saved N_SA) */
-    if (pNSdu->rx.has_meta_data == TRUE)
+    if ((pNSdu->rx.has_meta_data == TRUE) &&
+        ((pNSdu->rx.cfg->af == CANTP_NORMALFIXED) || (pNSdu->rx.cfg->af == CANTP_MIXED29BIT)))
     {
         pNSdu->rx.meta_data_lower[0x00u] = pNSdu->rx.saved_n_ta.nTa;
         pNSdu->rx.meta_data_lower[0x01u] = pNSdu->rx.saved_n_sa.nSa;
