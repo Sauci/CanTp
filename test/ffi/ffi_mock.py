@@ -211,7 +211,7 @@ class CanTpTest(object):
         pdu_info = self.code.ffi.new('PduInfoType *')
         pdu_info.SduDataPtr = sdu_data
         pdu_info.SduLength = sdu_length
-        if meta_data:
+        if meta_data is not None:
             sdu_meta_data = self.code.ffi.new('uint8 []', list(meta_data))
             pdu_info.MetaDataPtr = sdu_meta_data
         else:

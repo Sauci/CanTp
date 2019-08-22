@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-try:
-    from unittest.mock import ANY
-except ImportError:
-    from mock import ANY
+from unittest.mock import ANY
+
 from .parameter import *
 from .ffi import CanTpTest
 
@@ -798,6 +796,33 @@ def test_sws_00283(af):
 
 
 class TestSWS00293:
+    """
+    The CanTp module shall be able to detect the following errors:
+
+    Type of error                                               | Relevance   | Related error code         | Value [hex]
+    ------------------------------------------------------------+-------------+----------------------------+------------
+    API service called with wrong parameter(s): When            | Development | Could be a combination of: |
+    CanTp_Transmit is called for a none configured PDU          |             | CANTP_E_PARAM_CONFIG       | 0x01
+    identifier or with an identifier for a received PDU.        |             | CANTP_E_PARAM_ID           | 0x02
+    ------------------------------------------------------------+-------------+----------------------------+------------
+    API service called with a NULL pointer. In case of this     | Development | CANTP_E_PARAM_POINTER      | 0x03
+    error, the API service shall return immediately without any |             |                            |
+    further action, besides reporting this development error.   |             |                            |
+    ------------------------------------------------------------+-------------+----------------------------+------------
+    Module initialization has failed, e.g. CanTp_Init() called  | Development | CANTP_E_INIT_FAILED        | 0x04
+    with an invalid pointer in postbuild.                       |             |                            |
+    ------------------------------------------------------------+-------------+----------------------------+------------
+    API service used without module initialization : On any API | Development | CANTP_E_UNINIT             | 0x20
+    call except CanTp_Init(), CanTp_GetVersionInfo() and        |             |                            |
+    CanTp_MainFunction() if CanTp is in state CANTP_OFF.        |             |                            |
+    ------------------------------------------------------------+-------------+----------------------------+------------
+    Invalid Transmit PDU identifier (e.g. a service is called   | Development | CANTP_E_INVALID_TX_ID      | 0x30
+    with an inexistent Tx PDU identifier).                      |             |                            |
+    ------------------------------------------------------------+-------------+----------------------------+------------
+    Invalid Receive PDU identifier (e.g. a service is called    | Development | CANTP_E_INVALID_RX_ID      | 0x40
+    with an inexistent Rx PDU identifier).                      |             |                            |
+    ------------------------------------------------------------+-------------+----------------------------+------------
+    """
 
     @pytest.mark.parametrize('code_name, value', [pytest.param('CANTP_E_PARAM_CONFIG', 0x01),
                                                   pytest.param('CANTP_E_PARAM_ID', 0x02),
@@ -922,11 +947,9 @@ class TestSWS00315:
         handle.det_report_error.assert_called_once_with(ANY, handle.define('CANTP_I_N_BS'), ANY, handle.define('CANTP_E_TX_COM'))
 
     @pytest.mark.parametrize('af', addressing_formats)
-    @pytest.mark.parametrize('bs', block_sizes)
+    @pytest.mark.parametrize('bs', [bs for bs in block_sizes if bs.values[0] != 0])
     @pytest.mark.parametrize('n_bs', n_bs_timeouts)
     def test_last_consecutive_frame_confirmation(self, af, bs, n_bs):
-        if bs == 0:
-            pytest.skip(msg='if BS is set to 0, no FC frame is awaited.')
         config = DefaultSender(af=af, n_bs=n_bs)
         handle = CanTpTest(config)
         handle.lib.CanTp_Transmit(0, handle.get_pdu_info((dummy_byte,) * (handle.get_payload_size(af, 'FF') +
@@ -1078,6 +1101,93 @@ class TestSWS00329:
             assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].SduDataPtr[idx] == dummy_byte
 
 
+class TestSWS00330:
+    """
+    When CanTp_RxIndication is called for a SF or FF N-PDU with MetaData (indicating a generic connection), the CanTp
+    module shall store the addressing information contained in the MetaData of the PDU and use this information for the
+    initiation of the connection to the upper layer, for transmission of FC N-PDUs and for identification of CF N-PDUs.
+    The addressing information in the MetaData depends on the addressing format:
+    - Normal, Extended, Mixed 11 bit: none
+    - Normal fixed, Mixed 29 bit: N_SA, N_TA
+    """
+
+    @pytest.mark.parametrize('af', ['CANTP_NORMALFIXED', 'CANTP_MIXED29BIT'])
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_flow_control_transmission_for_addressing_formats_with_meta_data(self, af, n_sa, n_ta):
+        handle = CanTpTest(DefaultReceiver(af=af, n_sa=default_n_sa, n_ta=default_n_ta))
+        ff, _ = handle.get_receiver_multi_frame(af=af)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(ff, meta_data=[n_sa, n_ta]))
+        handle.lib.CanTp_MainFunction()
+        handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
+        handle.lib.CanTp_MainFunction()
+        assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[0] == n_ta
+        assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr[1] == n_sa
+
+
+class TestSWS00331:
+    """
+    When calling PduR_CanTpStartOfReception() for a generic connection (N-SDU with MetaData), the CanTp module shall
+    forward the extracted addressing information via the MetaData of the N-SDU. The addressing information in the
+    MetaData depends on the addressing format:
+    - Normal: none
+    - Extended: N_TA
+    - Mixed 11 bit: N_AE
+    - Normal fixed: N_SA, N_TA
+    - Mixed 29 bit: N_SA, N_TA, N_AE
+    """
+
+    @pytest.mark.parametrize('frame', [pytest.param(lambda h, **kw: h.get_receiver_single_frame(**kw), id='SF'),
+                                       pytest.param(lambda h, **kw: h.get_receiver_multi_frame(**kw)[0], id='FF')])
+    def test_normal_addressing_format(self, frame):
+        handle = CanTpTest(DefaultReceiver(af='CANTP_STANDARD'))
+        frame = frame(handle, af='CANTP_STANDARD')
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(frame, meta_data=[]))
+        assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].MetaDataPtr == handle.ffi.NULL
+
+    @pytest.mark.parametrize('frame', [pytest.param(lambda h, **kw: h.get_receiver_single_frame(**kw), id='SF'),
+                                       pytest.param(lambda h, **kw: h.get_receiver_multi_frame(**kw)[0], id='FF')])
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_extended_addressing_format(self, frame, n_ta):
+        handle = CanTpTest(DefaultReceiver(af='CANTP_EXTENDED'))
+        frame = frame(handle, af='CANTP_EXTENDED', n_ta=n_ta)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(frame, meta_data=[]))
+        assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].MetaDataPtr[0] == n_ta
+
+    @pytest.mark.parametrize('frame', [pytest.param(lambda h, **kw: h.get_receiver_single_frame(**kw), id='SF'),
+                                       pytest.param(lambda h, **kw: h.get_receiver_multi_frame(**kw)[0], id='FF')])
+    @pytest.mark.parametrize('n_ae', custom_n_ae)
+    def test_mixed_addressing_format(self, frame, n_ae):
+        handle = CanTpTest(DefaultReceiver(af='CANTP_MIXED'))
+        frame = frame(handle, af='CANTP_MIXED', n_ae=n_ae)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(frame, meta_data=[]))
+        assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].MetaDataPtr[0] == n_ae
+
+    @pytest.mark.parametrize('frame', [pytest.param(lambda h, **kw: h.get_receiver_single_frame(**kw), id='SF'),
+                                       pytest.param(lambda h, **kw: h.get_receiver_multi_frame(**kw)[0], id='FF')])
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    def test_normal_fixed_addressing_format(self, frame, n_sa, n_ta):
+        handle = CanTpTest(DefaultReceiver(af='CANTP_NORMALFIXED'))
+        frame = frame(handle, af='CANTP_NORMALFIXED')
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(frame, meta_data=[n_sa, n_ta]))
+        assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].MetaDataPtr[0] == n_sa
+        assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].MetaDataPtr[1] == n_ta
+
+    @pytest.mark.parametrize('frame', [pytest.param(lambda h, **kw: h.get_receiver_single_frame(**kw), id='SF'),
+                                       pytest.param(lambda h, **kw: h.get_receiver_multi_frame(**kw)[0], id='FF')])
+    @pytest.mark.parametrize('n_sa', custom_n_sa)
+    @pytest.mark.parametrize('n_ta', custom_n_ta)
+    @pytest.mark.parametrize('n_ae', custom_n_ae)
+    def test_mixed_29_bits_addressing_format(self, frame, n_sa, n_ta, n_ae):
+        handle = CanTpTest(DefaultReceiver(af='CANTP_MIXED29BIT'))
+        frame = frame(handle, af='CANTP_MIXED29BIT', n_ae=n_ae)
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(frame, meta_data=[n_sa, n_ta]))
+        assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].MetaDataPtr[0] == n_sa
+        assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].MetaDataPtr[1] == n_ta
+        assert handle.pdu_r_can_tp_start_of_reception.call_args[0][1].MetaDataPtr[2] == n_ae
+
+
 class TestSWS00332:
     """
     When calling CanIf_Transmit() for an FC on a generic connection (N-PDU with MetaData), the CanTp module shall
@@ -1223,7 +1333,8 @@ class TestSWS00334:
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
         assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr == handle.ffi.NULL
-        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_STANDARD')))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_STANDARD'),
+                                                             meta_data=[]))
         handle.lib.CanTp_MainFunction()
         assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr == handle.ffi.NULL
 
