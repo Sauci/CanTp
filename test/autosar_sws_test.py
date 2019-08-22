@@ -1246,7 +1246,8 @@ class TestSWS00334:
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
         assert handle.can_if_transmit.call_args_list[0][0][1].MetaDataPtr == handle.ffi.NULL
-        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_STANDARD')))
+        handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(handle.get_receiver_flow_control(af='CANTP_STANDARD'),
+                                                             meta_data=[]))
         handle.lib.CanTp_MainFunction()
         assert handle.can_if_transmit.call_args_list[1][0][1].MetaDataPtr == handle.ffi.NULL
 
