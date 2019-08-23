@@ -9,8 +9,7 @@
 
 #ifdef __cplusplus
 
-extern "C"
-{
+extern "C" {
 
 #endif /* ifdef __cplusplus */
 
@@ -68,7 +67,6 @@ typedef struct
 } RetryInfoType;
 
 #ifdef __cplusplus
-
 }
 
 #endif /* ifdef __cplusplus */

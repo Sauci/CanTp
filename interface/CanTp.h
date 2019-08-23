@@ -34,15 +34,13 @@
 
 #ifdef __cplusplus
 
-extern "C"
-{
+extern "C" {
 
 #endif /* #ifdef __cplusplus */
 
-
-/*-----------------------------------------------------------------------------------------------*/
-/* included files (#include).                                                                    */
-/*-----------------------------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------------------*/
+/* included files (#include).                                                                     */
+/*------------------------------------------------------------------------------------------------*/
 
 /**
  * @addtogroup CANTP_H
@@ -75,10 +73,9 @@ extern "C"
 
 /** @} */
 
-
-/*-----------------------------------------------------------------------------------------------*/
-/* global definitions (#define).                                                                 */
-/*-----------------------------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------------------*/
+/* global definitions (#define).                                                                  */
+/*------------------------------------------------------------------------------------------------*/
 
 /**
  * @addtogroup CANTP_H_GDEF
@@ -176,42 +173,48 @@ extern "C"
  */
 
 /**
- * @brief API service called with wrong parameter(s): when @ref CanTp_Transmit is called for a none configured PDU identifier or with an identifier for a received PDU.
+ * @brief API service called with wrong parameter(s): when @ref CanTp_Transmit is called for a none
+ * configured PDU identifier or with an identifier for a received PDU.
  */
 #define CANTP_E_PARAM_CONFIG (0x01u)
 
 /**
- * @brief API service called with wrong parameter(s): when @ref CanTp_Transmit is called for a none configured PDU identifier or with an identifier for a received PDU.
+ * @brief API service called with wrong parameter(s): when @ref CanTp_Transmit is called for a none
+ * configured PDU identifier or with an identifier for a received PDU.
  */
 #define CANTP_E_PARAM_ID (0x02u)
 
 /**
- * @brief API service called with a NULL pointer. in case of this error, the API service shall return immediately without any further action, besides reporting this development error.
+ * @brief API service called with a NULL pointer. in case of this error, the API service shall
+ * return immediately without any further action, besides reporting this development error.
  */
 #define CANTP_E_PARAM_POINTER (0x03u)
 
 /**
- * @brief module initialization has failed, e.g. @ref CanTp_Init called with an invalid pointer in post-build.
+ * @brief module initialization has failed, e.g. @ref CanTp_Init called with an invalid pointer in
+ * post-build.
  */
 #define CANTP_E_INIT_FAILED (0x04u)
 
 /**
- * @brief API service used without module initialization: on any API call except @ref CanTp_Init and @ref CanTp_GetVersionInfo if CanTp is in state CANTP_OFF.
+ * @brief API service used without module initialization: on any API call except @ref CanTp_Init and
+ * @ref CanTp_GetVersionInfo if CanTp is in state CANTP_OFF.
  */
 #define CANTP_E_UNINIT (0x20u)
 
 /**
- * @brief invalid transmit PDU identifier (e.g. a service is called with an inexistent tx PDU identifier).
+ * @brief invalid transmit PDU identifier (e.g. a service is called with an inexistent tx PDU
+ * identifier).
  */
 #define CANTP_E_INVALID_TX_ID (0x30u)
 
 /**
- * @brief invalid receive PDU identifier (e.g. a service is called with an inexistent rx PDU identifier).
+ * @brief invalid receive PDU identifier (e.g. a service is called with an inexistent rx PDU
+ * identifier).
  */
 #define CANTP_E_INVALID_RX_ID (0x40u)
 
 /** @} */
-
 
 /**
  * @addtogroup CANTP_H_E_R
@@ -224,17 +227,20 @@ extern "C"
 #define CANTP_E_PADDING (0x70u)
 
 /**
- * @brief @ref CanTp_Transmit is called for a configured tx I-Pdu with functional addressing and the length parameter indicates, that the message can not be sent with a SF.
+ * @brief @ref CanTp_Transmit is called for a configured tx I-Pdu with functional addressing and the
+ * length parameter indicates, that the message can not be sent with a SF.
  */
 #define CANTP_E_INVALID_TATYPE (0x90u)
 
 /**
- * @brief requested operation is not supported - a cancel transmission/reception request for an N-SDU that it is not on transmission/reception process.
+ * @brief requested operation is not supported - a cancel transmission/reception request for an
+ * N-SDU that it is not on transmission/reception process.
  */
 #define CANTP_E_OPER_NOT_SUPPORTED (0xA0u)
 
 /**
- * @brief event reported in case of an implementation specific error other than a protocol timeout error during a reception or a transmission.
+ * @brief event reported in case of an implementation specific error other than a protocol timeout
+ * error during a reception or a transmission.
  */
 #define CANTP_E_COM (0xB0u)
 
@@ -263,7 +269,6 @@ extern "C"
 
 /** @} */
 
-
 /**
  * @addtogroup CANTP_H_E_T
  * @{
@@ -271,10 +276,9 @@ extern "C"
 
 /** @} */
 
-
-/*-----------------------------------------------------------------------------------------------*/
-/* external function declarations (extern).                                                      */
-/*-----------------------------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------------------*/
+/* external function declarations (extern).                                                       */
+/*------------------------------------------------------------------------------------------------*/
 
 /**
  * @addtogroup CANTP_H_EFDECL
@@ -283,10 +287,9 @@ extern "C"
 
 /** @} */
 
-
-/*-----------------------------------------------------------------------------------------------*/
-/* global constant declarations (extern const).                                                  */
-/*-----------------------------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------------------*/
+/* global constant declarations (extern const).                                                   */
+/*------------------------------------------------------------------------------------------------*/
 
 /**
  * @addtogroup CANTP_H_GCDECL
@@ -295,10 +298,9 @@ extern "C"
 
 /** @} */
 
-
-/*-----------------------------------------------------------------------------------------------*/
-/* global variable declarations (extern).                                                        */
-/*-----------------------------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------------------*/
+/* global variable declarations (extern).                                                         */
+/*------------------------------------------------------------------------------------------------*/
 
 /**
  * @addtogroup CANTP_H_GVDECL
@@ -317,10 +319,9 @@ extern boolean CanTp_AbortedTxSession;
 
 /** @} */
 
-
-/*-----------------------------------------------------------------------------------------------*/
-/* global function declarations.                                                                 */
-/*-----------------------------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------------------*/
+/* global function declarations.                                                                  */
+/*------------------------------------------------------------------------------------------------*/
 
 /**
  * @addtogroup CANTP_H_GFDECL
@@ -339,7 +340,6 @@ void CanTp_Init(const CanTp_ConfigType *pConfig);
 #define CanTp_STOP_SEC_CODE_SLOW
 #include "CanTp_MemMap.h"
 
-
 #if (CANTP_GET_VERSION_INFO_API == STD_ON)
 
 #define CanTp_START_SEC_CODE_SLOW
@@ -356,7 +356,6 @@ void CanTp_GetVersionInfo(Std_VersionInfoType *pVersionInfo);
 
 #endif /* #if (CANTP_GET_VERSION_INFO_API == STD_ON) */
 
-
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
@@ -367,7 +366,6 @@ void CanTp_Shutdown(void);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
-
 
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -385,12 +383,12 @@ Std_ReturnType CanTp_Transmit(PduIdType txPduId, const PduInfoType *pPduInfo);
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
 /**
- * @brief requests cancellation of an ongoing transmission of a PDU in a lower layer communication module.
+ * @brief requests cancellation of an ongoing transmission of a PDU in a lower layer communication
+ * module.
  * @param [in] txPduId identification of the PDU to be cancelled
  *
  * @retval E_OK cancellation was executed successfully by the destination module
@@ -401,12 +399,12 @@ Std_ReturnType CanTp_CancelTransmit(PduIdType txPduId);
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
 /**
- * @brief requests cancellation of an ongoing reception of a PDU in a lower layer transport protocol module.
+ * @brief requests cancellation of an ongoing reception of a PDU in a lower layer transport protocol
+ * module.
  * @param [in] rxPduId identification of the PDU to be cancelled
  *
  * @retval E_OK cancellation was executed successfully by the destination module
@@ -416,7 +414,6 @@ Std_ReturnType CanTp_CancelReceive(PduIdType rxPduId);
 
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
-
 
 #if (CANTP_CHANGE_PARAMETER_API == STD_ON)
 
@@ -439,14 +436,14 @@ Std_ReturnType CanTp_ChangeParameter(PduIdType pduId, TPParameterType parameter,
 
 #endif /* #if (CANTP_CHANGE_PARAMETER_API == STD_ON) */
 
-
 #if (CANTP_READ_PARAMETER_API == STD_ON)
 
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
 /**
- * @brief this service is used to read the current value of reception parameters BS and STmin for a specified N-SDU.
+ * @brief this service is used to read the current value of reception parameters BS and STmin for a
+ * specified N-SDU.
  * @param [in] pduId identifier of the received N-SDU on which the reception parameter are read
  * @param [in] parameter specify the parameter to which the value has to be read (BS or STmin)
  * @param [out] pValue pointer where the parameter value will be provided
@@ -463,10 +460,9 @@ Std_ReturnType CanTp_ReadParameter(PduIdType pduId, TPParameterType parameter, u
 
 /** @} */
 
-
-/*-----------------------------------------------------------------------------------------------*/
-/* global scheduled function declarations.                                                       */
-/*-----------------------------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------------------*/
+/* global scheduled function declarations.                                                        */
+/*------------------------------------------------------------------------------------------------*/
 
 /**
  * @addtogroup CANTP_H_GSFDECL
@@ -486,9 +482,7 @@ void CanTp_MainFunction(void);
 
 /** @} */
 
-
 #ifdef __cplusplus
-
 };
 
 #endif /* #ifdef __cplusplus */

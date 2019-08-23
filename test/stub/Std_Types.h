@@ -9,8 +9,7 @@
 
 #ifdef __cplusplus
 
-extern "C"
-{
+extern "C" {
 
 #endif /* ifdef __cplusplus */
 
@@ -51,25 +50,25 @@ extern "C"
 
 #define FALSE (0x00u)
 
-#endif  /* #ifndef FALSE */
+#endif /* #ifndef FALSE */
 
 #ifndef STD_LOW
 
 #define STD_LOW (0x00u)
 
-#endif  /* #ifndef STD_LOW */
+#endif /* #ifndef STD_LOW */
 
 #ifndef STD_HIGH
 
 #define STD_HIGH (0x01u)
 
-#endif  /* #ifndef STD_HIGH */
+#endif /* #ifndef STD_HIGH */
 
 #ifndef NULL_PTR
 
 #define NULL_PTR ((void *)0x00u)
 
-#endif  /* #ifndef NULL_PTR */
+#endif /* #ifndef NULL_PTR */
 
 typedef uint32 Std_ReturnType;
 
@@ -83,7 +82,6 @@ typedef struct
 } Std_VersionInfoType;
 
 #ifdef __cplusplus
-
 }
 
 #endif /* ifdef __cplusplus */

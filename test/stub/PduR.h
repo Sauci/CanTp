@@ -9,8 +9,7 @@
 
 #ifdef __cplusplus
 
-extern "C"
-{
+extern "C" {
 
 #endif /* ifdef __cplusplus */
 
@@ -37,7 +36,6 @@ extern BufReq_ReturnType PduR_CanTpStartOfReception(PduIdType pduId,
                                                     PduLengthType *pBufferSize);
 
 #ifdef __cplusplus
-
 }
 
 #endif /* ifdef __cplusplus */

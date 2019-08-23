@@ -9,16 +9,14 @@
 
 #ifdef __cplusplus
 
-extern "C"
-{
+extern "C" {
 
 #endif /* ifdef __cplusplus */
 
-#include "Std_Types.h"
 #include "ComStack_Types.h"
+#include "Std_Types.h"
 
 #ifdef __cplusplus
-
 }
 
 #endif /* ifdef __cplusplus */

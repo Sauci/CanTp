@@ -9,15 +9,13 @@
 
 #ifdef __cplusplus
 
-extern "C"
-{
+extern "C" {
 
 #endif /* ifdef __cplusplus */
 
-
-/*-----------------------------------------------------------------------------------------------*/
-/* included files (#include).                                                                    */
-/*-----------------------------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------------------*/
+/* included files (#include).                                                                     */
+/*------------------------------------------------------------------------------------------------*/
 
 /**
  * @addtogroup CANTP_TYPES_H
@@ -30,10 +28,9 @@ extern "C"
 
 /** @} */
 
-
-/*-----------------------------------------------------------------------------------------------*/
-/* global data type definitions (typedef, struct).                                               */
-/*-----------------------------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------------------*/
+/* global data type definitions (typedef, struct).                                                */
+/*------------------------------------------------------------------------------------------------*/
 
 /**
  * @addtogroup CANTP_H_GTDEF
@@ -45,106 +42,96 @@ typedef enum
     /**
      * @brief full duplex channel
      */
-        CANTP_MODE_FULL_DUPLEX,
+    CANTP_MODE_FULL_DUPLEX,
 
     /**
      * @brief half duplex channel
      */
-        CANTP_MODE_HALF_DUPLEX
+    CANTP_MODE_HALF_DUPLEX
 
 } CanTp_ChannelMode; /* CanTpChannelMode. */
-
 
 typedef enum
 {
     /**
      * @brief extended addressing format
      */
-        CANTP_EXTENDED,
+    CANTP_EXTENDED,
 
     /**
      * @brief mixed 11 bit addressing format
      */
-        CANTP_MIXED,
+    CANTP_MIXED,
 
     /**
      * @brief mixed 29 bit addressing format
      */
-        CANTP_MIXED29BIT,
+    CANTP_MIXED29BIT,
 
     /**
      * @brief normal fixed addressing format
      */
-        CANTP_NORMALFIXED,
+    CANTP_NORMALFIXED,
 
     /**
      * @brief normal addressing format
      */
-        CANTP_STANDARD
+    CANTP_STANDARD
 
 } CanTp_AddressingFormatType;
-
 
 typedef enum
 {
     /**
      * @brief padding is used
      */
-        CANTP_OFF,
+    CANTP_OFF,
 
     /**
      * @brief padding is not used
      */
-        CANTP_ON
+    CANTP_ON
 
 } CanTp_StateType;
 
-
 typedef CanTp_StateType CanTp_RxPaddingActivationType;
 
-
 typedef CanTp_StateType CanTp_TxPaddingActivationType;
-
 
 typedef enum
 {
     /**
      * @brief functional request type
      */
-        CANTP_FUNCTIONAL,
+    CANTP_FUNCTIONAL,
 
     /**
      * @brief physical request type
      */
-        CANTP_PHYSICAL
+    CANTP_PHYSICAL
 
 } CanTp_ComTypeType;
-
 
 typedef struct
 {
     uint8 nSa; /* CanTpNSa. */
 } CanTp_NSaType; /* CanTpNSa. */
 
-
 typedef struct
 {
     uint8 nTa; /* CanTpNTa. */
 } CanTp_NTaType; /* CanTpNTa. */
-
 
 typedef struct
 {
     uint8 nAe; /* CanTpNAe. */
 } CanTp_NAeType; /* CanTpNAe. */
 
-
 typedef struct
 {
     const uint32 rxFcNPduRef; /* CanTpRxFcNPduRef. */
     const uint16 rxFcNPduId; /* CanTpRxFcNPduId. */
 } CanTp_RxFcNPduType; /* CanTpRxFcNPdu. */
-
 
 typedef struct
 {
@@ -160,7 +147,6 @@ typedef struct
     const uint16 fcNPduId; /* CanTpTxFcNPduConfirmationPduId. */
 
 } CanTp_TxFcNPduType; /* CanTpTxFcNPdu. */
-
 
 typedef struct
 {
@@ -190,7 +176,6 @@ typedef struct
     const CanTp_ComTypeType taType; /* CanTpRxTaType. */
     const PduIdType rxNSduRef; /* CanTpRxNSduRef. */
 } CanTp_RxNSduType; /* CanTpRxNSdu. */
-
 
 typedef struct
 {
@@ -253,20 +238,17 @@ typedef struct
 
 } CanTp_TxNSduType; /* CanTpTxNSdu. */
 
-
 typedef struct
 {
     const uint16 id; /* CanTpRxNPduId. */
     const uint32 rxNPduId; /* CanTpRxNPduRef. */
 } CanTp_RxNPduType; /* CanTpRxNPdu. */
 
-
 typedef struct
 {
     const uint32 pduRef; /* CanTpTxNPduRef. */
     const uint16 pduConfirmationPduId; /* CanTpTxNPduConfirmationPduId. */
 } CanTp_TxNPduType; /* CanTpTxNPdu. */
-
 
 typedef struct
 {
@@ -279,7 +261,6 @@ typedef struct
     } nSdu;
     const CanTp_ChannelMode channelMode;
 } CanTp_ChannelType; /* CanTpChannel. */
-
 
 /**
  * @brief data structure type for the post-build configuration parameters.
@@ -298,9 +279,7 @@ typedef struct
 
 /** @} */
 
-
 #ifdef __cplusplus
-
 };
 
 #endif /* ifdef __cplusplus */

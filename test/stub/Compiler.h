@@ -9,8 +9,7 @@
 
 #ifdef __cplusplus
 
-extern "C"
-{
+extern "C" {
 
 #endif /* ifdef __cplusplus */
 
@@ -21,7 +20,6 @@ extern "C"
 #define LOCAL_INLINE static inline
 
 #ifdef __cplusplus
-
 }
 
 #endif /* ifdef __cplusplus */
