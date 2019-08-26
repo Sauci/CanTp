@@ -14,7 +14,6 @@ The following definitions might be set by the user, depending on the needs.
 | ```ENABLE_PC_LINT```        | ```ON```/```OFF```               | ```OFF```                      | enables/disables generation of targets related to static code analysis (should be disabled if [PC-Lint](https://www.gimpel.com) software is not available)                       |
 | ```MISRA_C_VERSION```       | ```1998```/```2004```/```2012``` | ```2012```                     | specifies which version of **MISRA** should be used when performing static code analysis (only used if ```ENABLE_PC_LINT``` is set)                                              |
 | ```CANTP_CONFIG_FILEPATH``` | ```-```                          | ```CanTp/config/can_tp.json``` | specifies which json configuration file should be used to generate the auto-generated code                                                                                       |
-| ```OUTPUT_LIB_NAME```       | ```-```                          | ```CanTp```                    | specifies the library's name                                                                                                                                                     |
 | ```ENABLE_DOC_GEN```        | ```ON```/```OFF```               | ```OFF```                      | enables/disables generation of [Doxygen](http://www.doxygen.nl/) documentation                                                                                                   |
 
 To use this feature, simply add ```-D<definition>=<value>``` when configuring the build with CMake.

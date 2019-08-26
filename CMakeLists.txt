@@ -9,7 +9,6 @@ option(ENABLE_PC_LINT "enables/disables static code analysis." OFF)
 option(ENABLE_DOC_GEN "enables/disables documentation generation." OFF)
 set(MISRA_C_VERSION 2012 CACHE STRING "MISRA standard.")
 set(CANTP_CONFIG_FILEPATH ${CMAKE_CURRENT_SOURCE_DIR}/config/can_tp.json CACHE FILEPATH "")
-set(OUTPUT_LIB_NAME CanTp CACHE STRING "default library name")
 
 find_package(PythonInterp 3.6 REQUIRED)
 
@@ -24,9 +23,9 @@ endif()
 add_subdirectory(extern)
 add_subdirectory(generated)
 
-add_library(${OUTPUT_LIB_NAME} STATIC source/CanTp.c)
+add_library(CanTp STATIC source/CanTp.c)
 
-target_compile_definitions(${OUTPUT_LIB_NAME}
+target_compile_definitions(CanTp
     PRIVATE CANTP_DEV_ERROR_DETECT=$<IF:$<BOOL:${ENABLE_DET}>,STD_ON,STD_OFF>
     PRIVATE CANTP_SW_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
     PRIVATE CANTP_SW_VERSION_MINOR=${PROJECT_VERSION_MINOR}
@@ -40,7 +39,7 @@ target_compile_definitions(${OUTPUT_LIB_NAME}
     PUBLIC CANTP_BUILD_CFFI_INTERFACE=$<IF:$<BOOL:${ENABLE_TEST}>,STD_ON,STD_OFF>
     PUBLIC OS_GET_TIME_API=$<IF:$<BOOL:${OS_GET_TIME_API}>,STD_ON,STD_OFF>)
 
-target_include_directories(${OUTPUT_LIB_NAME}
+target_include_directories(CanTp
     PUBLIC interface
     PUBLIC $<$<BOOL:${ENABLE_TEST}>:${CMAKE_CURRENT_SOURCE_DIR}/test/stub>)
 
