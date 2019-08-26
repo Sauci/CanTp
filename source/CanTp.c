@@ -397,15 +397,11 @@ LOCAL_INLINE uint8 *CanTp_GetUpperLayerMetaData(const boolean hasMetaData,
             pTmpMetaDataBuffer[0x00u] = pSavedNSa->nSa;
             pTmpMetaDataBuffer[0x01u] = pSavedNTa->nTa;
         }
-        else if (af == CANTP_MIXED29BIT)
+        else
         {
             pTmpMetaDataBuffer[0x00u] = pSavedNSa->nSa;
             pTmpMetaDataBuffer[0x01u] = pSavedNTa->nTa;
             pTmpMetaDataBuffer[0x02u] = pNAe->nAe;
-        }
-        else
-        {
-            /* MISRA C, do nothing. */
         }
 
         result = pTmpMetaDataBuffer;
@@ -794,38 +790,32 @@ void CanTp_Init(const CanTp_ConfigType *pConfig)
                 for (cfg_sdu_idx = 0x00u; cfg_sdu_idx < p_cfg_channel->nSdu.rxNSduCnt;
                      cfg_sdu_idx++)
                 {
-                    if (p_cfg_channel->nSdu.rx != NULL_PTR)
+                    p_cfg_rx_sdu = &p_cfg_channel->nSdu.rx[cfg_sdu_idx];
+
+                    if (p_cfg_rx_sdu->nSduId == rt_sdu_idx)
                     {
-                        p_cfg_rx_sdu = &p_cfg_channel->nSdu.rx[cfg_sdu_idx];
+                        p_rt_sdu = &p_rt_channel->sdu[p_cfg_rx_sdu->nSduId];
 
-                        if (p_cfg_rx_sdu->nSduId == rt_sdu_idx)
-                        {
-                            p_rt_sdu = &p_rt_channel->sdu[p_cfg_rx_sdu->nSduId];
-
-                            p_rt_sdu->dir |= CANTP_DIRECTION_RX;
-                            p_rt_sdu->rx.cfg = p_cfg_rx_sdu;
-                            p_rt_sdu->rx.shared.taskState = CANTP_WAIT;
-                            p_rt_sdu->rx.shared.m_param.st_min = p_cfg_rx_sdu->sTMin;
-                            p_rt_sdu->rx.shared.m_param.bs = p_cfg_rx_sdu->bs;
-                        }
+                        p_rt_sdu->dir |= CANTP_DIRECTION_RX;
+                        p_rt_sdu->rx.cfg = p_cfg_rx_sdu;
+                        p_rt_sdu->rx.shared.taskState = CANTP_WAIT;
+                        p_rt_sdu->rx.shared.m_param.st_min = p_cfg_rx_sdu->sTMin;
+                        p_rt_sdu->rx.shared.m_param.bs = p_cfg_rx_sdu->bs;
                     }
                 }
 
                 for (cfg_sdu_idx = 0x00u; cfg_sdu_idx < p_cfg_channel->nSdu.txNSduCnt;
                      cfg_sdu_idx++)
                 {
-                    if (p_cfg_channel->nSdu.tx != NULL_PTR)
+                    p_cfg_tx_sdu = &p_cfg_channel->nSdu.tx[cfg_sdu_idx];
+
+                    if (p_cfg_tx_sdu->nSduId == rt_sdu_idx)
                     {
-                        p_cfg_tx_sdu = &p_cfg_channel->nSdu.tx[cfg_sdu_idx];
+                        p_rt_sdu = &p_rt_channel->sdu[p_cfg_tx_sdu->nSduId];
 
-                        if (p_cfg_tx_sdu->nSduId == rt_sdu_idx)
-                        {
-                            p_rt_sdu = &p_rt_channel->sdu[p_cfg_tx_sdu->nSduId];
-
-                            p_rt_sdu->dir |= CANTP_DIRECTION_TX;
-                            p_rt_sdu->tx.cfg = p_cfg_tx_sdu;
-                            p_rt_sdu->tx.taskState = CANTP_WAIT;
-                        }
+                        p_rt_sdu->dir |= CANTP_DIRECTION_TX;
+                        p_rt_sdu->tx.cfg = p_cfg_tx_sdu;
+                        p_rt_sdu->tx.taskState = CANTP_WAIT;
                     }
                 }
             }
