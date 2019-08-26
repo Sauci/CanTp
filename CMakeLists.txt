@@ -2,13 +2,16 @@ cmake_minimum_required(VERSION 3.8.0)
 
 project(CanTp VERSION 0.1.0 LANGUAGES C)
 
-option(OS_GET_TIME_API "indicates whether the OSEK API GetTime is available or not." OFF)
+set(AUTOSAR_STD_HEADER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/test/stub CACHE FILEPATH
+    "path to directory containing Std_Types.h and ComStack_Types.h.")
+set(CANTP_CONFIG_FILEPATH ${CMAKE_CURRENT_SOURCE_DIR}/config/can_tp.json CACHE FILEPATH
+    "path to configuration file used to generate post-build configuration.")
 option(ENABLE_DET "enables/disables development error detection." ON)
-option(ENABLE_TEST "enables/disables tests." ON)
-option(ENABLE_PC_LINT "enables/disables static code analysis." OFF)
 option(ENABLE_DOC_GEN "enables/disables documentation generation." OFF)
+option(ENABLE_PC_LINT "enables/disables static code analysis." OFF)
+option(ENABLE_TEST "enables/disables tests." ON)
 set(MISRA_C_VERSION 2012 CACHE STRING "MISRA standard.")
-set(CANTP_CONFIG_FILEPATH ${CMAKE_CURRENT_SOURCE_DIR}/config/can_tp.json CACHE FILEPATH "")
+option(OS_GET_TIME_API "indicates whether the OSEK API GetTime is available or not." OFF)
 
 find_package(PythonInterp 3.6 REQUIRED)
 
@@ -41,7 +44,7 @@ target_compile_definitions(CanTp
 
 target_include_directories(CanTp
     PUBLIC interface
-    PUBLIC $<$<BOOL:${ENABLE_TEST}>:${CMAKE_CURRENT_SOURCE_DIR}/test/stub>)
+    PUBLIC ${AUTOSAR_STD_HEADER_PATH})
 
 if (${ENABLE_TEST})
     enable_testing()
@@ -66,7 +69,7 @@ if (${ENABLE_PC_LINT})
         DEPENDENCIES ${CMAKE_CURRENT_SOURCE_DIR}/generated/CanTp_PBcfg.h
         OUTPUT_LOG ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.lnt.log
         EXCLUDE_DIRECTORIES
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/stub
+        ${AUTOSAR_STD_HEADER_PATH}
         OPTION_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/extern/lint/MISRA${MISRA_C_VERSION}.lnt
         ${CMAKE_CURRENT_SOURCE_DIR}/config/CanTp.lnt)

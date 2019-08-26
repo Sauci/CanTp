@@ -22,7 +22,7 @@ add_library(CanTp_PBcfg STATIC ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_PBcfg.c)
 target_include_directories(CanTp_PBcfg
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
     PRIVATE ${PROJECT_SOURCE_DIR}/interface
-    PRIVATE $<$<BOOL:${ENABLE_TEST}>:${PROJECT_SOURCE_DIR}/test/stub>)
+    PRIVATE ${AUTOSAR_STD_HEADER_PATH})
 
 if (${ENABLE_PC_LINT})
     add_pc_lint_target(NAME CanTp_PBcfg
@@ -30,7 +30,7 @@ if (${ENABLE_PC_LINT})
         OUTPUT_LOG ${PROJECT_SOURCE_DIR}/${PROJECT_NAME}_PBcfg.lnt.log
         EXCLUDE_DIRECTORIES
         ${PROJECT_SOURCE_DIR}/interface
-        ${PROJECT_SOURCE_DIR}/test/stub
+        ${AUTOSAR_STD_HEADER_PATH}
         OPTION_FILES
         ${PROJECT_SOURCE_DIR}/extern/lint/MISRA${MISRA_C_VERSION}.lnt
         ${PROJECT_SOURCE_DIR}/config/CanTp.lnt)
