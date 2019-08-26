@@ -5,15 +5,15 @@ project(CanTp VERSION 0.1.0 LANGUAGES C)
 option(OS_GET_TIME_API "indicates whether the OSEK API GetTime is available or not." OFF)
 option(ENABLE_DET "enables/disables development error detection." ON)
 option(ENABLE_TEST "enables/disables tests." ON)
-option(ENABLE_SCA "enables/disables static code analysis." OFF)
-option(ENABLE_DOC "enables/disables documentation generation." OFF)
+option(ENABLE_PC_LINT "enables/disables static code analysis." OFF)
+option(ENABLE_DOC_GEN "enables/disables documentation generation." OFF)
 set(MISRA_C_VERSION 2012 CACHE STRING "MISRA standard.")
 set(CANTP_CONFIG_FILEPATH ${CMAKE_CURRENT_SOURCE_DIR}/config/can_tp.json CACHE FILEPATH "")
 set(OUTPUT_LIB_NAME CanTp CACHE STRING "default library name")
 
 find_package(PythonInterp 3.6 REQUIRED)
 
-if (${ENABLE_DOC})
+if (${ENABLE_DOC_GEN})
     find_package(Doxygen REQUIRED dot)
 
     set(DOXYGEN_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/doc)
@@ -62,7 +62,7 @@ if (${ENABLE_TEST})
         INPUT ${CMAKE_BINARY_DIR}/cffi_config.tmp.py)
 endif ()
 
-if (${ENABLE_SCA})
+if (${ENABLE_PC_LINT})
     add_pc_lint_target(NAME CanTp
         DEPENDENCIES ${CMAKE_CURRENT_SOURCE_DIR}/generated/CanTp_PBcfg.h
         OUTPUT_LOG ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.lnt.log

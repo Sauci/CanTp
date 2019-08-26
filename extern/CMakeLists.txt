@@ -10,6 +10,6 @@ file(DOWNLOAD https://gimpel.com/html/pub90/au-misra1.lnt ${MISRA_CONFIG_DIRECTO
 file(DOWNLOAD https://gimpel.com/html/pub90/au-misra2.lnt ${MISRA_CONFIG_DIRECTORY}/MISRA2004.lnt)
 file(DOWNLOAD https://gimpel.com/html/pub90/au-misra3.lnt ${MISRA_CONFIG_DIRECTORY}/MISRA2012.lnt)
 
-if (${ENABLE_SCA})
+if (${ENABLE_PC_LINT})
     include(add_pc_lint_target.cmake)
 endif ()

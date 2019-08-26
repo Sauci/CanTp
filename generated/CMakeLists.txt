@@ -24,7 +24,7 @@ target_include_directories(CanTp_PBcfg
     PRIVATE ${PROJECT_SOURCE_DIR}/interface
     PRIVATE $<$<BOOL:${ENABLE_TEST}>:${PROJECT_SOURCE_DIR}/test/stub>)
 
-if (${ENABLE_SCA})
+if (${ENABLE_PC_LINT})
     add_pc_lint_target(NAME CanTp_PBcfg
         DEPENDS CanTp_PBcfg.c CanTp_PBcfg.h
         OUTPUT_LOG ${PROJECT_SOURCE_DIR}/${PROJECT_NAME}_PBcfg.lnt.log
