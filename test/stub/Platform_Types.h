@@ -9,8 +9,7 @@
 
 #ifdef __cplusplus
 
-extern "C"
-{
+extern "C" {
 
 #endif /* ifdef __cplusplus */
 
@@ -43,7 +42,6 @@ typedef uint8_least boolean;
 typedef float ieee_float;
 
 #ifdef __cplusplus
-
 }
 
 #endif /* ifdef __cplusplus */

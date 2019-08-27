@@ -17,14 +17,13 @@
 
 #ifdef __cplusplus
 
-extern "C"
-{
+extern "C" {
 
 #endif /* #ifdef __cplusplus */
 
-/*-----------------------------------------------------------------------------------------------*/
-/* included files (#include).                                                                    */
-/*-----------------------------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------------------*/
+/* included files (#include).                                                                     */
+/*------------------------------------------------------------------------------------------------*/
 
 /**
  * @addtogroup CANTP_CBK
@@ -33,10 +32,9 @@ extern "C"
 
 /** @} */
 
-
-/*-----------------------------------------------------------------------------------------------*/
-/* global callback function declarations.                                                        */
-/*-----------------------------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------------------*/
+/* global callback function declarations.                                                         */
+/*------------------------------------------------------------------------------------------------*/
 
 /**
  * @addtogroup CANTP_CBK_GCFDECL
@@ -49,7 +47,8 @@ extern "C"
 /**
  * @brief indication of a received PDU from a lower layer communication interface module.
  * @param [in] rxPduId ID of the received PDU.
- * @param [in] pPduInfo contains the length (SduLength) of the received PDU, a pointer to a buffer (SduDataPtr) containing the PDU, and the meta-data related to this PDU.
+ * @param [in] pPduInfo contains the length (SduLength) of the received PDU, a pointer to a buffer
+ * (SduDataPtr) containing the PDU, and the meta-data related to this PDU.
  */
 void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo);
 
@@ -60,7 +59,8 @@ void CanTp_RxIndication(PduIdType rxPduId, const PduInfoType *pPduInfo);
 #include "CanTp_MemMap.h"
 
 /**
- * @brief the lower layer communication interface module confirms the transmission of a PDU, or the failure to transmit a PDU.
+ * @brief the lower layer communication interface module confirms the transmission of a PDU, or the
+ * failure to transmit a PDU.
  * @param [in] txPduId ID of the PDU that has been transmitted
  * @param [in] result E_OK: the PDU was transmitted, E_NOT_OK: transmission of the PDU failed
  */
@@ -72,7 +72,6 @@ void CanTp_TxConfirmation(PduIdType txPduId, Std_ReturnType result);
 /** @} */
 
 #ifdef __cplusplus
-
 }
 
 #endif /* #ifdef __cplusplus */

@@ -8,8 +8,8 @@ import sys
 build_directory = "${CMAKE_BINARY_DIR}"
 header = "${PROJECT_SOURCE_DIR}/interface/CanTp.h"
 source = "${PROJECT_SOURCE_DIR}/source/CanTp.c"
-compile_definitions = "$<JOIN:$<TARGET_PROPERTY:${OUTPUT_LIB_NAME},COMPILE_DEFINITIONS>,$<SEMICOLON>>".split(';')
-include_directories = "$<JOIN:$<TARGET_PROPERTY:${OUTPUT_LIB_NAME},INCLUDE_DIRECTORIES>,$<SEMICOLON>>".split(';')
+compile_definitions = "$<JOIN:$<TARGET_PROPERTY:CanTp,COMPILE_DEFINITIONS>,$<SEMICOLON>>".split(';')
+include_directories = "$<JOIN:$<TARGET_PROPERTY:CanTp,INCLUDE_DIRECTORIES>,$<SEMICOLON>>".split(';')
 
 sys.path.append("${PROJECT_SOURCE_DIR}/script")
 sys.path.append(build_directory)
