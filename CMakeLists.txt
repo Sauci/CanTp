@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8.0)
 
 project(CanTp VERSION 0.1.0 LANGUAGES C)
 
-set(AUTOSAR_STD_HEADER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/test/stub CACHE FILEPATH
+set(AUTOSAR_STD_HEADER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/test/stub/common CACHE FILEPATH
     "path to directory containing Std_Types.h and ComStack_Types.h.")
 set(CANTP_CONFIG_FILEPATH ${CMAKE_CURRENT_SOURCE_DIR}/config/can_tp.json CACHE FILEPATH
     "path to configuration file used to generate post-build configuration.")
@@ -21,7 +21,7 @@ if (${ENABLE_DOC_GEN})
     set(DOXYGEN_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/doc)
 
     doxygen_add_docs(${PROJECT_NAME}.doc source interface COMMENT "generating CanTp documentation")
-endif()
+endif ()
 
 add_subdirectory(extern)
 add_subdirectory(generated)
@@ -44,7 +44,8 @@ target_compile_definitions(CanTp
 
 target_include_directories(CanTp
     PUBLIC interface
-    PUBLIC ${AUTOSAR_STD_HEADER_PATH})
+    PUBLIC ${AUTOSAR_STD_HEADER_PATH}
+    PUBLIC $<$<BOOL:${CANTP_ENABLE_TEST}>:${CMAKE_CURRENT_SOURCE_DIR}/test/stub>)
 
 if (${CANTP_ENABLE_TEST})
     enable_testing()

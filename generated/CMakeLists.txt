@@ -22,7 +22,8 @@ add_library(CanTp_PBcfg STATIC ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_PBcfg.c)
 target_include_directories(CanTp_PBcfg
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
     PRIVATE ${PROJECT_SOURCE_DIR}/interface
-    PRIVATE ${AUTOSAR_STD_HEADER_PATH})
+    PRIVATE ${AUTOSAR_STD_HEADER_PATH}
+    PRIVATE $<$<BOOL:${CANTP_ENABLE_TEST}>:${PROJECT_SOURCE_DIR}/test/stub>)
 
 if (${ENABLE_PC_LINT})
     add_pc_lint_target(NAME CanTp_PBcfg
