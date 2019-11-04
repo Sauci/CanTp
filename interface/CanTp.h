@@ -93,7 +93,7 @@ extern "C" {
 /**
  * @brief CAN transport layer major version number.
  */
-#define CANTP_SW_MAJOR_VERSION 0x00u
+#define CANTP_SW_MAJOR_VERSION (0x00u)
 
 #endif /* #ifndef CANTP_SW_MAJOR_VERSION */
 
@@ -102,7 +102,7 @@ extern "C" {
 /**
  * @brief CAN transport layer minor version number.
  */
-#define CANTP_SW_MINOR_VERSION 0x01u
+#define CANTP_SW_MINOR_VERSION (0x01u)
 
 #endif /* #ifndef CANTP_SW_MINOR_VERSION */
 
@@ -111,7 +111,7 @@ extern "C" {
 /**
  * @brief CAN transport layer patch version number.
  */
-#define CANTP_SW_PATCH_VERSION 0x00u
+#define CANTP_SW_PATCH_VERSION (0x00u)
 
 #endif /* #ifndef CANTP_SW_PATCH_VERSION */
 
