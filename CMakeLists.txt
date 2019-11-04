@@ -51,15 +51,16 @@ if (${CANTP_ENABLE_TEST})
     enable_testing()
 
     add_test(NAME CanTp_UnitTest
-        COMMAND ${PYTHON_EXECUTABLE} -W ignore::DeprecationWarning -m pytest
-        ${CMAKE_CURRENT_SOURCE_DIR}/test --junitxml=./report/${PROJECT_NAME}.xml
+        COMMAND ${PYTHON_EXECUTABLE} -W ignore::DeprecationWarning
+        -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test
+        --build_directory ${CMAKE_BINARY_DIR}
+        --script_directory ${PROJECT_SOURCE_DIR}/script
+        --header ${PROJECT_SOURCE_DIR}/interface/CanTp.h
+        --source ${PROJECT_SOURCE_DIR}/source/CanTp.c
+        --compile_definitions $<JOIN:$<TARGET_PROPERTY:CanTp,COMPILE_DEFINITIONS>,$<SEMICOLON>>
+        --include_directories $<JOIN:$<TARGET_PROPERTY:CanTp,INCLUDE_DIRECTORIES>,$<SEMICOLON>>
+        --junitxml=./report/${PROJECT_NAME}.xml
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-
-    configure_file(config/cffi_config.py.in ${CMAKE_BINARY_DIR}/cffi_config.tmp.py)
-
-    file(GENERATE
-        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/test/ffi/cffi_config.py
-        INPUT ${CMAKE_BINARY_DIR}/cffi_config.tmp.py)
 endif ()
 
 if (${ENABLE_PC_LINT})

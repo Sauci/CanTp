@@ -4,7 +4,7 @@
 from unittest.mock import ANY
 
 from .parameter import *
-from .ffi import CanTpTest
+from .conftest import CanTpTest
 
 
 def assert_rx_session_aborted(handle):
