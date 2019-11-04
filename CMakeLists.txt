@@ -55,9 +55,6 @@ if (${CANTP_ENABLE_TEST})
         ${CMAKE_CURRENT_SOURCE_DIR}/test --junitxml=./report/${PROJECT_NAME}.xml
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
-    add_custom_target(gcov.info
-        COMMAND gcov -a -b -c --object-directory ${CMAKE_BINARY_DIR} _cffi_can_tp.gcda)
-
     configure_file(config/cffi_config.py.in ${CMAKE_BINARY_DIR}/cffi_config.tmp.py)
 
     file(GENERATE
