@@ -1,6 +1,6 @@
 from math import ceil
 from .parameter import *
-from .ffi import CanTpTest
+from .conftest import CanTpTest
 
 
 class TestSTMinValue:

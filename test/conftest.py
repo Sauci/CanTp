@@ -1,6 +1,7 @@
 import os
 import sys
 
+from bsw_code_gen import BSWCodeGen
 from cffi import FFI
 from importlib import import_module
 from io import StringIO
@@ -13,12 +14,24 @@ from pycparser.c_generator import CGenerator as Generator
 from pycparser.c_parser import CParser
 from pcpp.preprocessor import Preprocessor as Pp
 
-from .cffi_config import build_directory, \
-    source as cfg_src, \
-    header as cfg_hdr, \
-    compile_definitions as cfg_cd, \
-    include_directories as cfg_id, \
-    CodeGen
+
+def pytest_addoption(parser):
+    parser.addoption('--build_directory', action='store')
+    parser.addoption('--script_directory', action='store')
+    parser.addoption('--header', action='store')
+    parser.addoption('--source', action='store')
+    parser.addoption('--compile_definitions', action='store')
+    parser.addoption('--include_directories', action='store')
+
+
+def pytest_configure(config):
+    print(config)
+    os.environ['build_directory'] = config.getoption('build_directory')
+    os.environ['script_directory'] = config.getoption('script_directory')
+    os.environ['header'] = config.getoption('header')
+    os.environ['source'] = config.getoption('source')
+    os.environ['compile_definitions'] = config.getoption('compile_definitions')
+    os.environ['include_directories'] = config.getoption('include_directories')
 
 
 def convert(name):
@@ -142,25 +155,27 @@ class CanTpTest(object):
         self.available_rx_buffer = rx_buffer_size
         self.can_if_tx_data = list()
         self.can_tp_rx_data = list()
-        code_gen = CodeGen(config)
-        with open(os.path.join(build_directory, 'CanTp_PBcfg.h'), 'w') as fp:
+        code_gen = BSWCodeGen(config, self.script_directory)
+        with open(os.path.join(self.build_directory, 'CanTp_PBcfg.h'), 'w') as fp:
             fp.write(code_gen.header)
-        with open(cfg_hdr, 'r') as fp:
+        with open(os.path.join(self.build_directory, 'CanTp_PBcfg.c'), 'w') as fp:
+            fp.write(code_gen.source)
+        with open(self.header, 'r') as fp:
             header = fp.read()
         self.config = MockGen('_cffi_can_tp_pbcfg_{}'.format(config.get_id),
                               code_gen.source,
                               code_gen.header,
-                              define_macros=cfg_cd,
-                              include_dirs=cfg_id + [build_directory],
-                              build_dir=build_directory)
+                              define_macros=tuple(self.compile_definitions),
+                              include_dirs=tuple(self.include_directories + [self.build_directory]),
+                              build_dir=self.build_directory)
         self.code = MockGen('_cffi_can_tp',
-                            '#include "{}"'.format(cfg_src),
+                            '#include "{}"'.format(self.source),
                             header,
-                            define_macros=cfg_cd,
-                            include_dirs=cfg_id + [build_directory],
+                            define_macros=tuple(self.compile_definitions),
+                            include_dirs=tuple(self.include_directories + [self.build_directory]),
                             compile_flags=('-g', '-O0', '-fprofile-arcs', '-ftest-coverage'),
                             link_flags=('-g', '-O0', '-fprofile-arcs', '-ftest-coverage'),
-                            build_dir=build_directory)
+                            build_dir=self.build_directory)
         if initialize:
             self.code.lib.CanTp_Init(self.code.ffi.cast('const CanTp_ConfigType *', self.config.lib.CanTp_Config))
             if self.code.lib.CanTp_State != self.code.lib.CANTP_ON:
@@ -335,3 +350,27 @@ class CanTpTest(object):
     @available_rx_buffer.setter
     def available_rx_buffer(self, value):
         self._available_rx_buffer = value
+
+    @property
+    def build_directory(self):
+        return os.getenv('build_directory')
+
+    @property
+    def script_directory(self):
+        return os.getenv('script_directory')
+
+    @property
+    def header(self):
+        return os.getenv('header')
+
+    @property
+    def source(self):
+        return os.getenv('source')
+
+    @property
+    def compile_definitions(self):
+        return os.getenv('compile_definitions').split(';')
+
+    @property
+    def include_directories(self):
+        return os.getenv('include_directories').split(';')

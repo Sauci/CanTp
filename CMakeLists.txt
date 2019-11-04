@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8.0)
 
 project(CanTp VERSION 0.1.0 LANGUAGES C)
 
-set(AUTOSAR_STD_HEADER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/test/stub CACHE FILEPATH
+set(AUTOSAR_STD_HEADER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/test/stub/common CACHE FILEPATH
     "path to directory containing Std_Types.h and ComStack_Types.h.")
 set(CANTP_CONFIG_FILEPATH ${CMAKE_CURRENT_SOURCE_DIR}/config/can_tp.json CACHE FILEPATH
     "path to configuration file used to generate post-build configuration.")
@@ -21,7 +21,7 @@ if (${ENABLE_DOC_GEN})
     set(DOXYGEN_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/doc)
 
     doxygen_add_docs(${PROJECT_NAME}.doc source interface COMMENT "generating CanTp documentation")
-endif()
+endif ()
 
 add_subdirectory(extern)
 add_subdirectory(generated)
@@ -44,24 +44,23 @@ target_compile_definitions(CanTp
 
 target_include_directories(CanTp
     PUBLIC interface
-    PUBLIC ${AUTOSAR_STD_HEADER_PATH})
+    PUBLIC ${AUTOSAR_STD_HEADER_PATH}
+    PUBLIC $<$<BOOL:${CANTP_ENABLE_TEST}>:${CMAKE_CURRENT_SOURCE_DIR}/test/stub>)
 
 if (${CANTP_ENABLE_TEST})
     enable_testing()
 
     add_test(NAME CanTp_UnitTest
-        COMMAND ${PYTHON_EXECUTABLE} -W ignore::DeprecationWarning -m pytest
-        ${CMAKE_CURRENT_SOURCE_DIR}/test --junitxml=./report/ut.xml
+        COMMAND ${PYTHON_EXECUTABLE} -W ignore::DeprecationWarning
+        -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test
+        --build_directory ${CMAKE_BINARY_DIR}
+        --script_directory ${PROJECT_SOURCE_DIR}/script
+        --header ${PROJECT_SOURCE_DIR}/interface/CanTp.h
+        --source ${PROJECT_SOURCE_DIR}/source/CanTp.c
+        --compile_definitions $<JOIN:$<TARGET_PROPERTY:CanTp,COMPILE_DEFINITIONS>,$<SEMICOLON>>
+        --include_directories $<JOIN:$<TARGET_PROPERTY:CanTp,INCLUDE_DIRECTORIES>,$<SEMICOLON>>
+        --junitxml=./report/${PROJECT_NAME}.xml
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-
-    add_custom_target(gcov.info
-        COMMAND gcov -a -b -c --object-directory ${CMAKE_BINARY_DIR} _cffi_can_tp.gcda)
-
-    configure_file(config/cffi_config.py.in ${CMAKE_BINARY_DIR}/cffi_config.tmp.py)
-
-    file(GENERATE
-        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/test/ffi/cffi_config.py
-        INPUT ${CMAKE_BINARY_DIR}/cffi_config.tmp.py)
 endif ()
 
 if (${ENABLE_PC_LINT})

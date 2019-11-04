@@ -4,7 +4,7 @@
 from unittest.mock import ANY
 
 from .parameter import *
-from .ffi import CanTpTest
+from .conftest import CanTpTest
 
 
 def assert_rx_session_aborted(handle):
@@ -498,7 +498,8 @@ class TestSWS00229:
 
     @pytest.mark.parametrize('data_size', multi_frames_sizes)
     @pytest.mark.parametrize('n_cs', n_cs_timeouts)
-    def test_cs_timeout(self, data_size, n_cs):
+    @pytest.mark.parametrize('return_value', ['BUFREQ_E_BUSY', 'BUFREQ_E_OVFL'])
+    def test_cs_timeout(self, data_size, n_cs, return_value):
         config = DefaultSender(n_cs=n_cs)
         handle = CanTpTest(config)
         fc_frame = handle.get_receiver_flow_control(padding=0xFF, bs=0, st_min=0)
@@ -506,8 +507,7 @@ class TestSWS00229:
         handle.lib.CanTp_MainFunction()
         handle.lib.CanTp_TxConfirmation(0, handle.define('E_OK'))
         handle.lib.CanTp_RxIndication(0, handle.get_pdu_info(fc_frame))
-        # TODO: add test for overflow return values.
-        handle.pdu_r_can_tp_copy_tx_data.return_value = handle.lib.BUFREQ_E_BUSY
+        handle.pdu_r_can_tp_copy_tx_data.return_value = getattr(handle.lib, return_value)
         for _ in range(int(n_cs / config.main_period)):
             handle.lib.CanTp_MainFunction()
         handle.det_report_error.assert_not_called()
