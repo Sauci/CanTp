@@ -52,7 +52,7 @@ if (${CANTP_ENABLE_TEST})
 
     add_test(NAME CanTp_UnitTest
         COMMAND ${PYTHON_EXECUTABLE} -W ignore::DeprecationWarning -m pytest
-        ${CMAKE_CURRENT_SOURCE_DIR}/test --junitxml=./report/ut.xml
+        ${CMAKE_CURRENT_SOURCE_DIR}/test --junitxml=./report/${PROJECT_NAME}.xml
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
     add_custom_target(gcov.info
