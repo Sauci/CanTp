@@ -7,31 +7,31 @@
         "block size": {
           "$ref": "#/definitions/block_size"
         },
-        "communication type": {
+        "communication_type": {
           "$ref": "#/definitions/communication_type"
         },
-        "wait for transmission maximum": {
+        "wait_for_transmission maximum": {
           "$ref": "#/definitions/wait_for_transmission_maximum"
         },
-        "minimum separation time": {
+        "minimum_separation_time": {
           "$ref": "#/definitions/minimum_separation_time"
         },
-        "N_As timeout": {
+        "N_As_timeout": {
           "$ref": "#/definitions/network_layer_timeout"
         },
-        "N_Bs timeout": {
+        "N_Bs_timeout": {
           "$ref": "#/definitions/network_layer_timeout"
         },
-        "N_Cs timeout": {
+        "N_Cs_timeout": {
           "$ref": "#/definitions/network_layer_timeout"
         },
-        "N_Ar timeout": {
+        "N_Ar_timeout": {
           "$ref": "#/definitions/network_layer_timeout"
         },
-        "N_Br timeout": {
+        "N_Br_timeout": {
           "$ref": "#/definitions/network_layer_timeout"
         },
-        "N_Cr timeout": {
+        "N_Cr_timeout": {
           "$ref": "#/definitions/network_layer_timeout"
         }
       }
@@ -41,7 +41,7 @@
       "items": {
         "type": "object",
         "properties": {
-          "main function period": {
+          "main_function_period": {
             "type": "number",
             "minimum": 0
           },
@@ -52,7 +52,7 @@
               {
                 "type": "object",
                 "properties": {
-                  "channel mode": {
+                  "channel_mode": {
                     "$ref": "#/definitions/channel_mode"
                   },
                   "receivers": {
@@ -66,7 +66,7 @@
                             },
                             {
                               "properties": {
-                                "addressing format": {
+                                "addressing_format": {
                                   "type": "string",
                                   "enum": [
                                     "CANTP_STANDARD",
@@ -84,14 +84,14 @@
                             },
                             {
                               "properties": {
-                                "addressing format": {
+                                "addressing_format": {
                                   "type": "string",
                                   "enum": [
                                     "CANTP_MIXED",
                                     "CANTP_MIXED29BIT"
                                   ]
                                 },
-                                "address extension": {
+                                "address_extension": {
                                   "$ref": "#/definitions/network_address_extension"
                                 }
                               }
@@ -105,13 +105,13 @@
                             },
                             {
                               "properties": {
-                                "addressing format": {
+                                "addressing_format": {
                                   "type": "string",
                                   "enum": [
                                     "CANTP_EXTENDED"
                                   ]
                                 },
-                                "target address": {
+                                "target_address": {
                                   "$ref": "#/definitions/network_address_extension"
                                 }
                               }
@@ -132,7 +132,7 @@
                             },
                             {
                               "properties": {
-                                "addressing format": {
+                                "addressing_format": {
                                   "type": "string",
                                   "enum": [
                                     "CANTP_STANDARD",
@@ -150,14 +150,14 @@
                             },
                             {
                               "properties": {
-                                "addressing format": {
+                                "addressing_format": {
                                   "type": "string",
                                   "enum": [
                                     "CANTP_MIXED",
                                     "CANTP_MIXED29BIT"
                                   ]
                                 },
-                                "address extension": {
+                                "address_extension": {
                                   "$ref": "#/definitions/network_address_extension"
                                 }
                               }
@@ -171,13 +171,13 @@
                             },
                             {
                               "properties": {
-                                "addressing format": {
+                                "addressing_format": {
                                   "type": "string",
                                   "enum": [
                                     "CANTP_EXTENDED"
                                   ]
                                 },
-                                "target address": {
+                                "target_address": {
                                   "$ref": "#/definitions/network_address_extension"
                                 }
                               }
@@ -222,41 +222,41 @@
         "comment": {
           "type": "string"
         },
-        "network service data unit identifier": {
+        "network_service_data_unit_identifier": {
           "$ref": "#/definitions/network_address_extension"
         },
-        "N_Ar timeout": {
+        "N_Ar_timeout": {
           "$ref": "#/definitions/network_layer_timeout"
         },
-        "N_Br timeout": {
+        "N_Br_timeout": {
           "$ref": "#/definitions/network_layer_timeout"
         },
-        "N_Cr timeout": {
+        "N_Cr_timeout": {
           "$ref": "#/definitions/network_layer_timeout"
         },
-        "block size": {
+        "block_size": {
           "$ref": "#/definitions/block_size"
         },
-        "minimum separation time": {
+        "minimum_separation_time": {
           "$ref": "#/definitions/minimum_separation_time"
         },
-        "wait for transmission maximum": {
+        "wait_for_transmission maximum": {
           "$ref": "#/definitions/wait_for_transmission_maximum"
         },
-        "network service data unit reference": {
+        "network_service_data_unit_reference": {
           "type": "integer",
           "minimum": 0,
           "maximum": 4294967295
         },
-        "enable padding": {
+        "enable_padding": {
           "type": "boolean"
         },
-        "communication type": {
+        "communication_type": {
           "$ref": "#/definitions/communication_type"
         }
       },
       "required": [
-        "network service data unit reference"
+        "network_service_data_unit_reference"
       ]
     },
     "block_size": {
@@ -277,35 +277,35 @@
         "comment": {
           "type": "string"
         },
-        "network service data unit identifier": {
+        "network_service_data_unit_identifier": {
           "$ref": "#/definitions/network_address_extension"
         },
-        "N_As timeout": {
+        "N_As_timeout": {
           "$ref": "#/definitions/network_layer_timeout"
         },
-        "N_Bs timeout": {
+        "N_Bs_timeout": {
           "$ref": "#/definitions/network_layer_timeout"
         },
-        "N_Cs timeout": {
+        "N_Cs_timeout": {
           "$ref": "#/definitions/network_layer_timeout"
         },
-        "network service data unit reference": {
+        "network_service_data_unit_reference": {
           "type": "integer",
           "minimum": 0,
           "maximum": 4294967295
         },
-        "enable transmit cancellation": {
+        "enable_transmit_cancellation": {
           "type": "boolean"
         },
-        "enable padding": {
+        "enable_padding": {
           "type": "boolean"
         },
-        "communication type": {
+        "communication_type": {
           "$ref": "#/definitions/communication_type"
         }
       },
       "required": [
-        "network service data unit reference"
+        "network_service_data_unit_reference"
       ]
     },
     "network_address_extension": {
