@@ -369,7 +369,7 @@ class CanTpTest(object):
 
     @property
     def compile_definitions(self):
-        return os.getenv('compile_definitions').split(';')
+        return os.getenv('compile_definitions').split(';') + ['CFFI_ENABLE=STD_ON']
 
     @property
     def include_directories(self):

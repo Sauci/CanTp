@@ -737,13 +737,13 @@ CanTp_StateType CanTp_State = CANTP_OFF;
 #define CanTp_STOP_SEC_VAR_FAST_POWER_ON_INIT_UNSPECIFIED
 #include "CanTp_MemMap.h"
 
-#ifdef CANTP_BUILD_CFFI_INTERFACE
+#ifdef CFFI_ENABLE
 
 boolean CanTp_AbortedRxSession = FALSE;
 
 boolean CanTp_AbortedTxSession = FALSE;
 
-#endif /* #ifndef CANTP_BUILD_CFFI_INTERFACE */
+#endif /* #ifndef CFFI_ENABLE */
 
 /** @} */
 
@@ -2597,11 +2597,11 @@ static void CanTp_AbortRxSession(CanTp_NSduType *pNSdu,
                                  const uint8 instanceId,
                                  const boolean confirm)
 {
-#ifdef CANTP_BUILD_CFFI_INTERFACE
+#ifdef CFFI_ENABLE
 
     CanTp_AbortedRxSession = TRUE;
 
-#endif /* #ifndef CANTP_BUILD_CFFI_INTERFACE */
+#endif /* #ifndef CFFI_ENABLE */
 
     pNSdu->rx.shared.taskState = CANTP_WAIT;
 
@@ -2623,11 +2623,11 @@ static void CanTp_AbortRxSession(CanTp_NSduType *pNSdu,
 
 static void CanTp_AbortTxSession(CanTp_NSduType *pNSdu, const uint8 instanceId, boolean confirm)
 {
-#ifdef CANTP_BUILD_CFFI_INTERFACE
+#ifdef CFFI_ENABLE
 
     CanTp_AbortedTxSession = TRUE;
 
-#endif /* #ifndef CANTP_BUILD_CFFI_INTERFACE */
+#endif /* #ifndef CFFI_ENABLE */
 
     pNSdu->tx.taskState = CANTP_WAIT;
 

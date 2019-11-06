@@ -49,11 +49,11 @@ extern "C" {
 
 #include "CanTp_Types.h"
 
-#if defined(CANTP_BUILD_CFFI_INTERFACE)
+#if defined(CFFI_ENABLE)
 
 /**
- * @brief if CANTP_BUILD_CFFI_INTERFACE is defined, expose the CanTp callback function to CFFI
- * module as well as the external functions.
+ * @brief if CFFI_ENABLE is defined, expose the CanTp callback function to CFFI module as well as
+ * the external functions.
  */
 #include "CanTp_Cbk.h"
 
@@ -69,7 +69,7 @@ extern "C" {
 
 #endif /* #if (CANTP_DEV_ERROR_DETECT == STD_ON) */
 
-#endif /* #if defined(CANTP_BUILD_CFFI_INTERFACE) */
+#endif /* #if defined(CFFI_ENABLE) */
 
 /** @} */
 
@@ -309,13 +309,13 @@ extern "C" {
 
 extern CanTp_StateType CanTp_State;
 
-#ifdef CANTP_BUILD_CFFI_INTERFACE
+#ifdef CFFI_ENABLE
 
 extern boolean CanTp_AbortedRxSession;
 
 extern boolean CanTp_AbortedTxSession;
 
-#endif /* #ifndef CANTP_BUILD_CFFI_INTERFACE */
+#endif /* #ifndef CFFI_ENABLE */
 
 /** @} */
 
