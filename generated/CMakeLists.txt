@@ -1,16 +1,15 @@
 add_custom_command(OUTPUT
-    ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_PBcfg.h
     ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_PBcfg.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_PBcfg.h
     DEPENDS ${CANTP_CONFIG_FILEPATH}
     DEPENDS ${PROJECT_SOURCE_DIR}/script/header.h.jinja2
     DEPENDS ${PROJECT_SOURCE_DIR}/script/source.c.jinja2
-    COMMAND bsw_code_gen
-    -schema ${PROJECT_SOURCE_DIR}/config/can_tp.schema.json
+    COMMAND ${PYTHON_EXECUTABLE} -m bsw_code_gen
     -template_directory ${PROJECT_SOURCE_DIR}/script
-    ${PROJECT_SOURCE_DIR}/config/can_tp.json
+    ${CANTP_CONFIG_FILEPATH}
     ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_PBcfg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_PBcfg.h
-    COMMENT "generating post-build configuration files")
+    COMMENT "generating post-build configuration header")
 
 add_library(CanTp_PBcfg STATIC ${CMAKE_CURRENT_SOURCE_DIR}/CanTp_PBcfg.c)
 
