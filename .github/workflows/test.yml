@@ -7,9 +7,18 @@ env:
   IMAGE_NAME: ${{github.repository}}
 
 jobs:
+  extract-metadata:
+    name: Extract metadata
+    runs-on: ubuntu-20.04
+    steps:
+     - name: Extract metadata (tags, labels) for Docker
+       uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+       with:
+         images: ${{env.REGISTRY}}/${{env.IMAGE_NAME}}
   build-and-push-image:
     name: Build and push image
     runs-on: ubuntu-20.04
+    needs: extract-metadata
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -19,18 +28,18 @@ jobs:
           registry: ${{env.REGISTRY}}
           username: ${{secrets.PKG_REGISTRY_USERNAME}}
           password: ${{secrets.PKG_REGISTRY_RW_TOKEN}}
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
-        with:
-          images: ${{env.REGISTRY}}/${{env.IMAGE_NAME}}
+      - name: Echo metadata
+        run: |
+          echo "here we are...."
+          echo ${{needs.extract-metadata.outputs.tags}}
+          echo ${{needs.extract-metadata.outputs.labels}}
       - name: Build and push Docker image
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
           context: .
           push: true
-          tags: ${{steps.meta.outputs.tags}}
-          labels: ${{steps.meta.outputs.labels}}
+          tags: ${{needs.extract-metadata.outputs.tags}}
+          labels: ${{needs.extract-metadata.outputs.labels}}
   run-tests:
     name: Run tests
     needs: build-and-push-image
