@@ -1,4 +1,4 @@
-name: cantp CI
+name: test
 
 on: [ push ]
 
@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
      - name: Extract metadata (tags, labels) for Docker
-       uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+       uses: docker/metadata-action@v3.6.2
        with:
          images: ${{env.REGISTRY}}/${{env.IMAGE_NAME}}
   build-and-push-image:
