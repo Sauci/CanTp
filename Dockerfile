@@ -13,6 +13,7 @@ RUN apk update && apk add \
     curl \
     doxygen \
     findutils \
+    gdb \
     git \
     graphviz \
     libffi-dev \
