@@ -1239,6 +1239,7 @@ Std_ReturnType CanTp_ReadParameter(PduIdType pduId, TPParameterType parameter, u
 
 void CanTp_MainFunction(void)
 {
+    uint8_least i;
     uint32 dt;
     uint32_least channel_idx;
     uint32_least n_sdu_idx;
@@ -1272,19 +1273,18 @@ void CanTp_MainFunction(void)
 
 #if (OS_GET_TIME_API == STD_ON)
 
-                dt = GetTime();
+                dt = CanTp_GetElapsedValue();
 #else
 
                 dt = CanTp_ConfigPtr->mainFunctionPeriod;
 
 #endif
 
-                p_n_sdu->n[0x00u] += dt;
-                p_n_sdu->n[0x01u] += dt;
-                p_n_sdu->n[0x02u] += dt;
-                p_n_sdu->n[0x03u] += dt;
-                p_n_sdu->n[0x04u] += dt;
-                p_n_sdu->n[0x05u] += dt;
+                for (i = 0x00u; i < 0x06u; ++i)
+                {
+                    p_n_sdu->n[i] += dt;
+                }
+
                 p_n_sdu->rx.st_min += dt;
                 p_n_sdu->tx.st_min += dt;
             }

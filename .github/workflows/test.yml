@@ -1,4 +1,4 @@
-name: cantp CI
+name: test
 
 on: [ push ]
 
