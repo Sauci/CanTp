@@ -1272,7 +1272,7 @@ void CanTp_MainFunction(void)
 
 #if (OS_GET_TIME_API == STD_ON)
 
-                dt = GetTime();
+                dt = CanTp_GetElapsedValue();
 #else
 
                 dt = CanTp_ConfigPtr->mainFunctionPeriod;

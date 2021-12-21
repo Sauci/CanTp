@@ -15,7 +15,7 @@ The following definitions might be set by the user, depending on the needs.
 | ```ENABLE_DOC_GEN```          | ```ON```/```OFF```               | ```OFF```                      | enables/disables generation of [Doxygen](http://www.doxygen.nl/) documentation                                                                                                   |
 | ```ENABLE_PC_LINT```          | ```ON```/```OFF```               | ```OFF```                      | enables/disables generation of targets related to static code analysis (should be disabled if [PC-Lint](https://www.gimpel.com) software is not available)                       |
 | ```MISRA_C_VERSION```         | ```1998```/```2004```/```2012``` | ```2012```                     | specifies which version of **MISRA** should be used when performing static code analysis (only used if ```ENABLE_PC_LINT``` is set)                                              |
-| ```OS_GET_TIME_API```         | ```ON```/```OFF```               | ```OFF```                      | indicates whether the OSEK API GetTime is available or not                                                                                                                       |
+| ```OS_GET_TIME_API```         | ```ON```/```OFF```               | ```OFF```                      | indicates whether the OSEK API GetElapsedValue is available or not. If enabled, the user is responsible to provide the function `uint32_t CanTp_GetElapsedValue(void)`           |
 
 To use this feature, simply add ```-D<definition>=<value>``` when configuring the build with CMake.
 
