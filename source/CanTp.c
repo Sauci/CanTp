@@ -2,44 +2,11 @@
  * @file CanTp.c
  * @author
  * @date
- *
- * @defgroup CANTP_C implementation
- * @ingroup CANTP
- *
- * @defgroup CANTP_C_LDEF local definitions
- * @ingroup CANTP_C
- * @defgroup CANTP_C_LTDEF local data type definitions
- * @ingroup CANTP_C
- * @defgroup CANTP_C_LMDEF local macros
- * @ingroup CANTP_C
- * @defgroup CANTP_C_LFDECL local function declarations
- * @ingroup CANTP_C
- * @defgroup CANTP_C_LCDEF local constant definitions
- * @ingroup CANTP_C
- * @defgroup CANTP_C_LVDEF local variable definitions
- * @ingroup CANTP_C
- * @defgroup CANTP_C_GCDEF global constant definitions
- * @ingroup CANTP_C
- * @defgroup CANTP_C_GVDEF global variable definitions
- * @ingroup CANTP_C
- * @defgroup CANTP_C_GFDEF global function definitions
- * @ingroup CANTP_C
- * @defgroup CANTP_C_GSFDEF global scheduled function definitions
- * @ingroup CANTP_C
- * @defgroup CANTP_C_GCFDEF global callback function definitions
- * @ingroup CANTP_C
- * @defgroup CANTP_C_LFDEF local function definitions
- * @ingroup CANTP_C
  */
 
 /*------------------------------------------------------------------------------------------------*/
 /* included files (#include).                                                                     */
 /*------------------------------------------------------------------------------------------------*/
-
-/**
- * @addtogroup CANTP_C
- * @{
- */
 
 #ifdef __cplusplus
 
@@ -74,16 +41,9 @@ extern "C" {
 
 #endif /* #if (CANTP_DEV_ERROR_DETECT == STD_ON) */
 
-/** @} */
-
 /*------------------------------------------------------------------------------------------------*/
 /* local definitions (#define).                                                                   */
 /*------------------------------------------------------------------------------------------------*/
-
-/**
- * @addtogroup CANTP_C_LDEF
- * @{
- */
 
 #define CANTP_N_PCI_TYPE_SF (0x00u)
 
@@ -113,16 +73,9 @@ extern "C" {
 
 #define CANTP_DIRECTION_TX (0x02u)
 
-/** @} */
-
 /*------------------------------------------------------------------------------------------------*/
 /* local data type definitions (typedef, struct).                                                 */
 /*------------------------------------------------------------------------------------------------*/
-
-/**
- * @addtogroup CANTP_C_LTDEF
- * @{
- */
 
 typedef uint8 CanTp_NPciType;
 
@@ -230,16 +183,9 @@ typedef struct
     CanTp_NSduType sdu[CANTP_MAX_NUM_OF_N_SDU];
 } CanTp_ChannelRtType;
 
-/** @} */
-
 /*------------------------------------------------------------------------------------------------*/
 /* local macros definitions (#define, inline).                                                    */
 /*------------------------------------------------------------------------------------------------*/
-
-/**
- * @addtogroup CANTP_C_LMDEF
- * @{
- */
 
 LOCAL_INLINE uint32 CanTp_ConvertMsToUs(uint32 timeout)
 {
@@ -410,16 +356,9 @@ LOCAL_INLINE uint8 *CanTp_GetUpperLayerMetaData(const boolean hasMetaData,
     return result;
 }
 
-/** @} */
-
 /*------------------------------------------------------------------------------------------------*/
 /* local function declarations (static).                                                          */
 /*------------------------------------------------------------------------------------------------*/
-
-/**
- * @addtogroup CANTP_C_LFDECL
- * @{
- */
 
 #define CanTp_START_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
@@ -669,16 +608,9 @@ static CanTp_FrameStateType CanTp_LDataConTCF(CanTp_NSduType *pNSdu);
 #define CanTp_STOP_SEC_CODE_FAST
 #include "CanTp_MemMap.h"
 
-/** @} */
-
 /*------------------------------------------------------------------------------------------------*/
 /* local constant definitions (static const).                                                     */
 /*------------------------------------------------------------------------------------------------*/
-
-/**
- * @addtogroup CANTP_C_LCDEF
- * @{
- */
 
 #define CanTp_START_SEC_VAR_FAST_INIT_UNSPECIFIED
 #include "CanTp_MemMap.h"
@@ -688,16 +620,9 @@ static const CanTp_ConfigType *CanTp_ConfigPtr = NULL_PTR;
 #define CanTp_STOP_SEC_VAR_FAST_INIT_UNSPECIFIED
 #include "CanTp_MemMap.h"
 
-/** @} */
-
 /*------------------------------------------------------------------------------------------------*/
 /* local variable definitions (static).                                                           */
 /*------------------------------------------------------------------------------------------------*/
-
-/**
- * @addtogroup CANTP_C_LVDEF
- * @{
- */
 
 #define CanTp_START_SEC_VAR_FAST_CLEARED_UNSPECIFIED
 #include "CanTp_MemMap.h"
@@ -707,27 +632,13 @@ static CanTp_ChannelRtType CanTp_Rt[CANTP_MAX_NUM_OF_CHANNEL];
 #define CanTp_STOP_SEC_VAR_FAST_CLEARED_UNSPECIFIED
 #include "CanTp_MemMap.h"
 
-/** @} */
-
 /*------------------------------------------------------------------------------------------------*/
 /* global constant definitions (extern const).                                                    */
 /*------------------------------------------------------------------------------------------------*/
 
-/**
- * @addtogroup CANTP_C_GCDEF
- * @{
- */
-
-/** @} */
-
 /*------------------------------------------------------------------------------------------------*/
 /* global variable definitions (extern).                                                          */
 /*------------------------------------------------------------------------------------------------*/
-
-/**
- * @addtogroup CANTP_C_GVDEF
- * @{
- */
 
 #define CanTp_START_SEC_VAR_FAST_POWER_ON_INIT_UNSPECIFIED
 #include "CanTp_MemMap.h"
@@ -745,16 +656,9 @@ boolean CanTp_AbortedTxSession = FALSE;
 
 #endif /* #ifndef CFFI_ENABLE */
 
-/** @} */
-
 /*------------------------------------------------------------------------------------------------*/
 /* global function definitions.                                                                   */
 /*------------------------------------------------------------------------------------------------*/
-
-/**
- * @addtogroup CANTP_C_GFDEF
- * @{
- */
 
 void CanTp_Init(const CanTp_ConfigType *pConfig)
 {
@@ -1226,16 +1130,9 @@ Std_ReturnType CanTp_ReadParameter(PduIdType pduId, TPParameterType parameter, u
 
 #endif /* #if (CANTP_READ_PARAMETER_API == STD_ON) */
 
-/** @} */
-
 /*------------------------------------------------------------------------------------------------*/
 /* global scheduled function definitions.                                                         */
 /*------------------------------------------------------------------------------------------------*/
-
-/**
- * @addtogroup CANTP_C_GSFDEF
- * @{
- */
 
 void CanTp_MainFunction(void)
 {
@@ -1296,16 +1193,9 @@ void CanTp_MainFunction(void)
     }
 }
 
-/** @} */
-
 /*------------------------------------------------------------------------------------------------*/
 /* global callback function definitions.                                                          */
 /*------------------------------------------------------------------------------------------------*/
-
-/**
- * @addtogroup CANTP_C_GCFDEF
- * @{
- */
 
 static void CanTp_StartNetworkLayerTimeout(CanTp_NSduType *pNSdu, const uint8 instanceId)
 {
@@ -2380,16 +2270,9 @@ void CanTp_TxConfirmation(PduIdType txPduId, Std_ReturnType result)
     }
 }
 
-/** @} */
-
 /*------------------------------------------------------------------------------------------------*/
 /* local function definitions (static).                                                           */
 /*------------------------------------------------------------------------------------------------*/
-
-/**
- * @addtogroup CANTP_C_LFDEF
- * @{
- */
 
 static Std_ReturnType CanTp_GetNSduFromPduId(PduIdType pduId, CanTp_NSduType **pNSdu)
 {
@@ -2994,8 +2877,6 @@ static void CanTp_SetPadding(uint8 *pBuffer, PduLengthType *pOfs, const uint8 va
 
     *pOfs = ofs;
 }
-
-/** @} */
 
 #ifdef __cplusplus
 }
