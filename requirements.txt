@@ -4,4 +4,4 @@ jsonschema==3.0.1
 pcpp==1.20.1
 pycparser==2.19.0
 pytest==4.4.1
-git+git://github.com/openmcusw/bsw_code_gen.git@master#egg=bsw_code_gen
+bsw-code-gen>=0.1.12
