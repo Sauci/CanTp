@@ -46,7 +46,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Run pytest tests
-        run: mkdir build && cd build && cmake .. -DCANTP_ENABLE_TEST=ON && make all && ctest -V;gcov _cffi_can_tp.c
+        run: mkdir build; cd build; cmake .. -DCANTP_ENABLE_TEST=ON; make all; ctest -V;gcov _cffi_can_tp.c
       - name: Upload code coverage to Codecov
         uses: codecov/codecov-action@v1
         with:
