@@ -157,14 +157,14 @@ class CanTpTest(object):
         self.can_tp_rx_data = list()
         code_gen = BSWCodeGen(config, self.script_directory)
         with open(os.path.join(self.build_directory, 'CanTp_PBcfg.h'), 'w') as fp:
-            fp.write(code_gen.header)
+            fp.write(code_gen.header_pb_cfg)
         with open(os.path.join(self.build_directory, 'CanTp_PBcfg.c'), 'w') as fp:
-            fp.write(code_gen.source)
+            fp.write(code_gen.source_pb_cfg)
         with open(self.header, 'r') as fp:
             header = fp.read()
         self.config = MockGen('_cffi_can_tp_pbcfg_{}'.format(config.get_id),
-                              code_gen.source,
-                              code_gen.header,
+                              code_gen.source_pb_cfg,
+                              code_gen.header_pb_cfg,
                               define_macros=tuple(self.compile_definitions),
                               include_dirs=tuple(self.include_directories + [self.build_directory]),
                               build_dir=self.build_directory)
